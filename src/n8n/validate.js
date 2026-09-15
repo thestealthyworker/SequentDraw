@@ -46,6 +46,18 @@ const NOTE_CONTENT_MAX_LENGTH = 2000;
 const TOUR_TITLE_MAX = 80;
 const TOUR_DESCRIPTION_MAX = 500;
 
+// Details card fields (docs/design/n8n-visual-style.md "Details card").
+const NODE_DESCRIPTION_MAX = 280;
+const NODE_LINK_MAX = 300;
+const EDGE_DESCRIPTION_MAX = 200;
+
+// Same narrowing idea as markdown.js's safeHref: http(s) only, and never a
+// value carrying whitespace, a quote, or an angle bracket -- those are not a
+// real address, so they are rejected outright here rather than degraded to
+// plain text (there is no "plain text" fallback for a structured field).
+const LINK_PROTOCOL_RE = /^https?:/i;
+const UNSAFE_LINK_CONTENT_RE = /[\s"'<>]/;
+
 // Array-length caps. Checked BEFORE any per-item iteration: an array over
 // its cap gets exactly one error and its items (and anything that would
 // otherwise cross-reference them) are skipped, not validated one at a
@@ -85,8 +97,22 @@ const MAX_MESSAGE_IN_SUMMARY = 300;
 
 const TOP_LEVEL_KEYS = new Set(['$schema', 'title', 'groups', 'nodes', 'edges', 'notes', 'tour']);
 const GROUP_KEYS = new Set(['id', 'label', 'color']);
-const NODE_KEYS = new Set(['id', 'label', 'sublabel', 'kind', 'icon', 'parentId', 'layers', 'status', 'source', 'prompt', 'rationale']);
-const EDGE_KEYS = new Set(['from', 'to', 'type', 'condition']);
+const NODE_KEYS = new Set([
+  'id',
+  'label',
+  'sublabel',
+  'kind',
+  'icon',
+  'parentId',
+  'layers',
+  'status',
+  'source',
+  'prompt',
+  'rationale',
+  'description',
+  'link',
+]);
+const EDGE_KEYS = new Set(['from', 'to', 'type', 'condition', 'description']);
 const NOTE_KEYS = new Set(['id', 'content', 'attachTo', 'color', 'layers']);
 const TOUR_KEYS = new Set(['order', 'title', 'description', 'nodeIds']);
 
@@ -253,6 +279,58 @@ function checkString(value, { path, errors, required, max, code, label }) {
       path,
       code: `${code}-too-long`,
       message: `${label} is ${value.length} characters, must be ${max} or fewer.`,
+    });
+  }
+}
+
+// Like checkString, but (for an optional field) a present value must be
+// non-empty after trimming whitespace -- not just non-empty by length. Line
+// breaks are kept (never stripped), matching the "trimmed non-empty, line
+// breaks kept" rule for node/edge description. Never echoes the value
+// itself into the message (only its length), same as checkString.
+function checkTrimmedString(value, { path, errors, max, code, label }) {
+  if (value == null) return;
+  if (typeof value !== 'string') {
+    errors.push({ path, code: `invalid-${code}`, message: `${label} must be a string.` });
+    return;
+  }
+  if (value.trim().length === 0) {
+    errors.push({ path, code: `invalid-${code}`, message: `${label} must not be empty or whitespace-only.` });
+    return;
+  }
+  if (value.length > max) {
+    errors.push({
+      path,
+      code: `${code}-too-long`,
+      message: `${label} is ${value.length} characters, must be ${max} or fewer.`,
+    });
+  }
+}
+
+// node.link: optional, at most NODE_LINK_MAX characters, http(s) only, and
+// never carrying whitespace, a quote, or an angle bracket anywhere in the
+// string (not just leading/trailing) -- the same narrowing idea as
+// markdown.js's safeHref(), reapplied here because this is a structured
+// field with no "render as plain text" fallback to degrade to.
+function checkLink(value, { path, errors, label }) {
+  if (value == null) return;
+  if (typeof value !== 'string') {
+    errors.push({ path, code: 'invalid-link', message: `${label} link must be a string.` });
+    return;
+  }
+  if (value.length > NODE_LINK_MAX) {
+    errors.push({
+      path,
+      code: 'link-too-long',
+      message: `${label} link is ${value.length} characters, must be ${NODE_LINK_MAX} or fewer.`,
+    });
+    return;
+  }
+  if (!LINK_PROTOCOL_RE.test(value) || UNSAFE_LINK_CONTENT_RE.test(value)) {
+    errors.push({
+      path,
+      code: 'invalid-link',
+      message: `${label} link ${displayValue(value)} must be an http:// or https:// URL with no whitespace, quotes, or angle brackets.`,
     });
   }
 }
@@ -465,6 +543,15 @@ function validateDoc(doc) {
           message: `Node "${truncate(n.id)}" has a rationale but is not status "suggested"; rationale is only allowed on suggested nodes.`,
         });
       }
+
+      checkTrimmedString(n.description, {
+        path: `${path}/description`,
+        errors,
+        max: NODE_DESCRIPTION_MAX,
+        code: 'description',
+        label: `Node "${truncate(n.id)}" description`,
+      });
+      checkLink(n.link, { path: `${path}/link`, errors, label: `Node "${truncate(n.id)}"` });
     });
     checkDuplicateIds(
       rawNodes.map((n, index) => ({ id: isPlainObjectish(n) ? n.id : undefined, index })),
@@ -506,6 +593,14 @@ function validateDoc(doc) {
           message: `Edge #${i} has a condition, so type must be "dashed" (got ${displayValue(e.type)}).`,
         });
       }
+
+      checkTrimmedString(e.description, {
+        path: `${path}/description`,
+        errors,
+        max: EDGE_DESCRIPTION_MAX,
+        code: 'description',
+        label: `Edge #${i} description`,
+      });
     });
   }
 
