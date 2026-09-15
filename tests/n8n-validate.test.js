@@ -982,3 +982,161 @@ describe('adversarial input: bounded time and bounded output', () => {
     assert.deepStrictEqual(codesOf(tourErr), ['too-many-tour-entries']);
   });
 });
+
+// ---------------------------------------------------------------------
+// Details card fields: node.description, node.link, edge.description
+// (docs/design/n8n-visual-style.md "Details card").
+// ---------------------------------------------------------------------
+
+describe('node.description', () => {
+  test('a valid description is accepted', () => {
+    const doc = baseDoc();
+    doc.nodes[0].description = 'Handles inbound webhook requests for this system.';
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+
+  test('line breaks are kept, not rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].description = 'Line one.\nLine two.';
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+
+  test('a whitespace-only description is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].description = '   ';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-description']);
+  });
+
+  test('a description over 280 characters is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].description = 'x'.repeat(281);
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['description-too-long']);
+  });
+
+  test('exactly 280 characters is accepted', () => {
+    const doc = baseDoc();
+    doc.nodes[0].description = 'x'.repeat(280);
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+
+  test('a non-string description is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].description = 42;
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-description']);
+  });
+});
+
+describe('node.link', () => {
+  test('a valid https link is accepted', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'https://docs.example.com/guide';
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+
+  test('a valid http link is accepted', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'http://internal.example.com/wiki';
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+
+  test('a javascript: link is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'javascript:alert(1)';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a data: link is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'data:text/html,<script>alert(1)</script>';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a link containing whitespace is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'https://example.com/a b';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a link containing a quote is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'https://example.com/"onmouseover="x';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a link containing an angle bracket is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'https://example.com/<script>';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a protocol-relative link is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = '//evil.example.com/x';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a schemeless-authority link ("https:evil.com", no //) is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'https:evil.com';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a single-slash link ("http:/x") is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'http:/x';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a link over 300 characters is rejected as link-too-long, not invalid-link', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'https://example.com/' + 'x'.repeat(281);
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['link-too-long']);
+  });
+
+  test('exactly 300 characters is accepted', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'https://example.com/' + 'x'.repeat(280);
+    assert.strictEqual(doc.nodes[0].link.length, 300);
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+});
+
+describe('edge.description', () => {
+  test('a valid edge description is accepted', () => {
+    const doc = baseDoc();
+    doc.edges[0].description = 'Refund amount and the original payment intent id';
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+
+  test('a whitespace-only edge description is rejected', () => {
+    const doc = baseDoc();
+    doc.edges[0].description = '   ';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-description']);
+  });
+
+  test('an edge description over 200 characters is rejected', () => {
+    const doc = baseDoc();
+    doc.edges[0].description = 'x'.repeat(201);
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['description-too-long']);
+  });
+
+  test('exactly 200 characters is accepted', () => {
+    const doc = baseDoc();
+    doc.edges[0].description = 'x'.repeat(200);
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+});

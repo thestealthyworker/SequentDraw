@@ -37,7 +37,8 @@
       "parentId": null,
       "layers": [
         "business"
-      ]
+      ],
+      "description": "The buyer who purchased the order and initiates or receives updates about the return."
     },
     {
       "id": "req_store",
@@ -48,7 +49,8 @@
       "parentId": "g_entry",
       "layers": [
         "business"
-      ]
+      ],
+      "description": "Storefront entry point where a signed-in customer requests a return for delivered items."
     },
     {
       "id": "req_admin",
@@ -59,7 +61,8 @@
       "parentId": "g_entry",
       "layers": [
         "business"
-      ]
+      ],
+      "description": "Admin entry point where a merchant creates a return on the customer's behalf."
     },
     {
       "id": "merchant",
@@ -70,7 +73,8 @@
       "parentId": null,
       "layers": [
         "business"
-      ]
+      ],
+      "description": "The store operator who can create returns manually and approves refunds above the configured cap."
     },
     {
       "id": "rma_label",
@@ -81,7 +85,8 @@
       "parentId": "g_ship",
       "layers": [
         "business"
-      ]
+      ],
+      "description": "The shipping label and instructions handed to the customer once fulfillment approves the return."
     },
     {
       "id": "ship_back",
@@ -92,7 +97,8 @@
       "parentId": "g_ship",
       "layers": [
         "business"
-      ]
+      ],
+      "description": "The customer posts the parcel back to the warehouse using the provided label."
     },
     {
       "id": "receive",
@@ -103,7 +109,8 @@
       "parentId": "g_ship",
       "layers": [
         "business"
-      ]
+      ],
+      "description": "Warehouse staff log that the parcel has physically arrived before any refund is considered."
     },
     {
       "id": "inspect",
@@ -114,7 +121,8 @@
       "parentId": "g_ship",
       "layers": [
         "business"
-      ]
+      ],
+      "description": "Warehouse staff check the condition of each returned item and record the outcome."
     },
     {
       "id": "mark_recv",
@@ -125,7 +133,8 @@
       "parentId": "g_core",
       "layers": [
         "business"
-      ]
+      ],
+      "description": "The merchant marks the return received in the admin UI, moving it toward a refund decision."
     },
     {
       "id": "refund_out",
@@ -136,7 +145,8 @@
       "parentId": "g_money",
       "layers": [
         "business"
-      ]
+      ],
+      "description": "The flow's final artifact: money has left the store's account and reached the customer."
     },
     {
       "id": "storefront",
@@ -147,7 +157,9 @@
       "parentId": "g_entry",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Next.js storefront the customer uses to browse, buy, and request a return.",
+      "link": "https://nextjs.org/docs"
     },
     {
       "id": "admin_ui",
@@ -158,7 +170,9 @@
       "parentId": "g_entry",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "React admin dashboard the merchant uses to manage orders, returns, and refunds.",
+      "link": "https://react.dev/"
     },
     {
       "id": "store_api",
@@ -169,7 +183,9 @@
       "parentId": "g_entry",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Public-facing routes the storefront calls; no merchant authentication required.",
+      "link": "https://docs.medusajs.com/"
     },
     {
       "id": "admin_api",
@@ -180,7 +196,9 @@
       "parentId": "g_entry",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Authenticated routes the admin dashboard calls to manage orders and returns.",
+      "link": "https://docs.medusajs.com/"
     },
     {
       "id": "wf_engine",
@@ -191,7 +209,9 @@
       "parentId": "g_core",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Medusa's workflow engine orchestrates the multi-step return process with retries and rollback.",
+      "link": "https://docs.medusajs.com/"
     },
     {
       "id": "order_mod",
@@ -202,7 +222,9 @@
       "parentId": "g_core",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Owns order lifecycle state and coordinates the other modules involved in a return.",
+      "link": "https://docs.medusajs.com/"
     },
     {
       "id": "return_model",
@@ -213,7 +235,8 @@
       "parentId": "g_core",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "The Return record created when a return is requested, holding its items and status."
     },
     {
       "id": "return_item",
@@ -224,7 +247,8 @@
       "parentId": "g_core",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "One line item on the return record, tracking quantity and reason for a single SKU."
     },
     {
       "id": "order_version",
@@ -235,7 +259,8 @@
       "parentId": "g_core",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Bumped on request and again on receipt, so the order stays consistent under concurrent edits."
     },
     {
       "id": "ful_mod",
@@ -246,7 +271,9 @@
       "parentId": "g_ship",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Owns shipment state, including the return shipment this flow creates.",
+      "link": "https://docs.medusajs.com/"
     },
     {
       "id": "ship_opt",
@@ -257,7 +284,8 @@
       "parentId": "g_ship",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Evaluates the fulfillment provider's is_return rule to decide whether a label can be generated."
     },
     {
       "id": "ful_provider",
@@ -268,7 +296,8 @@
       "parentId": "g_ship",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "The external carrier that generates and services the return shipping label."
     },
     {
       "id": "inv_mod",
@@ -279,7 +308,9 @@
       "parentId": "g_core",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Adjusts stock levels once returned items are confirmed undamaged and resellable.",
+      "link": "https://docs.medusajs.com/"
     },
     {
       "id": "pay_mod",
@@ -290,7 +321,9 @@
       "parentId": "g_money",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Owns refund logic and enforces the configured refund cap before money moves.",
+      "link": "https://docs.medusajs.com/"
     },
     {
       "id": "pay_provider",
@@ -301,7 +334,9 @@
       "parentId": "g_money",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Stripe issues the refund to the customer's original payment method.",
+      "link": "https://docs.stripe.com/refunds"
     },
     {
       "id": "order_txn",
@@ -312,7 +347,8 @@
       "parentId": "g_money",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "The OrderTransaction record created for the refund — the system's ledger entry for the money movement."
     },
     {
       "id": "event_bus",
@@ -323,7 +359,9 @@
       "parentId": "g_infra",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Redis-backed event bus that decouples the order module from anything reacting to return events.",
+      "link": "https://redis.io/docs/latest/"
     },
     {
       "id": "notif_mod",
@@ -334,7 +372,9 @@
       "parentId": "g_infra",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "Sends the customer-facing updates that accompany each stage of the return.",
+      "link": "https://docs.medusajs.com/"
     },
     {
       "id": "postgres",
@@ -345,7 +385,9 @@
       "parentId": "g_infra",
       "layers": [
         "base"
-      ]
+      ],
+      "description": "System of record for orders, returns, inventory, and transactions.",
+      "link": "https://www.postgresql.org/docs/"
     },
     {
       "id": "guest_path",
@@ -356,7 +398,8 @@
       "parentId": "g_entry",
       "layers": [
         "edge"
-      ]
+      ],
+      "description": "A guest-checkout order can request a return with no session, verified by order id and email instead."
     },
     {
       "id": "mismatch",
@@ -367,7 +410,8 @@
       "parentId": "g_ship",
       "layers": [
         "edge"
-      ]
+      ],
+      "description": "Raised when the items received do not match what the customer declared on the return request."
     },
     {
       "id": "damaged",
@@ -378,7 +422,8 @@
       "parentId": "g_ship",
       "layers": [
         "edge"
-      ]
+      ],
+      "description": "Raised when returned stock is not in resellable condition and must be excluded from restock."
     },
     {
       "id": "req_action",
@@ -389,7 +434,8 @@
       "parentId": "g_core",
       "layers": [
         "edge"
-      ]
+      ],
+      "description": "A human must intervene before the flow can continue; it does not resolve itself."
     },
     {
       "id": "refund_check",
@@ -400,7 +446,8 @@
       "parentId": "g_money",
       "layers": [
         "edge"
-      ]
+      ],
+      "description": "Validates the computed refund amount against the store's configured cap before Stripe is called."
     },
     {
       "id": "partial",
@@ -411,7 +458,8 @@
       "parentId": "g_core",
       "layers": [
         "edge"
-      ]
+      ],
+      "description": "The return covers only some of the order's items, so refund and inventory updates apply to a subset."
     },
     {
       "id": "cancel",
@@ -422,7 +470,8 @@
       "parentId": "g_core",
       "layers": [
         "edge"
-      ]
+      ],
+      "description": "The customer or merchant withdraws the return request before the parcel is received."
     },
     {
       "id": "no_notif",
@@ -433,7 +482,8 @@
       "parentId": "g_infra",
       "layers": [
         "edge"
-      ]
+      ],
+      "description": "Suppresses the customer notification for this return, e.g. for an internal or test order."
     },
     {
       "id": "ci",
@@ -444,7 +494,9 @@
       "parentId": "g_infra",
       "layers": [
         "build"
-      ]
+      ],
+      "description": "GitHub Actions runs the test suite on every push and pull request touching the return flow.",
+      "link": "https://docs.github.com/actions"
     },
     {
       "id": "int_tests",
@@ -455,7 +507,9 @@
       "parentId": "g_infra",
       "layers": [
         "build"
-      ]
+      ],
+      "description": "Jest integration suites cover the return module's request, receive, and refund paths.",
+      "link": "https://jestjs.io/docs/getting-started"
     },
     {
       "id": "migrations",
@@ -466,7 +520,8 @@
       "parentId": "g_infra",
       "layers": [
         "build"
-      ]
+      ],
+      "description": "Schema changes to the return and transaction tables, applied before the updated code deploys."
     }
   ],
   "edges": [
@@ -534,7 +589,8 @@
       "from": "order_mod",
       "to": "return_model",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "New Return record for the requested items"
     },
     {
       "from": "return_model",
@@ -546,7 +602,8 @@
       "from": "return_model",
       "to": "order_version",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Version bump so a concurrent order edit can't clobber the return"
     },
     {
       "from": "order_mod",
@@ -570,31 +627,36 @@
       "from": "ful_provider",
       "to": "rma_label",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Signed shipping label URL and tracking number"
     },
     {
       "from": "rma_label",
       "to": "ship_back",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Label and drop-off instructions handed to the customer"
     },
     {
       "from": "ship_back",
       "to": "receive",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "The physical parcel and its tracking number"
     },
     {
       "from": "receive",
       "to": "inspect",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Confirmation the parcel arrived, ready for condition check"
     },
     {
       "from": "inspect",
       "to": "mark_recv",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Per-item inspection outcome for every returned SKU"
     },
     {
       "from": "inspect",
@@ -624,19 +686,22 @@
       "from": "return_item",
       "to": "inv_mod",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "SKU and quantity to restock"
     },
     {
       "from": "damaged",
       "to": "inv_mod",
       "type": "dashed",
-      "condition": null
+      "condition": null,
+      "description": "Quantity to exclude from restock as not resellable"
     },
     {
       "from": "order_mod",
       "to": "pay_mod",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Return id and the items approved for refund"
     },
     {
       "from": "pay_mod",
@@ -654,13 +719,15 @@
       "from": "pay_mod",
       "to": "pay_provider",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Refund amount and the original payment intent id"
     },
     {
       "from": "pay_provider",
       "to": "order_txn",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Stripe refund confirmation and its charge id"
     },
     {
       "from": "order_txn",
@@ -684,13 +751,15 @@
       "from": "order_mod",
       "to": "event_bus",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Return-status-changed event for the order"
     },
     {
       "from": "event_bus",
       "to": "notif_mod",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Return event payload used to compose the customer update"
     },
     {
       "from": "no_notif",
@@ -702,13 +771,15 @@
       "from": "notif_mod",
       "to": "customer",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Email or SMS update on the return's status"
     },
     {
       "from": "order_mod",
       "to": "postgres",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Order and return state persisted to the ledger"
     },
     {
       "from": "inv_mod",
@@ -720,13 +791,15 @@
       "from": "migrations",
       "to": "postgres",
       "type": "dashed",
-      "condition": null
+      "condition": null,
+      "description": "Schema changes applied to the return and transaction tables"
     },
     {
       "from": "ci",
       "to": "int_tests",
       "type": "solid",
-      "condition": null
+      "condition": null,
+      "description": "Triggers the Jest suite on every push"
     },
     {
       "from": "int_tests",
@@ -744,23 +817,71 @@
     {
       "id": "n_ship",
       "content": "## Return shipping\nMedusa generates the **return label**, the customer ships the parcel back, and the warehouse logs receipt before inspection.",
-      "attachTo": ["g_ship"],
+      "attachTo": [
+        "g_ship"
+      ],
       "color": "blue",
-      "layers": ["business"]
+      "layers": [
+        "business"
+      ]
     },
     {
       "id": "n_inspection",
       "content": "## Inspection\nItems are checked by hand against the original order line. Notes:\n- condition, not just quantity\n- photos attached to the return record\n- `inspect` decides the outcome",
-      "attachTo": ["receive", "inspect"],
+      "attachTo": [
+        "receive",
+        "inspect"
+      ],
       "color": "green",
-      "layers": ["business"]
+      "layers": [
+        "business"
+      ]
     },
     {
       "id": "n_refund_cap",
       "content": "**Refund exceeds cap** halts the flow — a merchant must approve any refund over the configured limit before Stripe is called.",
-      "attachTo": ["refund_check"],
+      "attachTo": [
+        "refund_check"
+      ],
       "color": "red",
-      "layers": ["edge"]
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "n_consider_refund_timing",
+      "content": "Consider: should the refund wait until inspection confirms the items are undamaged, or fire as soon as the return is marked received?",
+      "attachTo": [
+        "mark_recv",
+        "pay_mod"
+      ],
+      "color": "gold",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "n_consider_silent_notification",
+      "content": "Consider: with `no_notification` set, the customer sees no update at all — is silent processing acceptable for every reason code, or only for internal/test orders?",
+      "attachTo": [
+        "no_notif",
+        "notif_mod"
+      ],
+      "color": "gold",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "n_consider_partial_timing",
+      "content": "Consider: for a partial return, should inventory and refund proceed per item as each is inspected, or only once the whole return is resolved?",
+      "attachTo": [
+        "partial"
+      ],
+      "color": "gold",
+      "layers": [
+        "edge"
+      ]
     }
   ]
 }

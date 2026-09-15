@@ -1,0 +1,34 @@
+{
+  "title": "Details doc",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "Group one"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service",
+      "parentId": "g1",
+      "description": "Handles inbound requests for this system.",
+      "link": "https://docs.example.com/a"
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "kind": "service",
+      "description": "Stores the processed result."
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "type": "solid",
+      "condition": null,
+      "description": "The processed record and its id"
+    }
+  ]
+}

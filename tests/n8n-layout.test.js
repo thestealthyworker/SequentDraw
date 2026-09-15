@@ -23,6 +23,65 @@ function overlaps(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
+// Pulls the one `var CARD_DATA = <json literal>;` statement out of the
+// inline script's source, by the same fixed statement boundary
+// render-shell.js always emits around it (the next declaration,
+// `var nodeCardsById`), rather than a regex that would have to somehow
+// parse balanced JSON out of a string that may itself contain adversarial
+// content. Returns the literal's raw text (for JSON.parse) and the script
+// source with that literal excised, for the network-access scan below.
+function extractCardDataLiteral(scriptContent) {
+  const marker = 'var CARD_DATA = ';
+  const start = scriptContent.indexOf(marker);
+  if (start < 0) throw new Error('CARD_DATA literal not found in script');
+  const afterMarker = start + marker.length;
+  const end = scriptContent.indexOf(';\n  var nodeCardsById', afterMarker);
+  if (end < 0) throw new Error('CARD_DATA literal not terminated at the expected boundary');
+  return {
+    cardDataJson: scriptContent.slice(afterMarker, end),
+    scriptWithoutCardData: scriptContent.slice(0, afterMarker) + scriptContent.slice(end),
+  };
+}
+
+// Strips `//` line comments, quote-aware: a "//" is only a comment start
+// when it is not inside a '...' or "..." string on that line. A naive
+// `line.replace(/\/\/.*$/, '')` would also truncate a line at the FIRST
+// "//" it sees even when that "//" is part of an "https://" URL sitting
+// inside a string literal (real code, not a comment) earlier on the same
+// line — silently hiding exactly the thing this check exists to catch.
+function stripLineComments(source) {
+  return source
+    .split('\n')
+    .map(line => {
+      let inSingle = false;
+      let inDouble = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === "'" && !inDouble) inSingle = !inSingle;
+        else if (ch === '"' && !inSingle) inDouble = !inDouble;
+        else if (!inSingle && !inDouble && ch === '/' && line[i + 1] === '/') {
+          return line.slice(0, i);
+        }
+      }
+      return line;
+    })
+    .join('\n');
+}
+
+// This file's and render-shell.js's own prose both name these
+// identifiers, to explain why they're absent — comment-stripped first so
+// that doesn't false-positive. Scanned for any http(s) URL text and for
+// the specific network/resource-loading APIs a self-contained,
+// double-click-to-open viewer must never call.
+const BANNED_NETWORK_APIS = ['fetch(', 'XMLHttpRequest', 'WebSocket(', 'EventSource(', 'sendBeacon', 'import(', 'new Image(', '.src =', '.src=', 'srcset', 'ping', 'url('];
+
+function findNetworkAccessViolations(scriptSource) {
+  const codeOnly = stripLineComments(scriptSource);
+  const urls = codeOnly.match(/https?:\/\//g) || [];
+  const apis = BANNED_NETWORK_APIS.filter(api => codeOnly.includes(api));
+  return { urls, apis };
+}
+
 describe('n8n layout on the Medusa fixture', () => {
   let layout;
   let html;
@@ -116,11 +175,43 @@ describe('n8n layout on the Medusa fixture', () => {
     ) || [];
     assert.deepStrictEqual(loaders, []);
 
+    // A node/edge `link` or `description` can also carry an http(s) URL,
+    // but those only ever reach the page as data inside the details-card
+    // JSON literal embedded in the single inline <script> (see
+    // render-shell.js) — the viewer only turns one into a clickable
+    // <a href> at runtime, on demand, exactly like a note's link is
+    // opened on click and never fetched. Rather than exempt the whole
+    // script from the URL/network check, extract and JSON.parse that one
+    // literal out, then scan everything else — a much narrower, harder to
+    // abuse exemption than "the script doesn't count".
+    const scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
+    assert.ok(scriptMatch, 'expected exactly one inline <script>');
+    const scriptContent = scriptMatch[1];
+    const { cardDataJson, scriptWithoutCardData } = extractCardDataLiteral(scriptContent);
+    assert.doesNotThrow(() => JSON.parse(cardDataJson), 'the extracted literal must really be JSON, i.e. inert data');
+
+    const violations = findNetworkAccessViolations(scriptWithoutCardData);
+    assert.deepStrictEqual(violations.urls, [], 'the script (outside the embedded card-data literal) must contain no http(s) URL text');
+    assert.deepStrictEqual(violations.apis, [], `the script (outside the embedded card-data literal) must not use: ${violations.apis.join(', ')}`);
+
+    const htmlOutsideScript = html.replace(scriptContent, '');
     const anchorHrefs = new Set([...html.matchAll(/<a\s[^>]*\bhref="([^"]*)"/g)].map(m => m[1]));
-    const urls = (html.match(/https?:\/\/[^\s"'<>)]+/g) || [])
+    const urls = (htmlOutsideScript.match(/https?:\/\/[^\s"'<>)]+/g) || [])
       .filter(url => url !== 'http://www.w3.org/2000/svg')
       .filter(url => ![...anchorHrefs].some(href => href.startsWith(url)));
-    assert.deepStrictEqual(urls, [], 'http(s) URLs may only appear as <a href> values');
+    assert.deepStrictEqual(urls, [], 'http(s) URLs outside the inline <script> may only appear as <a href> values');
+  });
+
+  test('the network-access check actually catches a mutation (proves it is not vacuous)', () => {
+    // Same scan as above, run against a deliberately sabotaged copy of the
+    // real script: if this test ever passed with an empty violations list,
+    // the check above would be worthless.
+    const scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
+    const { scriptWithoutCardData } = extractCardDataLiteral(scriptMatch[1]);
+    const mutated = scriptWithoutCardData + "\n  fetch('https://example.com');\n";
+    const violations = findNetworkAccessViolations(mutated);
+    assert.ok(violations.urls.length > 0, 'the mutation check should have found the injected http(s) URL');
+    assert.ok(violations.apis.includes('fetch('), 'the mutation check should have found the injected fetch(...) call');
   });
 
   test('renderHtml output is a complete, non-empty HTML document', () => {

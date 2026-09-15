@@ -211,13 +211,20 @@ Revised 2026-09-15 for the n8n visual style.
 
 Each step from here ships its Claude Code / Codex skill and eval cases in the same
 PR (`docs/design/skills-and-plugin.md`). The owner-defined skills are `git-map`,
-`business-map`, `eval-build`, `grill-build` and `gitrepo-suggest`. The plugin
-scaffold arrives with the first of them, `git-map`.
+`business-map`, `eval-build`, `grill-build`, `gitrepo-suggest` and `doc-map`. The
+plugin scaffold arrives with the first of them, `git-map`.
 
 2. Text notes: n8n-style sticky notes from the IR `notes` array, placed by the engine
-   (design in the same doc). The owner requested this on 2026-09-15.
+   (design in the same doc). The owner requested this on 2026-09-15. **Done (PR #11).**
 3. Validate the JSON schema on input, including notes. Fail loudly on the invariants
-   listed in the spec.
+   listed in the spec, report every error at once, and publish a JSON Schema.
+   **Done (PR #12).**
+3a. Details cards: optional node and edge descriptions shown on hover, tap or keyboard,
+    with derived connections, plus gold "Consider:" notes. Requested by the owner after
+    reviewing the maps. Also fixes layer toggles so edges, handles and frames leave no
+    leftovers. **Done (details-cards PR).**
+3b. Documentation export: a static SVG with inline captions for screenshots and docs,
+    because hover cannot appear in an image. Its skill `doc-map` ships with step 5.
 4. Promote `check.js` into automated tests. Assert zero node overlaps, edge
    attachment within tolerance, zero label collisions, no note overlapping a node.
    These are the regression tests that make everything after this safe.
@@ -226,6 +233,14 @@ scaffold arrives with the first of them, `git-map`.
 6. Build Mode B as a question flow, with gap rendering.
 7. Suggestion agent (tool recommendations from n8n integrations), after gap detection
    is trustworthy.
+7a. Correction mode, added by the owner (2026-09-15) after M2. In the viewer, users
+    correct wrongly mapped nodes by meaning, not position: reattach or delete a
+    connection, move a node to another group or layer, change its kind, edit sticky
+    notes. **Save corrected JSON** downloads the updated document with a change list,
+    and the engine re-renders it with a fresh layout. There is no free dragging and no
+    stored positions, since stored positions would break computed layout, layer toggles
+    and the documentation export. Conversational correction ("move Stripe into
+    Payment") is available earlier, through the skills from `git-map` on.
 8. Tours last.
 9. **Internal cleanup, after the M3 gate passes:** remove the CTO agent, the review
    reports and the gate process (see `CLAUDE.md`). They are internal checks, not part

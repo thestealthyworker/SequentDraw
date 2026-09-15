@@ -6,6 +6,7 @@ const { validateDoc } = require('./validate');
 const { layoutFlat } = require('./layout-flat');
 const {
   snap,
+  GRID,
   NODE_GAP,
   LABEL_RESERVE,
   GROUP_PADDING,
@@ -14,28 +15,24 @@ const {
 const { routeForward, routeBackward } = require('./routing');
 const { labelBoxesOf, frameTitleBoxesOf } = require('./obstacles');
 const { computeNoteBoxes } = require('./notes');
+const { frameBoxFromMemberBoxes } = require('./frame-box');
 
+// Shares its bounding-box math with the viewer's runtime frame resize (see
+// frame-box.js's own header) so the two can never compute a different box
+// for the same set of members.
 function computeFrameBoxes(doc, nodeBoxes) {
-  const frameBoxes = {};
+  // Object.create(null), not {}: a group id is author-controlled and
+  // ID_RE allows "__proto__" as a legal id. Keying a plain {} by it would
+  // silently reassign the object's prototype on write (no own property
+  // created) instead of storing that group's box, and later reads/
+  // Object.entries() would miss it entirely.
+  const frameBoxes = Object.create(null);
   doc.groups.forEach(g => {
     const memberIds = doc.nodes.filter(n => n.parentId === g.id).map(n => n.id);
     if (!memberIds.length) return;
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    memberIds.forEach(id => {
-      const b = nodeBoxes[id];
-      minX = Math.min(minX, b.x);
-      minY = Math.min(minY, b.y);
-      maxX = Math.max(maxX, b.x + b.w);
-      maxY = Math.max(maxY, b.y + b.h + LABEL_RESERVE);
-    });
-    const x = Math.floor((minX - GROUP_PADDING.left) / 16) * 16;
-    const y = Math.floor((minY - GROUP_PADDING.top) / 16) * 16;
-    const right = Math.ceil((maxX + GROUP_PADDING.right) / 16) * 16;
-    const bottom = Math.ceil((maxY + GROUP_PADDING.bottom) / 16) * 16;
-    frameBoxes[g.id] = { x, y, w: right - x, h: bottom - y, memberIds };
+    const memberBoxes = memberIds.map(id => nodeBoxes[id]);
+    const box = frameBoxFromMemberBoxes(memberBoxes, { labelReserve: LABEL_RESERVE, padding: GROUP_PADDING, grid: GRID });
+    frameBoxes[g.id] = { ...box, memberIds };
   });
   return frameBoxes;
 }
@@ -126,7 +123,9 @@ function computeHandles(doc, nodeBoxes) {
     inEdgesOf.get(e.to).push(i);
   });
 
-  const handles = {};
+  // Object.create(null): same __proto__-as-a-legal-id hazard as
+  // computeFrameBoxes above, keyed by node id here.
+  const handles = Object.create(null);
   doc.nodes.forEach(n => {
     const box = nodeBoxes[n.id];
     const cy = box.y + box.h / 2;
@@ -182,7 +181,9 @@ function computeHandles(doc, nodeBoxes) {
 }
 
 function computeEdges(doc, handles, nodeBoxes, frameBoxes, noteBoxes) {
-  const byId = {};
+  // Object.create(null): same __proto__-as-a-legal-id hazard, keyed by
+  // node id here.
+  const byId = Object.create(null);
   doc.nodes.forEach(n => (byId[n.id] = n));
   const allNodeBoxes = Object.entries(nodeBoxes).map(([id, b]) => ({ id, ...b }));
   const allFrameBoxes = Object.entries(frameBoxes).map(([id, f]) => ({ id, ...f }));

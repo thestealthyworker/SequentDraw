@@ -327,16 +327,20 @@ beat one that loses half its function depending on context.
 
 ### Edges at a visibility boundary
 
-When an edge runs to a node hidden by the active layer filter, draw a **stub**: the
-edge terminates at a small marker where the hidden node sits.
+*Revised 2026-09-15 by the owner.* An edge is visible only when **both** of its
+endpoints are visible. If either endpoint is hidden by the active layer filter, the
+whole edge is hidden: line, arrowhead, hit area and labels. So is any handle left with
+no visible edge, and group frames shrink to their visible members. Nodes still never
+move.
 
-Not hidden — that silently drops a connection and makes the map look disconnected.
-Not bridged to the next visible node — that implies a direct link which does not
-exist, which is the one thing a documentation tool must never do.
+This replaces the original **stub** rule, where an edge ended at a small marker in
+empty space. On a real map those markers read as leftover debris. Discovery is kept
+without them: a node's details card lists every connection, marking those to hidden
+nodes "(hidden)".
 
-Stubs also do discovery work. The reader sees there is something switched off
-without having to read the toggle bar, and the gaps left by the union layout become
-meaningful rather than merely empty.
+The other half of the original rule stands. An edge is never bridged to the next
+visible node: that would imply a direct link which does not exist, which is the one
+thing a documentation tool must never do.
 
 ## Tours
 

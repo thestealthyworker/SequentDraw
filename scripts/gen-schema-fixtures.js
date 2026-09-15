@@ -55,6 +55,23 @@ write('tour-valid.json', {
   tour: [{ order: 1, title: 'How it starts', description: 'A hands off to B.', nodeIds: ['a', 'b'] }],
 });
 
+write('details-valid.json', {
+  title: 'Details doc',
+  groups: [{ id: 'g1', label: 'Group one' }],
+  nodes: [
+    {
+      id: 'a',
+      label: 'A',
+      kind: 'service',
+      parentId: 'g1',
+      description: 'Handles inbound requests for this system.',
+      link: 'https://docs.example.com/a',
+    },
+    { id: 'b', label: 'B', kind: 'service', description: 'Stores the processed result.' },
+  ],
+  edges: [{ from: 'a', to: 'b', type: 'solid', condition: null, description: 'The processed record and its id' }],
+});
+
 write('notes-valid.json', {
   title: 'Notes doc',
   groups: [{ id: 'g1', label: 'Group one', color: 'blue' }],
@@ -185,6 +202,46 @@ write('structural-too-many-tour-entries.json', {
   tour: Array.from({ length: 51 }, (_, i) => ({ order: i + 1, title: `Step ${i}`, description: 'D', nodeIds: ['a'] })),
 });
 
+write('structural-description-too-long.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].description = 'x'.repeat(281);
+  return d;
+})());
+
+write('structural-link-too-long.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'https://example.com/' + 'x'.repeat(281);
+  return d;
+})());
+
+// The link pattern requires "https?://" plus at least one more character,
+// so a non-http(s) scheme, a schemeless authority, and a single-slash
+// "http:/x" are all structural now (the schema's own pattern catches
+// them), not merely a validateDoc()-only crossref rule.
+write('structural-link-javascript-scheme.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'javascript:alert(1)';
+  return d;
+})());
+
+write('structural-link-schemeless.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'https:evil.com';
+  return d;
+})());
+
+write('structural-link-single-slash.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'http:/x';
+  return d;
+})());
+
+write('structural-edge-description-too-long.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.edges[0].description = 'x'.repeat(201);
+  return d;
+})());
+
 write('structural-too-many-fields-on-node.json', (() => {
   const node = { id: 'a', label: 'A', kind: 'service' };
   for (let i = 0; i < 205; i++) node[`extra_field_${i}`] = true;
@@ -262,5 +319,29 @@ write('crossref-tour-nodeids-unknown.json', {
 write('crossref-note-id-collides-with-node.json', baseTwoNodeDoc({ notes: [{ id: 'a', content: 'collides with node a' }] }));
 
 write('crossref-whitespace-only-title.json', baseTwoNodeDoc({ title: '   ' }));
+
+write('crossref-node-description-whitespace.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].description = '   ';
+  return d;
+})());
+
+write('crossref-edge-description-whitespace.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.edges[0].description = '   ';
+  return d;
+})());
+
+write('crossref-node-link-whitespace.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'https://example.com/a b';
+  return d;
+})());
+
+write('crossref-node-link-quote.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'https://example.com/"onmouseover="x';
+  return d;
+})());
 
 console.log('wrote fixtures to', DIR);

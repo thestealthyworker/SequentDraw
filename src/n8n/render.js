@@ -3,7 +3,52 @@
 const { esc, layersOf, nodeMarkup, handleMarkup, frameMarkup, edgeMarkup } = require('./render-svg');
 const { noteMarkup } = require('./notes-render');
 const { css, script } = require('./render-shell');
-const { DOT_GRID_GAP, DOT_COLOR, CANVAS_FILL } = require('./constants');
+const { buildCardData } = require('./card-data');
+const {
+  DOT_GRID_GAP,
+  DOT_COLOR,
+  CANVAS_FILL,
+  LABEL_RESERVE,
+  GROUP_PADDING,
+  GRID,
+  FRAME_LABEL_OFFSET_X,
+  FRAME_LABEL_OFFSET_Y,
+} = require('./constants');
+
+// Numeric-only geometry the viewer needs to recompute a frame's box for
+// whichever members are currently visible (frame-box.js), and nothing
+// else -- no free text, so no escaping concerns beyond what safeJson()
+// already does uniformly for every embedded literal.
+function buildGeometryData(layout) {
+  // Object.create(null): a node id is author-controlled and ID_RE allows
+  // "__proto__" as a legal id. Keying a plain {} by it would silently
+  // reassign the object's prototype instead of storing that node's box.
+  const nodeBoxes = Object.create(null);
+  Object.entries(layout.nodeBoxes).forEach(([id, b]) => {
+    nodeBoxes[id] = { x: b.x, y: b.y, w: b.w, h: b.h };
+  });
+  return {
+    nodeBoxes,
+    labelReserve: LABEL_RESERVE,
+    padding: GROUP_PADDING,
+    grid: GRID,
+    frameLabelOffsetX: FRAME_LABEL_OFFSET_X,
+    frameLabelOffsetY: FRAME_LABEL_OFFSET_Y,
+  };
+}
+
+// "Payment provider, service, receives from 1, sends to 2" — the exact
+// shape docs/design/n8n-visual-style.md gives as the node aria-label
+// example. Built from the same card data embedded for the details card, so
+// the accessible name and the card content can never disagree on counts.
+function nodeAriaLabel(cardNode) {
+  return `${cardNode.label}, ${cardNode.kind}, receives from ${cardNode.receivesFrom.length}, sends to ${cardNode.sendsTo.length}`;
+}
+
+function edgeAriaLabel(cardEdge) {
+  const condition = cardEdge.condition ? `, ${cardEdge.condition}` : '';
+  return `${cardEdge.fromLabel} to ${cardEdge.toLabel}, ${cardEdge.type}${condition}`;
+}
 
 const LAYER_TITLES = { base: 'Base', edge: 'Edge cases', business: 'Business', build: 'Build' };
 
@@ -46,6 +91,10 @@ function renderHtml(layout, doc) {
   const { nodeBoxes, frameBoxes, noteBoxes, handles, edges, entryIds, canvas } = layout;
   const entrySet = new Set(entryIds);
 
+  const cardData = buildCardData(doc, layout);
+  const cardNodeById = new Map(cardData.nodes.map(c => [c.id, c]));
+  const geometry = buildGeometryData(layout);
+
   const bgPad = 4000;
   const bg = `<rect x="${canvas.x - bgPad}" y="${canvas.y - bgPad}" width="${canvas.width + bgPad * 2}" height="${canvas.height + bgPad * 2}" fill="${CANVAS_FILL}"/>` +
     `<rect x="${canvas.x - bgPad}" y="${canvas.y - bgPad}" width="${canvas.width + bgPad * 2}" height="${canvas.height + bgPad * 2}" fill="url(#dot-grid)"/>`;
@@ -54,13 +103,16 @@ function renderHtml(layout, doc) {
     .map(g => (frameBoxes[g.id] ? frameMarkup(g, frameBoxes[g.id]) : ''))
     .join('\n');
 
-  const edgesSvg = edges.map(edgeMarkup).join('\n');
+  // cardData.edges preserves doc.edges' index order exactly (see
+  // card-data.js), so edges[i] and cardData.edges[i] describe the same edge.
+  const edgesSvg = edges.map(e => edgeMarkup(e, edgeAriaLabel(cardData.edges[e.index]))).join('\n');
 
   const nodesSvg = doc.nodes
     .map(n => {
       const box = nodeBoxes[n.id];
       if (!box) return '';
-      return nodeMarkup(n, box, entrySet.has(n.id)) + handleMarkup(n.id, handles);
+      const ariaLabel = nodeAriaLabel(cardNodeById.get(n.id));
+      return nodeMarkup(n, box, entrySet.has(n.id), ariaLabel) + handleMarkup(n.id, handles);
     })
     .join('\n');
 
@@ -100,7 +152,8 @@ ${layerBarMarkup(doc)}
 <button id="zoom-fit" type="button" title="Fit to view" aria-label="Fit to view">&#9678;</button>
 <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">&#43;</button>
 </div>
-<script>${script(canvas)}</script>
+<div id="details-card" class="details-card" hidden></div>
+<script>${script(canvas, cardData, geometry)}</script>
 </body>
 </html>`;
 }

@@ -28,6 +28,11 @@ const BACKWARD_CORNER_RADIUS = 16;
 
 const GROUP_PADDING = { top: 40, left: 24, right: 24, bottom: 24 };
 const GROUP_RADIUS = 4;
+// Frame title text offset from the frame box's top-left corner. Named so
+// render-svg.js's frameMarkup() and the viewer's runtime frame-box resize
+// (render-shell.js, via frame-box.js) always agree on where the label sits.
+const FRAME_LABEL_OFFSET_X = 12;
+const FRAME_LABEL_OFFSET_Y = 22;
 
 const GROUP_COLORS = {
   purple: { fill: '#EFEBFC', border: '#8B7FD1', title: '#4C3F91' },
@@ -117,6 +122,8 @@ module.exports = {
   BACKWARD_CORNER_RADIUS,
   GROUP_PADDING,
   GROUP_RADIUS,
+  FRAME_LABEL_OFFSET_X,
+  FRAME_LABEL_OFFSET_Y,
   GROUP_COLORS,
   NODE_BORDER,
   NODE_BORDER_WIDTH,
