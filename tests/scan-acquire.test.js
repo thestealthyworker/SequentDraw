@@ -9,7 +9,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { resolveSource, cloneGitHub, GIT_SAFE_ENV, GIT_SAFE_CONFIG_ARGS } = require('../src/scan/acquire');
+const { resolveSource, cloneGitHub, validateRef, GIT_SAFE_ENV, GIT_SAFE_CONFIG_ARGS } = require('../src/scan/acquire');
 
 const FIXTURES_DIR = path.join(__dirname, 'fixtures', 'repos', 'compose-app');
 
@@ -84,6 +84,44 @@ describe('resolveSource: GitHub URLs', () => {
   }
 });
 
+describe('validateRef: rejects a ref that would inject a git option or escape the ref grammar', () => {
+  const reject = [
+    ['%2D%2Dupload-pack%3D/tmp/pwn.sh', 'percent-encoded leading dashes (git option injection)'],
+    ['%2E%2E', 'percent-encoded ".."'],
+    ['%252D%252D', 'double percent-encoding (still has "%" after one decode)'],
+    ['%2F..', 'decodes to a ref containing ".."'],
+    ['@{', 'reflog/upstream shorthand'],
+    ['has space', 'plain whitespace'],
+    ['%0Ainjected', 'percent-encoded newline'],
+    ['-x', 'a literal leading dash'],
+    ['a'.repeat(300), 'over the 200-character cap'],
+    ['a//b', 'double slash'],
+    ['a\\b', 'backslash'],
+    ['a/', 'trailing slash'],
+    ['a.', 'trailing dot'],
+    ['a/b.lock', '.lock path component'],
+  ];
+
+  for (const [ref, why] of reject) {
+    test(`rejects ${JSON.stringify(ref)} (${why})`, () => {
+      assert.throws(() => validateRef(ref));
+    });
+  }
+
+  test('accepts a plain hex SHA and a plain branch name', () => {
+    assert.strictEqual(validateRef('63e9150ca17af4ed05880d4245e486481f73fcb4'), '63e9150ca17af4ed05880d4245e486481f73fcb4');
+    assert.strictEqual(validateRef('main'), 'main');
+    assert.strictEqual(validateRef('feature%2Fx'), 'feature/x'); // a legitimately encoded slash decodes cleanly
+  });
+
+  test('resolveSource rejects the percent-encoded git-option-injection URL from the security review', async () => {
+    await assert.rejects(
+      () => resolveSource('https://github.com/x/y/tree/%2D%2Dupload-pack%3D/tmp/pwn.sh'),
+      /not a valid git ref|option/,
+    );
+  });
+});
+
 describe('cloneGitHub: safe argument and env shape', () => {
   function fakeRunGit(script) {
     const calls = [];
@@ -118,10 +156,29 @@ describe('cloneGitHub: safe argument and env shape', () => {
       for (const [key, value] of Object.entries(GIT_SAFE_ENV)) {
         assert.strictEqual(call.env[key], value, `expected env.${key} to be "${value}"`);
       }
+      assert.strictEqual(call.env.GIT_LFS_SKIP_SMUDGE, '1');
     }
+
+    // "--" must separate git's own options from the positional
+    // <url> <dir> pair, and the url must be the argument immediately
+    // after it -- this is what stops a hostile-but-validated-looking
+    // string from ever being parsed as an option instead of a value.
+    const dashDashIndex = cloneArgs.indexOf('--');
+    assert.ok(dashDashIndex >= 0, 'expected a literal "--" in the clone argv');
+    assert.strictEqual(cloneArgs[dashDashIndex + 1], 'https://github.com/dockersamples/example-voting-app.git');
 
     await result.cleanup();
     assert.strictEqual(fs.existsSync(result.path), false);
+  });
+
+  test('clone (no ref): submodule/fsmonitor/protocol-allow config flags are present', async () => {
+    const { runGit, calls } = fakeRunGit(() => ({ code: 0, stdout: '', stderr: '', timedOut: false }));
+    const result = await cloneGitHub({ owner: 'a', repo: 'b', ref: null }, { tmpRoot: os.tmpdir(), runGit });
+    const cloneArgs = calls[0].args;
+    for (const flag of ['submodule.recurse=false', 'core.fsmonitor=false', 'protocol.allow=never', 'protocol.https.allow=always']) {
+      assert.ok(cloneArgs.includes(flag), `expected clone args to include "${flag}"`);
+    }
+    await result.cleanup();
   });
 
   test('clone with a ref: init, fetch --depth 1 <url> <ref>, checkout --detach FETCH_HEAD', async () => {
@@ -145,9 +202,34 @@ describe('cloneGitHub: safe argument and env shape', () => {
     assert.ok(checkoutCall, 'expected a checkout call');
     assert.ok(checkoutCall.args.includes('--detach'));
     assert.ok(checkoutCall.args.includes('FETCH_HEAD'));
+    // The ref itself is never an argument to checkout -- FETCH_HEAD is
+    // the only positional there.
+    assert.strictEqual(checkoutCall.args.includes('main'), false);
     void subcommands;
 
+    // "--" must separate fetch's own options from the positional
+    // <url> <ref> pair, with the url immediately after it.
+    const dashDashIndex = fetchCall.args.indexOf('--');
+    assert.ok(dashDashIndex >= 0, 'expected a literal "--" in the fetch argv');
+    assert.strictEqual(fetchCall.args[dashDashIndex + 1], 'https://github.com/vercel/nextjs-subscription-payments.git');
+    assert.strictEqual(fetchCall.args[dashDashIndex + 2], 'main');
+
+    for (const call of calls) {
+      assert.strictEqual(call.env.GIT_LFS_SKIP_SMUDGE, '1');
+      for (const flag of ['submodule.recurse=false', 'core.fsmonitor=false', 'protocol.allow=never', 'protocol.https.allow=always']) {
+        assert.ok(call.args.includes(flag), `expected "${flag}" on every call in the ref path`);
+      }
+    }
+
     await result.cleanup();
+  });
+
+  test('rejects a hostile ref before ever calling runGit', async () => {
+    const { runGit, calls } = fakeRunGit(() => ({ code: 0, stdout: '', stderr: '', timedOut: false }));
+    await assert.rejects(
+      () => cloneGitHub({ owner: 'a', repo: 'b', ref: '--upload-pack=/tmp/pwn.sh' }, { tmpRoot: os.tmpdir(), runGit }),
+    );
+    assert.strictEqual(calls.length, 0, 'runGit must never be invoked with a rejected ref');
   });
 
   test('never invokes a shell: git is always run with an argument array', async () => {

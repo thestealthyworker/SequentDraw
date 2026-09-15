@@ -30,6 +30,73 @@ const OWNER_RE = '[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})';
 const REPO_RE = '[A-Za-z0-9._-]{1,100}';
 const GITHUB_PATH_RE = new RegExp(`^/(${OWNER_RE})/(${REPO_RE}?)(\\.git)?(?:/tree/(.+))?$`);
 
+// --- ref validation -------------------------------------------------------
+//
+// The `/tree/<ref>` segment of a GitHub URL is still percent-encoded when
+// it comes out of GITHUB_PATH_RE (URL#pathname never decodes it). A ref
+// is later passed as a positional argument to `git fetch`, so validating
+// the still-encoded string (as an earlier version of this file did, by
+// checking refRaw.startsWith('-') / .includes('..') before decoding) is
+// a real injection hole: "%2D%2Dupload-pack%3D/tmp/pwn.sh" passes those
+// checks encoded, then decodes to "--upload-pack=/tmp/pwn.sh", which git
+// parses as an option, not a ref. validateRef() always decodes FIRST and
+// validates the decoded value; callers must never use refRaw directly.
+const REF_MAX_LENGTH = 200;
+const HEX_SHA_RE = /^[0-9a-f]{7,40}$/i;
+const REF_NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/;
+// Control characters (including NUL, tab, newline, DEL) and plain ASCII
+// space -- a ref has no legitimate use for any of them.
+const CONTROL_OR_WHITESPACE_RE = /[\x00-\x20\x7f]/;
+
+function validateRef(rawEncodedRef) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(rawEncodedRef);
+  } catch {
+    throw new Error('git-map: ref has invalid percent-encoding.');
+  }
+
+  if (decoded.length === 0) {
+    throw new Error('git-map: ref must not be empty.');
+  }
+  if (decoded.length > REF_MAX_LENGTH) {
+    throw new Error(`git-map: ref is ${decoded.length} characters, must be ${REF_MAX_LENGTH} or fewer.`);
+  }
+  // A decoded ref that still contains "%" was double-encoded
+  // ("%252D" -> "%2D") -- one decode pass was not enough to see its real
+  // content, so it is rejected rather than decoded again.
+  if (decoded.includes('%')) {
+    throw new Error('git-map: ref must not contain "%" after decoding (double-encoded refs are rejected).');
+  }
+  if (CONTROL_OR_WHITESPACE_RE.test(decoded)) {
+    throw new Error('git-map: ref must not contain control or whitespace characters.');
+  }
+  if (decoded.startsWith('-')) {
+    throw new Error('git-map: ref must not start with "-" (would be parsed as a git option).');
+  }
+
+  // A full or abbreviated hex commit SHA is always accepted.
+  if (HEX_SHA_RE.test(decoded)) return decoded;
+
+  // Otherwise, a git-style branch/tag name: see `git check-ref-format`
+  // for the real rule set -- this is a conservative allow-list subset of
+  // it, not a full reimplementation.
+  if (
+    !REF_NAME_RE.test(decoded) ||
+    decoded.includes('..') ||
+    decoded.includes('//') ||
+    decoded.includes('@{') ||
+    decoded.includes('\\') ||
+    decoded.endsWith('/') ||
+    decoded.endsWith('.') ||
+    decoded.split('/').some(segment => segment.endsWith('.lock'))
+  ) {
+    throw new Error(`git-map: ref ${JSON.stringify(truncateForError(decoded))} is not a valid git ref.`);
+  }
+
+  return decoded;
+}
+
 async function resolveLocalPath(rawInput) {
   const resolved = path.resolve(rawInput);
   let real;
@@ -87,13 +154,7 @@ function resolveGithubUrl(rawInput) {
     throw new Error(`git-map: invalid repository name in "${truncateForError(rawInput)}".`);
   }
 
-  let ref = null;
-  if (refRaw) {
-    if (refRaw.includes('..') || refRaw.startsWith('-')) {
-      throw new Error(`git-map: invalid ref in "${truncateForError(rawInput)}".`);
-    }
-    ref = decodeURIComponent(refRaw);
-  }
+  const ref = refRaw ? validateRef(refRaw) : null;
 
   return { type: 'github', owner, repo, ref, name: repo };
 }
@@ -127,12 +188,26 @@ const DEFAULT_MAX_BYTES = 200 * 1024 * 1024; // 200MB
 
 // The exact safe-clone posture from the design doc, reproduced as a
 // literal array so cloneGitHub()'s tests can assert on it precisely.
+// GIT_LFS_SKIP_SMUDGE=1 stops a globally installed git-lfs filter from
+// downloading LFS objects during checkout -- fetching arbitrary content
+// from a third-party LFS endpoint is exactly the kind of side effect the
+// design doc's "never execute/fetch anything the repo doesn't have to"
+// posture rules out.
 const GIT_SAFE_ENV = {
   GIT_TERMINAL_PROMPT: '0',
   GIT_CONFIG_NOSYSTEM: '1',
   GIT_ASKPASS: '',
+  GIT_LFS_SKIP_SMUDGE: '1',
 };
 
+// protocol.allow=never plus an explicit protocol.https.allow=always
+// switches every transport to deny-by-default and re-allows only the one
+// this module ever uses; protocol.file.allow / protocol.ext.allow=never
+// are kept too as belt-and-braces since they predate the deny-by-default
+// pair. submodule.recurse=false is a second, config-level backstop
+// behind --no-recurse-submodules (which only applies to `clone`, not the
+// init+fetch+checkout path used for a pinned ref). core.fsmonitor=false
+// stops git from launching a filesystem-watcher hook process.
 const GIT_SAFE_CONFIG_ARGS = [
   '-c',
   'core.hooksPath=/dev/null',
@@ -142,6 +217,14 @@ const GIT_SAFE_CONFIG_ARGS = [
   'protocol.ext.allow=never',
   '-c',
   'core.symlinks=false',
+  '-c',
+  'submodule.recurse=false',
+  '-c',
+  'core.fsmonitor=false',
+  '-c',
+  'protocol.allow=never',
+  '-c',
+  'protocol.https.allow=always',
 ];
 
 function buildEnv() {
@@ -219,6 +302,13 @@ async function cloneGitHub(
   { owner, repo, ref },
   { tmpRoot, timeoutMs = DEFAULT_TIMEOUT_MS, maxBytes = DEFAULT_MAX_BYTES, runGit = defaultRunGit } = {},
 ) {
+  // Defence in depth: re-validate even an already-decoded ref. A ref
+  // that passed validateRef() once contains no "%", so a second decode
+  // pass here is a no-op for a legitimate caller (resolveSource());
+  // this only matters for a caller that reaches cloneGitHub() directly
+  // with an untrusted ref, bypassing resolveSource() entirely.
+  const safeRef = ref ? validateRef(ref) : null;
+
   const root = tmpRoot || os.tmpdir();
   await fsp.mkdir(root, { recursive: true });
   const workDir = await fsp.mkdtemp(path.join(root, 'sequentdraw-git-map-'));
@@ -240,7 +330,7 @@ async function cloneGitHub(
   }
 
   try {
-    if (ref) {
+    if (safeRef) {
       await run([...GIT_SAFE_CONFIG_ARGS, 'init', workDir]);
       await run([
         ...GIT_SAFE_CONFIG_ARGS,
@@ -251,9 +341,14 @@ async function cloneGitHub(
         '1',
         '--no-tags',
         '--filter=blob:limit=1m',
+        '--',
         url,
-        ref,
+        safeRef,
       ]);
+      // The ref is never passed to checkout: FETCH_HEAD already points at
+      // exactly the commit `fetch` just resolved it to, so there is no
+      // second place for a validated-but-still-attacker-influenced ref
+      // string to reach a git invocation as an argument.
       await run([...GIT_SAFE_CONFIG_ARGS, '-C', workDir, 'checkout', '--detach', 'FETCH_HEAD']);
     } else {
       await run([
@@ -265,6 +360,7 @@ async function cloneGitHub(
         '--no-tags',
         '--no-recurse-submodules',
         '--filter=blob:limit=1m',
+        '--',
         url,
         workDir,
       ]);
@@ -275,7 +371,7 @@ async function cloneGitHub(
       throw new Error(`git-map: clone of ${owner}/${repo} is ${size} bytes, exceeding the ${maxBytes}-byte limit.`);
     }
 
-    let resolvedRef = ref || null;
+    let resolvedRef = safeRef || null;
     if (!resolvedRef) {
       const head = await run([...GIT_SAFE_CONFIG_ARGS, '-C', workDir, 'rev-parse', 'HEAD']);
       resolvedRef = head.stdout.trim() || null;
@@ -300,6 +396,7 @@ async function cloneGitHub(
 module.exports = {
   resolveSource,
   cloneGitHub,
+  validateRef,
   GIT_SAFE_ENV,
   GIT_SAFE_CONFIG_ARGS,
   dirSizeBytes,
