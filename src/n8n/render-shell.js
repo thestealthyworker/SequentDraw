@@ -2,7 +2,7 @@
 // inlined into the output file — no external requests, per docs/SPEC.md
 // ("Output ... No build step, no server, no dependencies").
 
-const { CANVAS_FILL } = require('./constants');
+const { CANVAS_FILL, NOTE_FONT_SIZE, NOTE_H1_SIZE, NOTE_H2_SIZE } = require('./constants');
 
 // Safe to serialise any value into an inline <script>: JSON.stringify alone
 // does not escape "<", so a string value containing "</script>" would
@@ -38,6 +38,15 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#333}
 .edge-stub{fill:#c4c4c4;stroke:#ffffff;stroke-width:1.5;display:none}
 .n8n-edge.show-stub-start .stub-start,
 .n8n-edge.show-stub-end .stub-end{display:block}
+
+.n8n-note rect{transition:opacity .15s}
+.note-text{font-size:${NOTE_FONT_SIZE}px;fill:#3a3a35;font-family:inherit}
+.note-text .note-h1{font-size:${NOTE_H1_SIZE}px;font-weight:700}
+.note-text .note-h2{font-size:${NOTE_H2_SIZE}px;font-weight:700}
+.note-bold{font-weight:700}
+.note-italic{font-style:italic}
+.note-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.note-text a{fill:#2f5fb0;text-decoration:underline;cursor:pointer}
 
 .hidden-by-layer{display:none}
 
@@ -168,6 +177,7 @@ function script(canvas) {
   var nodes = [].slice.call(document.querySelectorAll('.n8n-node'));
   var frames = [].slice.call(document.querySelectorAll('.n8n-frame'));
   var edges = [].slice.call(document.querySelectorAll('.n8n-edge'));
+  var notes = [].slice.call(document.querySelectorAll('.n8n-note'));
 
   function activeLayers(){
     var set = {};
@@ -203,6 +213,12 @@ function script(canvas) {
       e.classList.toggle('hidden-by-layer', !fromOn && !toOn);
       e.classList.toggle('show-stub-start', !fromOn && toOn);
       e.classList.toggle('show-stub-end', fromOn && !toOn);
+    });
+    // A note's visibility depends only on its own layers (same rule as a
+    // node — shown when any of its layers is active), independent of
+    // whatever it is attached to.
+    notes.forEach(function(n){
+      n.classList.toggle('hidden-by-layer', !nodeVisible(n, active));
     });
   }
 
