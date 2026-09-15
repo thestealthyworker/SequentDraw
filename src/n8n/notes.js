@@ -42,17 +42,17 @@ function overlaps(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-function nodeFootprint(box) {
-  return { x: box.x, y: box.y, w: box.w, h: box.h + LABEL_RESERVE };
+function nodeFootprint(box, labelReserve) {
+  return { x: box.x, y: box.y, w: box.w, h: box.h + (labelReserve == null ? LABEL_RESERVE : labelReserve) };
 }
 
-function contentBBox(nodeBoxes, frameBoxes) {
+function contentBBox(nodeBoxes, frameBoxes, labelReserve) {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
   Object.values(nodeBoxes).forEach(b => {
-    const fp = nodeFootprint(b);
+    const fp = nodeFootprint(b, labelReserve);
     minX = Math.min(minX, fp.x);
     minY = Math.min(minY, fp.y);
     maxX = Math.max(maxX, fp.x + fp.w);
@@ -71,14 +71,14 @@ function contentBBox(nodeBoxes, frameBoxes) {
 // Bounding box of a note's attached nodes/groups, including a node's
 // reserved label strip (per spec: "beside the bounding box of its attached
 // nodes/groups (including their label strips)").
-function attachTargetBox(attachTo, nodeBoxes, frameBoxes) {
+function attachTargetBox(attachTo, nodeBoxes, frameBoxes, labelReserve) {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
   attachTo.forEach(id => {
     if (nodeBoxes[id]) {
-      const fp = nodeFootprint(nodeBoxes[id]);
+      const fp = nodeFootprint(nodeBoxes[id], labelReserve);
       minX = Math.min(minX, fp.x);
       minY = Math.min(minY, fp.y);
       maxX = Math.max(maxX, fp.x + fp.w);
@@ -102,11 +102,13 @@ function boxForDirection(target, w, h, dir, offset) {
 }
 
 // note or map-level boxes -> { [noteId]: { x, y, w, h, color, mdLayout } }.
-function computeNoteBoxes(doc, nodeBoxes, frameBoxes) {
+// `labelReserve` defaults to the interactive LABEL_RESERVE; see
+// nodeFootprint above for why the doc-export pass passes a taller value.
+function computeNoteBoxes(doc, nodeBoxes, frameBoxes, labelReserve) {
   const notes = Array.isArray(doc.notes) ? doc.notes : [];
   if (!notes.length) return {};
 
-  const nodeFootprints = Object.values(nodeBoxes).map(nodeFootprint);
+  const nodeFootprints = Object.values(nodeBoxes).map(b => nodeFootprint(b, labelReserve));
   const frameTitleBoxes = frameTitleBoxesOf(doc.groups, frameBoxes);
   const frameEntries = Object.entries(frameBoxes).map(([id, f]) => ({ id, ...f }));
   const placed = []; // every note box placed so far this pass, always an obstacle for the next one
@@ -127,7 +129,7 @@ function computeNoteBoxes(doc, nodeBoxes, frameBoxes) {
   }
 
   const result = {};
-  const bbox = contentBBox(nodeBoxes, frameBoxes);
+  const bbox = contentBBox(nodeBoxes, frameBoxes, labelReserve);
   let topY = bbox.y; // successive map-level notes stack further up
 
   notes.forEach(note => {
@@ -146,7 +148,7 @@ function computeNoteBoxes(doc, nodeBoxes, frameBoxes) {
       topY = box.y;
     } else {
       const attachToSet = new Set(attachTo);
-      const target = attachTargetBox(attachTo, nodeBoxes, frameBoxes);
+      const target = attachTargetBox(attachTo, nodeBoxes, frameBoxes, labelReserve);
       const dirs = ['above', 'right', 'below', 'left'];
       box = null;
       for (const dir of dirs) {

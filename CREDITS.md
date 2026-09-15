@@ -19,6 +19,7 @@ React, Stripe, Redis, PostgreSQL, GitHub Actions and Jest.
 | Project | Used for | Licence |
 |---|---|---|
 | [ajv](https://github.com/ajv-validator/ajv) | Validates `schema/sequentdraw.schema.json` against fixtures in `tests/schema-parity.test.js`, proving the published JSON Schema agrees with `validateDoc()`. Dev-only: not a runtime dependency, not shipped in any rendered output. | MIT |
+| [@xmldom/xmldom](https://github.com/xmldom/xmldom) | Parses every SVG the documentation-export tests produce (`tests/n8n-doc-export.test.js`) to assert it is well-formed XML. Dev-only: not a runtime dependency, not shipped in any rendered output. Licence checked via `gh api repos/xmldom/xmldom/license` on 2026-09-15. | MIT |
 
 ## Design prior art
 

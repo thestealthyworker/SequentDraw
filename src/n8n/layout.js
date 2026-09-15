@@ -20,7 +20,8 @@ const { frameBoxFromMemberBoxes } = require('./frame-box');
 // Shares its bounding-box math with the viewer's runtime frame resize (see
 // frame-box.js's own header) so the two can never compute a different box
 // for the same set of members.
-function computeFrameBoxes(doc, nodeBoxes) {
+function computeFrameBoxes(doc, nodeBoxes, labelReserve) {
+  const reserve = labelReserve == null ? LABEL_RESERVE : labelReserve;
   // Object.create(null), not {}: a group id is author-controlled and
   // ID_RE allows "__proto__" as a legal id. Keying a plain {} by it would
   // silently reassign the object's prototype on write (no own property
@@ -31,7 +32,7 @@ function computeFrameBoxes(doc, nodeBoxes) {
     const memberIds = doc.nodes.filter(n => n.parentId === g.id).map(n => n.id);
     if (!memberIds.length) return;
     const memberBoxes = memberIds.map(id => nodeBoxes[id]);
-    const box = frameBoxFromMemberBoxes(memberBoxes, { labelReserve: LABEL_RESERVE, padding: GROUP_PADDING, grid: GRID });
+    const box = frameBoxFromMemberBoxes(memberBoxes, { labelReserve: reserve, padding: GROUP_PADDING, grid: GRID });
     frameBoxes[g.id] = { ...box, memberIds };
   });
   return frameBoxes;
@@ -43,9 +44,10 @@ function computeFrameBoxes(doc, nodeBoxes) {
 // sweep the result and push any node whose reserved footprint (its 96x96
 // shape plus the label strip below it) collides with another node straight
 // down until it clears — a small, deterministic, strategy-agnostic fixup.
-function resolveOverlaps(nodeBoxes) {
+function resolveOverlaps(nodeBoxes, labelReserve) {
+  const reserve = labelReserve == null ? LABEL_RESERVE : labelReserve;
   const ids = Object.keys(nodeBoxes);
-  const footprintH = id => nodeBoxes[id].h + LABEL_RESERVE;
+  const footprintH = id => nodeBoxes[id].h + reserve;
   for (let iter = 0; iter < 8; iter++) {
     let moved = false;
     for (let i = 0; i < ids.length; i++) {
@@ -180,7 +182,7 @@ function computeHandles(doc, nodeBoxes) {
   return handles;
 }
 
-function computeEdges(doc, handles, nodeBoxes, frameBoxes, noteBoxes) {
+function computeEdges(doc, handles, nodeBoxes, frameBoxes, noteBoxes, labelReserve) {
   // Object.create(null): same __proto__-as-a-legal-id hazard, keyed by
   // node id here.
   const byId = Object.create(null);
@@ -196,7 +198,7 @@ function computeEdges(doc, handles, nodeBoxes, frameBoxes, noteBoxes) {
   // to cross the small title-text area specifically, so unlike the frame
   // body there's no own-group carve-out for it. A note box is never exempt
   // either — no edge routes through a sticky note, own group's or not.
-  const allLabelBoxes = labelBoxesOf(nodeBoxes);
+  const allLabelBoxes = labelBoxesOf(nodeBoxes, labelReserve);
   const allFrameTitleBoxes = frameTitleBoxesOf(doc.groups, frameBoxes);
   const allNoteBoxes = Object.entries(noteBoxes || {}).map(([id, b]) => ({ id, x: b.x, y: b.y, w: b.w, h: b.h }));
 
@@ -225,7 +227,8 @@ function computeEdges(doc, handles, nodeBoxes, frameBoxes, noteBoxes) {
   });
 }
 
-function computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes) {
+function computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes, labelReserve) {
+  const reserve = labelReserve == null ? LABEL_RESERVE : labelReserve;
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -234,7 +237,7 @@ function computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes) {
     minX = Math.min(minX, b.x);
     minY = Math.min(minY, b.y);
     maxX = Math.max(maxX, b.x + b.w);
-    maxY = Math.max(maxY, b.y + b.h + LABEL_RESERVE);
+    maxY = Math.max(maxY, b.y + b.h + reserve);
   });
   Object.values(frameBoxes).forEach(f => {
     minX = Math.min(minX, f.x);
@@ -255,22 +258,27 @@ function computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes) {
   return { x, y, width, height };
 }
 
-async function layoutMap(doc) {
-  const validated = validateDoc(doc);
+// Runs the layout pipeline against an already-validated (or, for the
+// doc-export path, filtered-but-not-re-validated — see doc-filter.js) doc
+// shape, without calling validateDoc itself. `opts.labelReserve` lets a
+// caller grow the reserved label strip to also fit caption text; omitting
+// it reproduces the interactive layout's exact LABEL_RESERVE everywhere.
+async function layoutValidated(validated, opts = {}) {
+  const labelReserve = opts.labelReserve == null ? LABEL_RESERVE : opts.labelReserve;
 
-  const { nodeBoxes } = await layoutFlat(validated);
-  resolveOverlaps(nodeBoxes);
+  const { nodeBoxes } = await layoutFlat(validated, { labelReserve });
+  resolveOverlaps(nodeBoxes, labelReserve);
   resolveHorizontalCrowding(nodeBoxes);
-  resolveOverlaps(nodeBoxes);
+  resolveOverlaps(nodeBoxes, labelReserve);
 
-  const frameBoxes = computeFrameBoxes(validated, nodeBoxes);
+  const frameBoxes = computeFrameBoxes(validated, nodeBoxes, labelReserve);
   // Notes are placed before edges are routed — they are obstacles routing
   // must avoid, like label strips (see computeEdges above).
-  const noteBoxes = computeNoteBoxes(validated, nodeBoxes, frameBoxes);
+  const noteBoxes = computeNoteBoxes(validated, nodeBoxes, frameBoxes, labelReserve);
   const entrySet = computeEntrySet(validated);
   const handles = computeHandles(validated, nodeBoxes);
-  const edges = computeEdges(validated, handles, nodeBoxes, frameBoxes, noteBoxes);
-  const canvas = computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes);
+  const edges = computeEdges(validated, handles, nodeBoxes, frameBoxes, noteBoxes, labelReserve);
+  const canvas = computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes, labelReserve);
 
   return {
     nodeBoxes,
@@ -280,7 +288,13 @@ async function layoutMap(doc) {
     edges,
     entryIds: [...entrySet],
     canvas,
+    labelReserve,
   };
 }
 
-module.exports = { layoutMap };
+async function layoutMap(doc, opts = {}) {
+  const validated = validateDoc(doc);
+  return layoutValidated(validated, opts);
+}
+
+module.exports = { layoutMap, layoutValidated };

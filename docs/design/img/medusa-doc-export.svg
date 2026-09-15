@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-16 -296 4272 2033" width="4272" height="2033" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+<rect x="-16" y="-296" width="4272" height="2033" fill="#ffffff"/>
+<defs>
+<marker id="n8n-doc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+<path d="M2 1 L8 5 L2 9" fill="none" stroke="#c4c4c4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+<text x="16" y="-258.8" font-size="18" font-weight="600" fill="#161615">Medusa order return (RMA) flow</text>
+<g><g>
+<rect x="240" y="400" width="608" height="720" rx="4" fill="#EFEBFC" stroke="#8B7FD1" stroke-width="1"/>
+<text x="252" y="422" font-size="13" font-weight="600" fill="#4C3F91">Request</text>
+</g>
+<g>
+<rect x="976" y="512" width="1056" height="832" rx="4" fill="#E3F6F1" stroke="#3FA88F" stroke-width="1"/>
+<text x="988" y="534" font-size="13" font-weight="600" fill="#1F6B58">Order domain</text>
+</g>
+<g>
+<rect x="2160" y="528" width="1728" height="480" rx="4" fill="#FBEAE4" stroke="#D97757" stroke-width="1"/>
+<text x="2172" y="550" font-size="13" font-weight="600" fill="#9A4A2B">Fulfillment</text>
+</g>
+<g>
+<rect x="2160" y="0" width="832" height="496" rx="4" fill="#EAF6E9" stroke="#6FA766" stroke-width="1"/>
+<text x="2172" y="22" font-size="13" font-weight="600" fill="#3E6F37">Payment</text>
+</g>
+<g>
+<rect x="2160" y="1056" width="832" height="608" rx="4" fill="#F1F1EF" stroke="#9C9C97" stroke-width="1"/>
+<text x="2172" y="1078" font-size="13" font-weight="600" fill="#5B5B57">Platform</text>
+</g></g>
+<g><path d="M 112 1536 C 192 1536 192 720 272 720" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 112 960 C 192 960 192 960 272 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 368 720 C 432 720 432 720 496 720" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 368 960 C 432 960 432 960 496 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 592 720 C 656 720 656 512 720 512" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 592 960 C 656 960 656 960 720 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 816 512 C 912 512 912 960 1008 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 816 960 C 912 960 912 960 1008 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 592 496 C 656 496 656 512 720 512" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1104 960 C 1168 960 1168 960 1232 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1328 960 C 1392 960 1392 960 1456 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1552 960 C 1616 960 1616 1184 1680 1184" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1552 960 C 1616 960 1616 960 1680 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1328 960 L 1352 960 Q 1368 960 1368 944 L 1368 904 Q 1368 888 1384 888 L 2136 888 Q 2152 888 2152 872 L 2152 816 Q 2152 800 2168 800 L 2192 800" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2288 800 C 2352 800 2352 800 2416 800" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2512 800 C 2576 800 2576 800 2640 800" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2736 800 C 2800 800 2800 800 2864 800" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2960 800 C 3024 800 3024 800 3088 800" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 3184 800 C 3248 800 3248 800 3312 800" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 3408 800 C 3472 800 3472 816 3536 816" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 3632 816 L 3656 816 Q 3672 816 3672 832 L 3672 1672 Q 3672 1688 3656 1688 L 984 1688 Q 968 1688 968 1672 L 968 688 Q 968 672 984 672 L 1008 672" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 3632 816 C 3696 816 3696 624 3760 624" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 3632 816 C 3696 816 3696 848 3760 848" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 3856 624 L 3880 624 Q 3896 624 3896 640 L 3896 656 Q 3896 672 3880 672 L 1880 672 Q 1864 672 1864 656 L 1864 624 Q 1864 608 1880 608 L 1904 608" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1104 672 L 1128 672 Q 1144 672 1144 688 L 1144 1102 Q 1144 1118 1128 1118 L 696 1118 Q 680 1118 680 1102 L 680 976 Q 680 960 696 960 L 720 960" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1776 1184 C 1840 1184 1840 1184 1904 1184" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 3856 848 L 3880 848 Q 3896 848 3896 864 L 3896 1672 Q 3896 1688 3880 1688 L 1880 1688 Q 1864 1688 1864 1672 L 1864 1200 Q 1864 1184 1880 1184 L 1904 1184" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1328 960 L 1352 960 Q 1368 960 1368 944 L 1368 376 Q 1368 360 1384 360 L 2136 360 Q 2152 360 2152 344 L 2152 128 Q 2152 112 2168 112 L 2192 112" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2288 112 C 2352 112 2352 336 2416 336" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2512 336 L 2158 336 Q 2142 336 2142 352 L 2142 1672 Q 2142 1688 2126 1688 L 1880 1688 Q 1864 1688 1864 1672 L 1864 624 Q 1864 608 1880 608 L 1904 608" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2288 112 C 2352 112 2352 96 2416 96" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2512 96 C 2576 96 2576 96 2640 96" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2736 96 C 2800 96 2800 96 2864 96" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1328 960 C 1392 960 1392 736 1456 736" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1552 960 C 1616 960 1616 736 1680 736" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1328 960 L 1352 960 Q 1368 960 1368 976 L 1368 1326 Q 1368 1342 1384 1342 L 2136 1342 Q 2152 1342 2152 1358 L 2152 1488 Q 2152 1504 2168 1504 L 2192 1504" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2288 1504 C 2352 1504 2352 1488 2416 1488" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2288 1328 C 2352 1328 2352 1488 2416 1488" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2512 1488 L 2536 1488 Q 2552 1488 2552 1504 L 2552 1678 Q 2552 1694 2536 1694 L -8.000000000000002 1694 Q -24 1694 -24 1678 L -24 1552 Q -24 1536 -8 1536 L 16 1536" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 1328 960 L 1352 960 Q 1368 960 1368 976 L 1368 1646 Q 1368 1662 1384 1662 L 2808 1662 Q 2824 1662 2824 1646 L 2824 1216 Q 2824 1200 2840 1200 L 2864 1200" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2000 1184 L 2024 1184 Q 2040 1184 2040 1168 L 2040 1056 Q 2040 1040 2056 1040 L 2808 1040 Q 2824 1040 2824 1056 L 2824 1184 Q 2824 1200 2840 1200 L 2864 1200" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2736 1152 C 2800 1152 2800 1200 2864 1200" fill="none" stroke="#c4c4c4" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2288 1152 C 2352 1152 2352 1152 2416 1152" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/>
+<path d="M 2512 1152 C 2576 1152 2576 1152 2640 1152" fill="none" stroke="#c4c4c4" stroke-width="2"  marker-end="url(#n8n-doc-arrow)"/></g>
+<g><g>
+<path d="M 36 1488 L 92 1488 A 20 20 0 0 1 112 1508 L 112 1564 A 20 20 0 0 1 92 1584 L 36 1584 A 20 20 0 0 1 16 1564 L 16 1508 A 20 20 0 0 1 36 1488 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" stroke-dasharray="6 4"/>
+<g transform="translate(44 1516) scale(1.6666666666666667)"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 3v12M6 12h12" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="64" y="1602">Customer</tspan></text>
+<text x="64" y="1616" text-anchor="middle" font-size="13" fill="#77776f">buyer</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="64" y="1634">The buyer who purchased</tspan><tspan x="64" y="1648">the order and…</tspan></text>
+</g><circle cx="16" cy="1536" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="112" cy="1536" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 292 672 L 348 672 A 20 20 0 0 1 368 692 L 368 748 A 20 20 0 0 1 348 768 L 292 768 A 20 20 0 0 1 272 748 L 272 692 A 20 20 0 0 1 292 672 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(300 700) scale(1.6666666666666667)"><path d="M5 5h14v14H5zM9 9h6v6H9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="320" y="786">Request return</tspan></text>
+<text x="320" y="800" text-anchor="middle" font-size="13" fill="#77776f">from storefront</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="320" y="818">Storefront entry point</tspan><tspan x="320" y="832">where a…</tspan></text>
+</g><circle cx="272" cy="720" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="368" cy="720" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 292 912 L 348 912 A 20 20 0 0 1 368 932 L 368 988 A 20 20 0 0 1 348 1008 L 292 1008 A 20 20 0 0 1 272 988 L 272 932 A 20 20 0 0 1 292 912 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(300 940) scale(1.6666666666666667)"><path d="M5 5h14v14H5zM9 9h6v6H9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="320" y="1026">Create return</tspan></text>
+<text x="320" y="1040" text-anchor="middle" font-size="13" fill="#77776f">merchant in admin</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="320" y="1058">Admin entry point where</tspan><tspan x="320" y="1072">a merchant creates…</tspan></text>
+</g><circle cx="272" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="368" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 52 912 L 92 912 A 20 20 0 0 1 112 932 L 112 988 A 20 20 0 0 1 92 1008 L 52 1008 A 36 36 0 0 1 16 972 L 16 948 A 36 36 0 0 1 52 912 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(44 940) scale(1.6666666666666667)"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2-7 4.5V21h14v-2.5C19 16 16 14 12 14z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="64" y="1026">Merchant</tspan></text>
+<text x="64" y="1040" text-anchor="middle" font-size="13" fill="#77776f">store operator</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="64" y="1058">The store operator who</tspan><tspan x="64" y="1072">can create…</tspan></text>
+</g><circle cx="112" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2884 752 L 2940 752 A 20 20 0 0 1 2960 772 L 2960 828 A 20 20 0 0 1 2940 848 L 2884 848 A 20 20 0 0 1 2864 828 L 2864 772 A 20 20 0 0 1 2884 752 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2892 780) scale(1.6666666666666667)"><path d="M6 2h8l4 4v16H6V2zm8 0v5h5" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2912" y="866">Return label</tspan></text>
+<text x="2912" y="880" text-anchor="middle" font-size="13" fill="#77776f">shipping document</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2912" y="898">The shipping label and</tspan><tspan x="2912" y="912">instructions handed…</tspan></text>
+</g><circle cx="2864" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2960" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 3108 752 L 3164 752 A 20 20 0 0 1 3184 772 L 3184 828 A 20 20 0 0 1 3164 848 L 3108 848 A 20 20 0 0 1 3088 828 L 3088 772 A 20 20 0 0 1 3108 752 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(3116 780) scale(1.6666666666666667)"><path d="M5 5h14v14H5zM9 9h6v6H9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="3136" y="866">Ship items back</tspan></text>
+<text x="3136" y="880" text-anchor="middle" font-size="13" fill="#77776f">customer posts</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="3136" y="898">The customer posts the</tspan><tspan x="3136" y="912">parcel back to…</tspan></text>
+</g><circle cx="3088" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="3184" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 3332 752 L 3388 752 A 20 20 0 0 1 3408 772 L 3408 828 A 20 20 0 0 1 3388 848 L 3332 848 A 20 20 0 0 1 3312 828 L 3312 772 A 20 20 0 0 1 3332 752 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(3340 780) scale(1.6666666666666667)"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2-7 4.5V21h14v-2.5C19 16 16 14 12 14z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="3360" y="866">Receive parcel</tspan></text>
+<text x="3360" y="880" text-anchor="middle" font-size="13" fill="#77776f">at warehouse</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="3360" y="898">Warehouse staff log</tspan><tspan x="3360" y="912">that the parcel…</tspan></text>
+</g><circle cx="3312" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="3408" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 3556 768 L 3612 768 A 20 20 0 0 1 3632 788 L 3632 844 A 20 20 0 0 1 3612 864 L 3556 864 A 20 20 0 0 1 3536 844 L 3536 788 A 20 20 0 0 1 3556 768 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(3564 796) scale(1.6666666666666667)"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-4 0-7 2-7 4.5V21h14v-2.5C19 16 16 14 12 14z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="3584" y="882">Inspect items</tspan></text>
+<text x="3584" y="896" text-anchor="middle" font-size="13" fill="#77776f">condition check</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="3584" y="914">Warehouse staff check</tspan><tspan x="3584" y="928">the condition of…</tspan></text>
+</g><circle cx="3536" cy="816" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="3632" cy="816" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1028 624 L 1084 624 A 20 20 0 0 1 1104 644 L 1104 700 A 20 20 0 0 1 1084 720 L 1028 720 A 20 20 0 0 1 1008 700 L 1008 644 A 20 20 0 0 1 1028 624 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1036 652) scale(1.6666666666666667)"><path d="M5 5h14v14H5zM9 9h6v6H9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1056" y="738">Mark received</tspan></text>
+<text x="1056" y="752" text-anchor="middle" font-size="13" fill="#77776f">in admin</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1056" y="770">The merchant marks the</tspan><tspan x="1056" y="784">return received in…</tspan></text>
+</g><circle cx="1008" cy="672" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="1104" cy="672" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2884 48 L 2940 48 A 20 20 0 0 1 2960 68 L 2960 124 A 20 20 0 0 1 2940 144 L 2884 144 A 20 20 0 0 1 2864 124 L 2864 68 A 20 20 0 0 1 2884 48 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2892 76) scale(1.6666666666666667)"><path d="M6 2h8l4 4v16H6V2zm8 0v5h5" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2912" y="162">Refund issued</tspan></text>
+<text x="2912" y="176" text-anchor="middle" font-size="13" fill="#77776f">money returned</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2912" y="194">The flow's final</tspan><tspan x="2912" y="208">artifact: money…</tspan></text>
+</g><circle cx="2864" cy="96" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 516 672 L 572 672 A 20 20 0 0 1 592 692 L 592 748 A 20 20 0 0 1 572 768 L 516 768 A 20 20 0 0 1 496 748 L 496 692 A 20 20 0 0 1 516 672 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(520 696) scale(2)"><path d="M18.665 21.978C16.758 23.255 14.465 24 12 24 5.377 24 0 18.623 0 12S5.377 0 12 0s12 5.377 12 12c0 3.583-1.574 6.801-4.067 9.001L9.219 7.2H7.2v9.596h1.615V9.251l9.85 12.727Zm-3.332-8.533 1.6 2.061V7.2h-1.6v6.245Z" fill="#000000"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="544" y="786">Storefront</tspan></text>
+<text x="544" y="800" text-anchor="middle" font-size="13" fill="#77776f">Next.js</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="544" y="818">Next.js storefront the</tspan><tspan x="544" y="832">customer uses…</tspan></text>
+</g><circle cx="496" cy="720" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="592" cy="720" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 516 912 L 572 912 A 20 20 0 0 1 592 932 L 592 988 A 20 20 0 0 1 572 1008 L 516 1008 A 20 20 0 0 1 496 988 L 496 932 A 20 20 0 0 1 516 912 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(520 936) scale(2)"><path d="M14.23 12.004a2.236 2.236 0 0 1-2.235 2.236 2.236 2.236 0 0 1-2.236-2.236 2.236 2.236 0 0 1 2.235-2.236 2.236 2.236 0 0 1 2.236 2.236zm2.648-10.69c-1.346 0-3.107.96-4.888 2.622-1.78-1.653-3.542-2.602-4.887-2.602-.41 0-.783.093-1.106.278-1.375.793-1.683 3.264-.973 6.365C1.98 8.917 0 10.42 0 12.004c0 1.59 1.99 3.097 5.043 4.03-.704 3.113-.39 5.588.988 6.38.32.187.69.275 1.102.275 1.345 0 3.107-.96 4.888-2.624 1.78 1.654 3.542 2.603 4.887 2.603.41 0 .783-.09 1.106-.275 1.374-.792 1.683-3.263.973-6.365C22.02 15.096 24 13.59 24 12.004c0-1.59-1.99-3.097-5.043-4.032.704-3.11.39-5.587-.988-6.38-.318-.184-.688-.277-1.092-.278zm-.005 1.09v.006c.225 0 .406.044.558.127.666.382.955 1.835.73 3.704-.054.46-.142.945-.25 1.44-.96-.236-2.006-.417-3.107-.534-.66-.905-1.345-1.727-2.035-2.447 1.592-1.48 3.087-2.292 4.105-2.295zm-9.77.02c1.012 0 2.514.808 4.11 2.28-.686.72-1.37 1.537-2.02 2.442-1.107.117-2.154.298-3.113.538-.112-.49-.195-.964-.254-1.42-.23-1.868.054-3.32.714-3.707.19-.09.4-.127.563-.132zm4.882 3.05c.455.468.91.992 1.36 1.564-.44-.02-.89-.034-1.345-.034-.46 0-.915.01-1.36.034.44-.572.895-1.096 1.345-1.565zM12 8.1c.74 0 1.477.034 2.202.093.406.582.802 1.203 1.183 1.86.372.64.71 1.29 1.018 1.946-.308.655-.646 1.31-1.013 1.95-.38.66-.773 1.288-1.18 1.87-.728.063-1.466.098-2.21.098-.74 0-1.477-.035-2.202-.093-.406-.582-.802-1.204-1.183-1.86-.372-.64-.71-1.29-1.018-1.946.303-.657.646-1.313 1.013-1.954.38-.66.773-1.286 1.18-1.868.728-.064 1.466-.098 2.21-.098zm-3.635.254c-.24.377-.48.763-.704 1.16-.225.39-.435.782-.635 1.174-.265-.656-.49-1.31-.676-1.947.64-.15 1.315-.283 2.015-.386zm7.26 0c.695.103 1.365.23 2.006.387-.18.632-.405 1.282-.66 1.933-.2-.39-.41-.783-.64-1.174-.225-.392-.465-.774-.705-1.146zm3.063.675c.484.15.944.317 1.375.498 1.732.74 2.852 1.708 2.852 2.476-.005.768-1.125 1.74-2.857 2.475-.42.18-.88.342-1.355.493-.28-.958-.646-1.956-1.1-2.98.45-1.017.81-2.01 1.085-2.964zm-13.395.004c.278.96.645 1.957 1.1 2.98-.45 1.017-.812 2.01-1.086 2.964-.484-.15-.944-.318-1.37-.5-1.732-.737-2.852-1.706-2.852-2.474 0-.768 1.12-1.742 2.852-2.476.42-.18.88-.342 1.356-.494zm11.678 4.28c.265.657.49 1.312.676 1.948-.64.157-1.316.29-2.016.39.24-.375.48-.762.705-1.158.225-.39.435-.788.636-1.18zm-9.945.02c.2.392.41.783.64 1.175.23.39.465.772.705 1.143-.695-.102-1.365-.23-2.006-.386.18-.63.406-1.282.66-1.933zM17.92 16.32c.112.493.2.968.254 1.423.23 1.868-.054 3.32-.714 3.708-.147.09-.338.128-.563.128-1.012 0-2.514-.807-4.11-2.28.686-.72 1.37-1.536 2.02-2.44 1.107-.118 2.154-.3 3.113-.54zm-11.83.01c.96.234 2.006.415 3.107.532.66.905 1.345 1.727 2.035 2.446-1.595 1.483-3.092 2.295-4.11 2.295-.22-.005-.406-.05-.553-.132-.666-.38-.955-1.834-.73-3.703.054-.46.142-.944.25-1.438zm4.56.64c.44.02.89.034 1.345.034.46 0 .915-.01 1.36-.034-.44.572-.895 1.095-1.345 1.565-.455-.47-.91-.993-1.36-1.565z" fill="#61DAFB"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="544" y="1026">Admin dashboard</tspan></text>
+<text x="544" y="1040" text-anchor="middle" font-size="13" fill="#77776f">merchant UI</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="544" y="1058">React admin dashboard</tspan><tspan x="544" y="1072">the merchant uses…</tspan></text>
+</g><circle cx="496" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="592" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 740 464 L 796 464 A 20 20 0 0 1 816 484 L 816 540 A 20 20 0 0 1 796 560 L 740 560 A 20 20 0 0 1 720 540 L 720 484 A 20 20 0 0 1 740 464 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(748 492) scale(1.6666666666666667)"><path d="M4 6h16v5H4zM4 13h16v5H4zM7 8.5h.01M7 15.5h.01" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="768" y="578">Store API</tspan></text>
+<text x="768" y="592" text-anchor="middle" font-size="13" fill="#77776f">public routes</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="768" y="610">Public-facing routes</tspan><tspan x="768" y="624">the storefront…</tspan></text>
+</g><circle cx="720" cy="512" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="816" cy="512" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 740 912 L 796 912 A 20 20 0 0 1 816 932 L 816 988 A 20 20 0 0 1 796 1008 L 740 1008 A 20 20 0 0 1 720 988 L 720 932 A 20 20 0 0 1 740 912 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(748 940) scale(1.6666666666666667)"><path d="M4 6h16v5H4zM4 13h16v5H4zM7 8.5h.01M7 15.5h.01" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="768" y="1026">Admin API</tspan></text>
+<text x="768" y="1040" text-anchor="middle" font-size="13" fill="#77776f">authenticated</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="768" y="1058">Authenticated routes</tspan><tspan x="768" y="1072">the admin…</tspan></text>
+</g><circle cx="720" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="816" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1028 912 L 1084 912 A 20 20 0 0 1 1104 932 L 1104 988 A 20 20 0 0 1 1084 1008 L 1028 1008 A 20 20 0 0 1 1008 988 L 1008 932 A 20 20 0 0 1 1028 912 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1036 940) scale(1.6666666666666667)"><path d="M4 6h16v5H4zM4 13h16v5H4zM7 8.5h.01M7 15.5h.01" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1056" y="1026">Workflow engine</tspan></text>
+<text x="1056" y="1040" text-anchor="middle" font-size="13" fill="#77776f">orchestration</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1056" y="1058">Medusa's workflow</tspan><tspan x="1056" y="1072">engine orchestrates…</tspan></text>
+</g><circle cx="1008" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="1104" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1252 912 L 1308 912 A 20 20 0 0 1 1328 932 L 1328 988 A 20 20 0 0 1 1308 1008 L 1252 1008 A 20 20 0 0 1 1232 988 L 1232 932 A 20 20 0 0 1 1252 912 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1260 940) scale(1.6666666666666667)"><path d="M4 6h16v5H4zM4 13h16v5H4zM7 8.5h.01M7 15.5h.01" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1280" y="1026">Order module</tspan></text>
+<text x="1280" y="1040" text-anchor="middle" font-size="13" fill="#77776f">lifecycle</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1280" y="1058">Owns order lifecycle</tspan><tspan x="1280" y="1072">state and…</tspan></text>
+</g><circle cx="1232" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="1328" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1476 912 L 1532 912 A 20 20 0 0 1 1552 932 L 1552 988 A 20 20 0 0 1 1532 1008 L 1476 1008 A 20 20 0 0 1 1456 988 L 1456 932 A 20 20 0 0 1 1476 912 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1484 940) scale(1.6666666666666667)"><path d="M6 2h8l4 4v16H6V2zm8 0v5h5" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1504" y="1026">Return model</tspan></text>
+<text x="1504" y="1040" text-anchor="middle" font-size="13" fill="#77776f">return record</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1504" y="1058">The Return record</tspan><tspan x="1504" y="1072">created when a…</tspan></text>
+</g><circle cx="1456" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="1552" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1700 1136 L 1756 1136 A 20 20 0 0 1 1776 1156 L 1776 1212 A 20 20 0 0 1 1756 1232 L 1700 1232 A 20 20 0 0 1 1680 1212 L 1680 1156 A 20 20 0 0 1 1700 1136 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1708 1164) scale(1.6666666666666667)"><path d="M6 2h8l4 4v16H6V2zm8 0v5h5" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1728" y="1250">ReturnItem</tspan></text>
+<text x="1728" y="1264" text-anchor="middle" font-size="13" fill="#77776f">per line item</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1728" y="1282">One line item on the</tspan><tspan x="1728" y="1296">return record,…</tspan></text>
+</g><circle cx="1680" cy="1184" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="1776" cy="1184" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1700 912 L 1756 912 A 20 20 0 0 1 1776 932 L 1776 988 A 20 20 0 0 1 1756 1008 L 1700 1008 A 20 20 0 0 1 1680 988 L 1680 932 A 20 20 0 0 1 1700 912 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1708 940) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1728" y="1026">Version bump</tspan></text>
+<text x="1728" y="1040" text-anchor="middle" font-size="13" fill="#77776f">request and receipt</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1728" y="1058">Bumped on request and</tspan><tspan x="1728" y="1072">again on receipt,…</tspan></text>
+</g><circle cx="1680" cy="960" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2212 752 L 2268 752 A 20 20 0 0 1 2288 772 L 2288 828 A 20 20 0 0 1 2268 848 L 2212 848 A 20 20 0 0 1 2192 828 L 2192 772 A 20 20 0 0 1 2212 752 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2220 780) scale(1.6666666666666667)"><path d="M4 6h16v5H4zM4 13h16v5H4zM7 8.5h.01M7 15.5h.01" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2240" y="866">Fulfillment</tspan><tspan x="2240" y="882">module</tspan></text>
+<text x="2240" y="896" text-anchor="middle" font-size="13" fill="#77776f">shipping</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2240" y="914">Owns shipment state,</tspan><tspan x="2240" y="928">including the…</tspan></text>
+</g><circle cx="2192" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2288" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2436 752 L 2492 752 A 20 20 0 0 1 2512 772 L 2512 828 A 20 20 0 0 1 2492 848 L 2436 848 A 20 20 0 0 1 2416 828 L 2416 772 A 20 20 0 0 1 2436 752 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2444 780) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2464" y="866">Return option</tspan></text>
+<text x="2464" y="880" text-anchor="middle" font-size="13" fill="#77776f">is_return rule</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2464" y="898">Evaluates the</tspan><tspan x="2464" y="912">fulfillment…</tspan></text>
+</g><circle cx="2416" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2512" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2660 752 L 2716 752 A 20 20 0 0 1 2736 772 L 2736 828 A 20 20 0 0 1 2716 848 L 2660 848 A 20 20 0 0 1 2640 828 L 2640 772 A 20 20 0 0 1 2660 752 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" stroke-dasharray="6 4"/>
+<g transform="translate(2668 780) scale(1.6666666666666667)"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 3v12M6 12h12" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2688" y="866">Fulfillment</tspan><tspan x="2688" y="882">provider</tspan></text>
+<text x="2688" y="896" text-anchor="middle" font-size="13" fill="#77776f">carrier</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2688" y="914">The external carrier</tspan><tspan x="2688" y="928">that generates…</tspan></text>
+</g><circle cx="2640" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2736" cy="800" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1924 1136 L 1980 1136 A 20 20 0 0 1 2000 1156 L 2000 1212 A 20 20 0 0 1 1980 1232 L 1924 1232 A 20 20 0 0 1 1904 1212 L 1904 1156 A 20 20 0 0 1 1924 1136 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1932 1164) scale(1.6666666666666667)"><path d="M4 6h16v5H4zM4 13h16v5H4zM7 8.5h.01M7 15.5h.01" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1952" y="1250">Inventory module</tspan></text>
+<text x="1952" y="1264" text-anchor="middle" font-size="13" fill="#77776f">stock levels</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1952" y="1282">Adjusts stock levels</tspan><tspan x="1952" y="1296">once returned items…</tspan></text>
+</g><circle cx="1904" cy="1184" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2000" cy="1184" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2212 64 L 2268 64 A 20 20 0 0 1 2288 84 L 2288 140 A 20 20 0 0 1 2268 160 L 2212 160 A 20 20 0 0 1 2192 140 L 2192 84 A 20 20 0 0 1 2212 64 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2220 92) scale(1.6666666666666667)"><path d="M4 6h16v5H4zM4 13h16v5H4zM7 8.5h.01M7 15.5h.01" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2240" y="178">Payment module</tspan></text>
+<text x="2240" y="192" text-anchor="middle" font-size="13" fill="#77776f">refunds</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2240" y="210">Owns refund logic and</tspan><tspan x="2240" y="224">enforces the…</tspan></text>
+</g><circle cx="2192" cy="112" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2288" cy="112" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2436 48 L 2492 48 A 20 20 0 0 1 2512 68 L 2512 124 A 20 20 0 0 1 2492 144 L 2436 144 A 20 20 0 0 1 2416 124 L 2416 68 A 20 20 0 0 1 2436 48 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2440 72) scale(2)"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z" fill="#635BFF"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2464" y="162">Payment provider</tspan></text>
+<text x="2464" y="176" text-anchor="middle" font-size="13" fill="#77776f">Stripe</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2464" y="194">Stripe issues the</tspan><tspan x="2464" y="208">refund to…</tspan></text>
+</g><circle cx="2416" cy="96" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2512" cy="96" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2660 48 L 2716 48 A 20 20 0 0 1 2736 68 L 2736 124 A 20 20 0 0 1 2716 144 L 2660 144 A 20 20 0 0 1 2640 124 L 2640 68 A 20 20 0 0 1 2660 48 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2668 76) scale(1.6666666666666667)"><path d="M6 2h8l4 4v16H6V2zm8 0v5h5" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2688" y="162">OrderTransaction</tspan></text>
+<text x="2688" y="176" text-anchor="middle" font-size="13" fill="#77776f">refund record</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2688" y="194">The OrderTransaction</tspan><tspan x="2688" y="208">record created for…</tspan></text>
+</g><circle cx="2640" cy="96" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2736" cy="96" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2212 1456 L 2268 1456 A 20 20 0 0 1 2288 1476 L 2288 1532 A 20 20 0 0 1 2268 1552 L 2212 1552 A 20 20 0 0 1 2192 1532 L 2192 1476 A 20 20 0 0 1 2212 1456 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2216 1480) scale(2)"><path d="M22.71 13.145c-1.66 2.092-3.452 4.483-7.038 4.483-3.203 0-4.397-2.825-4.48-5.12.701 1.484 2.073 2.685 4.214 2.63 4.117-.133 6.94-3.852 6.94-7.239 0-4.05-3.022-6.972-8.268-6.972-3.752 0-8.4 1.428-11.455 3.685C2.59 6.937 3.885 9.958 4.35 9.626c2.648-1.904 4.748-3.13 6.784-3.744C8.12 9.244.886 17.05 0 18.425c.1 1.261 1.66 4.648 2.424 4.648.232 0 .431-.133.664-.365a100.49 100.49 0 0 0 5.54-6.765c.222 3.104 1.748 6.898 6.014 6.898 3.819 0 7.604-2.756 9.33-8.965.2-.764-.73-1.361-1.261-.73zm-4.349-5.013c0 1.959-1.926 2.922-3.685 2.922-.941 0-1.664-.247-2.235-.568 1.051-1.592 2.092-3.225 3.21-4.973 1.972.334 2.71 1.43 2.71 2.619z" fill="#FF4438"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2240" y="1570">Event bus</tspan></text>
+<text x="2240" y="1584" text-anchor="middle" font-size="13" fill="#77776f">Redis</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2240" y="1602">Redis-backed event bus</tspan><tspan x="2240" y="1616">that decouples…</tspan></text>
+</g><circle cx="2192" cy="1504" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2288" cy="1504" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2436 1440 L 2492 1440 A 20 20 0 0 1 2512 1460 L 2512 1516 A 20 20 0 0 1 2492 1536 L 2436 1536 A 20 20 0 0 1 2416 1516 L 2416 1460 A 20 20 0 0 1 2436 1440 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2444 1468) scale(1.6666666666666667)"><path d="M4 6h16v5H4zM4 13h16v5H4zM7 8.5h.01M7 15.5h.01" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2464" y="1554">Notification</tspan><tspan x="2464" y="1570">module</tspan></text>
+<text x="2464" y="1584" text-anchor="middle" font-size="13" fill="#77776f">customer updates</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2464" y="1602">Sends the</tspan><tspan x="2464" y="1616">customer-facing…</tspan></text>
+</g><circle cx="2416" cy="1488" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2512" cy="1488" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2884 1152 L 2940 1152 A 20 20 0 0 1 2960 1172 L 2960 1228 A 20 20 0 0 1 2940 1248 L 2884 1248 A 20 20 0 0 1 2864 1228 L 2864 1172 A 20 20 0 0 1 2884 1152 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2888 1176) scale(2)"><path d="M23.5594 14.7228a.5269.5269 0 0 0-.0563-.1191c-.139-.2632-.4768-.3418-1.0074-.2321-1.6533.3411-2.2935.1312-2.5256-.0191 1.342-2.0482 2.445-4.522 3.0411-6.8297.2714-1.0507.7982-3.5237.1222-4.7316a1.5641 1.5641 0 0 0-.1509-.235C21.6931.9086 19.8007.0248 17.5099.0005c-1.4947-.0158-2.7705.3461-3.1161.4794a9.449 9.449 0 0 0-.5159-.0816 8.044 8.044 0 0 0-1.3114-.1278c-1.1822-.0184-2.2038.2642-3.0498.8406-.8573-.3211-4.7888-1.645-7.2219.0788C.9359 2.1526.3086 3.8733.4302 6.3043c.0409.818.5069 3.334 1.2423 5.7436.4598 1.5065.9387 2.7019 1.4334 3.582.553.9942 1.1259 1.5933 1.7143 1.7895.4474.1491 1.1327.1441 1.8581-.7279.8012-.9635 1.5903-1.8258 1.9446-2.2069.4351.2355.9064.3625 1.39.3772a.0569.0569 0 0 0 .0004.0041 11.0312 11.0312 0 0 0-.2472.3054c-.3389.4302-.4094.5197-1.5002.7443-.3102.064-1.1344.2339-1.1464.8115-.0025.1224.0329.2309.0919.3268.2269.4231.9216.6097 1.015.6331 1.3345.3335 2.5044.092 3.3714-.6787-.017 2.231.0775 4.4174.3454 5.0874.2212.5529.7618 1.9045 2.4692 1.9043.2505 0 .5263-.0291.8296-.0941 1.7819-.3821 2.5557-1.1696 2.855-2.9059.1503-.8707.4016-2.8753.5388-4.1012.0169-.0703.0357-.1207.057-.1362.0007-.0005.0697-.0471.4272.0307a.3673.3673 0 0 0 .0443.0068l.2539.0223.0149.001c.8468.0384 1.9114-.1426 2.5312-.4308.6438-.2988 1.8057-1.0323 1.5951-1.6698zM2.371 11.8765c-.7435-2.4358-1.1779-4.8851-1.2123-5.5719-.1086-2.1714.4171-3.6829 1.5623-4.4927 1.8367-1.2986 4.8398-.5408 6.108-.13-.0032.0032-.0066.0061-.0098.0094-2.0238 2.044-1.9758 5.536-1.9708 5.7495-.0002.0823.0066.1989.0162.3593.0348.5873.0996 1.6804-.0735 2.9184-.1609 1.1504.1937 2.2764.9728 3.0892.0806.0841.1648.1631.2518.2374-.3468.3714-1.1004 1.1926-1.9025 2.1576-.5677.6825-.9597.5517-1.0886.5087-.3919-.1307-.813-.5871-1.2381-1.3223-.4796-.839-.9635-2.0317-1.4155-3.5126zm6.0072 5.0871c-.1711-.0428-.3271-.1132-.4322-.1772.0889-.0394.2374-.0902.4833-.1409 1.2833-.2641 1.4815-.4506 1.9143-1.0002.0992-.126.2116-.2687.3673-.4426a.3549.3549 0 0 0 .0737-.1298c.1708-.1513.2724-.1099.4369-.0417.156.0646.3078.26.3695.4752.0291.1016.0619.2945-.0452.4444-.9043 1.2658-2.2216 1.2494-3.1676 1.0128zm2.094-3.988-.0525.141c-.133.3566-.2567.6881-.3334 1.003-.6674-.0021-1.3168-.2872-1.8105-.8024-.6279-.6551-.9131-1.5664-.7825-2.5004.1828-1.3079.1153-2.4468.079-3.0586-.005-.0857-.0095-.1607-.0122-.2199.2957-.2621 1.6659-.9962 2.6429-.7724.4459.1022.7176.4057.8305.928.5846 2.7038.0774 3.8307-.3302 4.7363-.084.1866-.1633.3629-.2311.5454zm7.3637 4.5725c-.0169.1768-.0358.376-.0618.5959l-.146.4383a.3547.3547 0 0 0-.0182.1077c-.0059.4747-.054.6489-.115.8693-.0634.2292-.1353.4891-.1794 1.0575-.11 1.4143-.8782 2.2267-2.4172 2.5565-1.5155.3251-1.7843-.4968-2.0212-1.2217a6.5824 6.5824 0 0 0-.0769-.2266c-.2154-.5858-.1911-1.4119-.1574-2.5551.0165-.5612-.0249-1.9013-.3302-2.6462.0044-.2932.0106-.5909.019-.8918a.3529.3529 0 0 0-.0153-.1126 1.4927 1.4927 0 0 0-.0439-.208c-.1226-.4283-.4213-.7866-.7797-.9351-.1424-.059-.4038-.1672-.7178-.0869.067-.276.1831-.5875.309-.9249l.0529-.142c.0595-.16.134-.3257.213-.5012.4265-.9476 1.0106-2.2453.3766-5.1772-.2374-1.0981-1.0304-1.6343-2.2324-1.5098-.7207.0746-1.3799.3654-1.7088.5321a5.6716 5.6716 0 0 0-.1958.1041c.0918-1.1064.4386-3.1741 1.7357-4.4823a4.0306 4.0306 0 0 1 .3033-.276.3532.3532 0 0 0 .1447-.0644c.7524-.5706 1.6945-.8506 2.802-.8325.4091.0067.8017.0339 1.1742.081 1.939.3544 3.2439 1.4468 4.0359 2.3827.8143.9623 1.2552 1.9315 1.4312 2.4543-1.3232-.1346-2.2234.1268-2.6797.779-.9926 1.4189.543 4.1729 1.2811 5.4964.1353.2426.2522.4522.2889.5413.2403.5825.5515.9713.7787 1.2552.0696.087.1372.1714.1885.245-.4008.1155-1.1208.3825-1.0552 1.717-.0123.1563-.0423.4469-.0834.8148-.0461.2077-.0702.4603-.0994.7662zm.8905-1.6211c-.0405-.8316.2691-.9185.5967-1.0105a2.8566 2.8566 0 0 0 .135-.0406 1.202 1.202 0 0 0 .1342.103c.5703.3765 1.5823.4213 3.0068.1344-.2016.1769-.5189.3994-.9533.6011-.4098.1903-1.0957.333-1.7473.3636-.7197.0336-1.0859-.0807-1.1721-.151zm.5695-9.2712c-.0059.3508-.0542.6692-.1054 1.0017-.055.3576-.112.7274-.1264 1.1762-.0142.4368.0404.8909.0932 1.3301.1066.887.216 1.8003-.2075 2.7014a3.5272 3.5272 0 0 1-.1876-.3856c-.0527-.1276-.1669-.3326-.3251-.6162-.6156-1.1041-2.0574-3.6896-1.3193-4.7446.3795-.5427 1.3408-.5661 2.1781-.463zm.2284 7.0137a12.3762 12.3762 0 0 0-.0853-.1074l-.0355-.0444c.7262-1.1995.5842-2.3862.4578-3.4385-.0519-.4318-.1009-.8396-.0885-1.2226.0129-.4061.0666-.7543.1185-1.0911.0639-.415.1288-.8443.1109-1.3505.0134-.0531.0188-.1158.0118-.1902-.0457-.4855-.5999-1.938-1.7294-3.253-.6076-.7073-1.4896-1.4972-2.6889-2.0395.5251-.1066 1.2328-.2035 2.0244-.1859 2.0515.0456 3.6746.8135 4.8242 2.2824a.908.908 0 0 1 .0667.1002c.7231 1.3556-.2762 6.2751-2.9867 10.5405zm-8.8166-6.1162c-.025.1794-.3089.4225-.6211.4225a.5821.5821 0 0 1-.0809-.0056c-.1873-.026-.3765-.144-.5059-.3156-.0458-.0605-.1203-.178-.1055-.2844.0055-.0401.0261-.0985.0925-.1488.1182-.0894.3518-.1226.6096-.0867.3163.0441.6426.1938.6113.4186zm7.9305-.4114c.0111.0792-.049.201-.1531.3102-.0683.0717-.212.1961-.4079.2232a.5456.5456 0 0 1-.075.0052c-.2935 0-.5414-.2344-.5607-.3717-.024-.1765.2641-.3106.5611-.352.297-.0414.6111.0088.6356.1851z" fill="#4169E1"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2912" y="1266">Postgres</tspan></text>
+<text x="2912" y="1280" text-anchor="middle" font-size="13" fill="#77776f">persistence</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2912" y="1298">System of record for</tspan><tspan x="2912" y="1312">orders,…</tspan></text>
+</g><circle cx="2864" cy="1200" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 532 448 L 572 448 A 20 20 0 0 1 592 468 L 592 524 A 20 20 0 0 1 572 544 L 532 544 A 36 36 0 0 1 496 508 L 496 484 A 36 36 0 0 1 532 448 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(524 476) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="544" y="562">Guest return</tspan></text>
+<text x="544" y="576" text-anchor="middle" font-size="13" fill="#77776f">no auth required</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="544" y="594">A guest-checkout order</tspan><tspan x="544" y="608">can request a…</tspan></text>
+</g><circle cx="592" cy="496" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 3780 576 L 3836 576 A 20 20 0 0 1 3856 596 L 3856 652 A 20 20 0 0 1 3836 672 L 3780 672 A 20 20 0 0 1 3760 652 L 3760 596 A 20 20 0 0 1 3780 576 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(3788 604) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="3808" y="690">Item mismatch</tspan></text>
+<text x="3808" y="704" text-anchor="middle" font-size="13" fill="#77776f">sent vs received</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="3808" y="722">Raised when the items</tspan><tspan x="3808" y="736">received do not…</tspan></text>
+</g><circle cx="3760" cy="624" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="3856" cy="624" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 3780 800 L 3836 800 A 20 20 0 0 1 3856 820 L 3856 876 A 20 20 0 0 1 3836 896 L 3780 896 A 20 20 0 0 1 3760 876 L 3760 820 A 20 20 0 0 1 3780 800 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(3788 828) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="3808" y="914">Damaged quantity</tspan></text>
+<text x="3808" y="928" text-anchor="middle" font-size="13" fill="#77776f">not resellable</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="3808" y="946">Raised when returned</tspan><tspan x="3808" y="960">stock is not…</tspan></text>
+</g><circle cx="3760" cy="848" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="3856" cy="848" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1924 560 L 1980 560 A 20 20 0 0 1 2000 580 L 2000 636 A 20 20 0 0 1 1980 656 L 1924 656 A 20 20 0 0 1 1904 636 L 1904 580 A 20 20 0 0 1 1924 560 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1932 588) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1952" y="674">requires_action</tspan></text>
+<text x="1952" y="688" text-anchor="middle" font-size="13" fill="#77776f">process halts</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1952" y="706">A human must intervene</tspan><tspan x="1952" y="720">before the flow…</tspan></text>
+</g><circle cx="1904" cy="608" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2436 288 L 2492 288 A 20 20 0 0 1 2512 308 L 2512 364 A 20 20 0 0 1 2492 384 L 2436 384 A 20 20 0 0 1 2416 364 L 2416 308 A 20 20 0 0 1 2436 288 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2444 316) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2464" y="402">Refund exceeds</tspan><tspan x="2464" y="418">cap</tspan></text>
+<text x="2464" y="432" text-anchor="middle" font-size="13" fill="#77776f">validation</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2464" y="450">Validates the computed</tspan><tspan x="2464" y="464">refund amount…</tspan></text>
+</g><circle cx="2416" cy="336" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2512" cy="336" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1476 688 L 1532 688 A 20 20 0 0 1 1552 708 L 1552 764 A 20 20 0 0 1 1532 784 L 1476 784 A 20 20 0 0 1 1456 764 L 1456 708 A 20 20 0 0 1 1476 688 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1484 716) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1504" y="802">Partially</tspan><tspan x="1504" y="818">returned</tspan></text>
+<text x="1504" y="832" text-anchor="middle" font-size="13" fill="#77776f">some items only</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1504" y="850">The return covers only</tspan><tspan x="1504" y="864">some of the…</tspan></text>
+</g><circle cx="1456" cy="736" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 1700 688 L 1756 688 A 20 20 0 0 1 1776 708 L 1776 764 A 20 20 0 0 1 1756 784 L 1700 784 A 20 20 0 0 1 1680 764 L 1680 708 A 20 20 0 0 1 1700 688 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(1708 716) scale(1.6666666666666667)"><path d="M5 5h14v14H5zM9 9h6v6H9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="1728" y="802">Cancel return</tspan></text>
+<text x="1728" y="816" text-anchor="middle" font-size="13" fill="#77776f">before receipt</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="1728" y="834">The customer or</tspan><tspan x="1728" y="848">merchant withdraws…</tspan></text>
+</g><circle cx="1680" cy="736" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2228 1280 L 2268 1280 A 20 20 0 0 1 2288 1300 L 2288 1356 A 20 20 0 0 1 2268 1376 L 2228 1376 A 36 36 0 0 1 2192 1340 L 2192 1316 A 36 36 0 0 1 2228 1280 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2220 1308) scale(1.6666666666666667)"><path d="M12 3l9 9-9 9-9-9 9-9z" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2240" y="1394">no_notification</tspan></text>
+<text x="2240" y="1408" text-anchor="middle" font-size="13" fill="#77776f">silence updates</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2240" y="1426">Suppresses the customer</tspan><tspan x="2240" y="1440">notification for…</tspan></text>
+</g><circle cx="2288" cy="1328" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2228 1104 L 2268 1104 A 20 20 0 0 1 2288 1124 L 2288 1180 A 20 20 0 0 1 2268 1200 L 2228 1200 A 36 36 0 0 1 2192 1164 L 2192 1140 A 36 36 0 0 1 2228 1104 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2216 1128) scale(2)"><path d="M10.984 13.836a.5.5 0 0 1-.353-.146l-.745-.743a.5.5 0 1 1 .706-.708l.392.391 1.181-1.18a.5.5 0 0 1 .708.707l-1.535 1.533a.504.504 0 0 1-.354.146zm9.353-.147l1.534-1.532a.5.5 0 0 0-.707-.707l-1.181 1.18-.392-.391a.5.5 0 1 0-.706.708l.746.743a.497.497 0 0 0 .706-.001zM4.527 7.452l2.557-1.585A1 1 0 0 0 7.09 4.17L4.533 2.56A1 1 0 0 0 3 3.406v3.196a1.001 1.001 0 0 0 1.527.85zm2.03-2.436L4 6.602V3.406l2.557 1.61zM24 12.5c0 1.93-1.57 3.5-3.5 3.5a3.503 3.503 0 0 1-3.46-3h-2.08a3.503 3.503 0 0 1-3.46 3 3.502 3.502 0 0 1-3.46-3h-.558c-.972 0-1.85-.399-2.482-1.042V17c0 1.654 1.346 3 3 3h.04c.244-1.693 1.7-3 3.46-3 1.93 0 3.5 1.57 3.5 3.5S13.43 24 11.5 24a3.502 3.502 0 0 1-3.46-3H8c-2.206 0-4-1.794-4-4V9.899A5.008 5.008 0 0 1 0 5c0-2.757 2.243-5 5-5s5 2.243 5 5a5.005 5.005 0 0 1-4.952 4.998A2.482 2.482 0 0 0 7.482 12h.558c.244-1.693 1.7-3 3.46-3a3.502 3.502 0 0 1 3.46 3h2.08a3.503 3.503 0 0 1 3.46-3c1.93 0 3.5 1.57 3.5 3.5zm-15 8c0 1.378 1.122 2.5 2.5 2.5s2.5-1.122 2.5-2.5-1.122-2.5-2.5-2.5S9 19.122 9 20.5zM5 9c2.206 0 4-1.794 4-4S7.206 1 5 1 1 2.794 1 5s1.794 4 4 4zm9 3.5c0-1.378-1.122-2.5-2.5-2.5S9 11.122 9 12.5s1.122 2.5 2.5 2.5 2.5-1.122 2.5-2.5zm9 0c0-1.378-1.122-2.5-2.5-2.5S18 11.122 18 12.5s1.122 2.5 2.5 2.5 2.5-1.122 2.5-2.5zm-13 8a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0zm2 0a.5.5 0 1 0 1 0 .5.5 0 0 0-1 0zm12 0c0 1.93-1.57 3.5-3.5 3.5a3.503 3.503 0 0 1-3.46-3.002c-.007.001-.013.005-.021.005l-.506.017h-.017a.5.5 0 0 1-.016-.999l.506-.017c.018-.002.035.006.052.007A3.503 3.503 0 0 1 20.5 17c1.93 0 3.5 1.57 3.5 3.5zm-1 0c0-1.378-1.122-2.5-2.5-2.5S18 19.122 18 20.5s1.122 2.5 2.5 2.5 2.5-1.122 2.5-2.5z" fill="#2088FF"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2240" y="1218">CI pipeline</tspan></text>
+<text x="2240" y="1232" text-anchor="middle" font-size="13" fill="#77776f">GitHub Actions</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2240" y="1250">GitHub Actions runs the</tspan><tspan x="2240" y="1264">test suite on…</tspan></text>
+</g><circle cx="2288" cy="1152" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2436 1104 L 2492 1104 A 20 20 0 0 1 2512 1124 L 2512 1180 A 20 20 0 0 1 2492 1200 L 2436 1200 A 20 20 0 0 1 2416 1180 L 2416 1124 A 20 20 0 0 1 2436 1104 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2440 1128) scale(2)"><path d="M22.251 11.82a3.117 3.117 0 0 0-2.328-3.01L22.911 0H8.104L11.1 8.838a3.116 3.116 0 0 0-2.244 2.988c0 1.043.52 1.967 1.313 2.536a8.279 8.279 0 0 1-1.084 1.244 8.14 8.14 0 0 1-2.55 1.647c-.834-.563-1.195-1.556-.869-2.446a3.11 3.11 0 0 0-.91-6.08 3.117 3.117 0 0 0-3.113 3.113c0 .848.347 1.626.903 2.182-.048.097-.097.195-.146.299-.465.959-.993 2.043-1.195 3.259-.403 2.432.257 4.384 1.849 5.489A5.093 5.093 0 0 0 5.999 24c1.827 0 3.682-.917 5.475-1.807 1.279-.632 2.599-1.292 3.898-1.612.48-.118.98-.187 1.508-.264 1.07-.153 2.175-.312 3.168-.89a4.482 4.482 0 0 0 2.182-3.091c.174-.994 0-1.994-.444-2.87.298-.48.465-1.042.465-1.647zm-1.355 0c0 .965-.785 1.75-1.75 1.75a1.753 1.753 0 0 1-1.085-3.126l.007-.007c.056-.042.118-.084.18-.125 0 0 .008 0 .008-.007.028-.014.055-.035.083-.05.007 0 .014-.006.021-.006.028-.014.063-.028.097-.042.035-.014.07-.027.098-.041.007 0 .013-.007.02-.007.028-.007.056-.021.084-.028.007 0 .02-.007.028-.007.034-.007.062-.014.097-.02h.007l.104-.022c.007 0 .02 0 .028-.007.028 0 .055-.007.083-.007h.035c.035 0 .07-.007.111-.007h.09c.028 0 .05 0 .077.007h.014c.055.007.111.014.167.028a1.766 1.766 0 0 1 1.396 1.723zM10.043 1.39h10.93l-2.509 7.4c-.104.02-.208.055-.312.09l-2.64-5.385-2.648 5.35c-.104-.034-.216-.055-.327-.076l-2.494-7.38zm4.968 9.825a3.083 3.083 0 0 0-.938-1.668l1.438-2.904 1.452 2.967c-.43.43-.743.98-.868 1.605H15.01zm-3.481-1.098c.034-.007.062-.014.097-.02h.02c.029-.008.056-.008.084-.015h.028c.028 0 .049-.007.076-.007h.271c.028 0 .049.007.07.007.014 0 .02 0 .035.007.027.007.048.007.076.014.007 0 .014 0 .028.007l.097.02h.007c.028.008.056.015.083.029.007 0 .014.007.028.007.021.007.049.014.07.027.007 0 .014.007.02.007.028.014.056.021.084.035h.007a.374.374 0 0 1 .09.049h.007c.028.014.056.034.084.048.007 0 .007.007.013.007.028.014.05.035.077.049l.007.007c.083.062.16.132.236.201l.007.007a1.747 1.747 0 0 1 .48 1.209 1.752 1.752 0 0 1-3.502 0 1.742 1.742 0 0 1 1.32-1.695zm-6.838-.049c.966 0 1.751.786 1.751 1.751s-.785 1.751-1.75 1.751-1.752-.785-1.752-1.75.786-1.752 1.751-1.752zm16.163 6.025a3.07 3.07 0 0 1-1.508 2.133c-.758.438-1.689.577-2.669.716a17.29 17.29 0 0 0-1.64.291c-1.445.355-2.834 1.05-4.182 1.717-1.724.854-3.35 1.66-4.857 1.66a3.645 3.645 0 0 1-2.154-.688c-1.529-1.056-1.453-3.036-1.272-4.12.167-1.015.632-1.966 1.077-2.877.028-.055.049-.104.077-.16.152.056.312.098.479.126-.264 1.473.486 2.994 1.946 3.745l.264.139.284-.104c1.216-.431 2.342-1.133 3.336-2.071a9.334 9.334 0 0 0 1.445-1.716c.16.027.32.034.48.034a3.117 3.117 0 0 0 3.008-2.327h1.167a3.109 3.109 0 0 0 3.01 2.327c.576 0 1.11-.16 1.57-.43.18.52.236 1.063.139 1.605z" fill="#C21325"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2464" y="1218">Integration</tspan><tspan x="2464" y="1234">tests</tspan></text>
+<text x="2464" y="1248" text-anchor="middle" font-size="13" fill="#77776f">module suites</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2464" y="1266">Jest integration suites</tspan><tspan x="2464" y="1280">cover the…</tspan></text>
+</g><circle cx="2416" cy="1152" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2512" cy="1152" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/>
+<g>
+<path d="M 2660 1104 L 2716 1104 A 20 20 0 0 1 2736 1124 L 2736 1180 A 20 20 0 0 1 2716 1200 L 2660 1200 A 20 20 0 0 1 2640 1180 L 2640 1124 A 20 20 0 0 1 2660 1104 Z" fill="#ffffff" stroke="rgba(0,0,0,0.1)" stroke-width="1.5" />
+<g transform="translate(2668 1132) scale(1.6666666666666667)"><path d="M6 2h8l4 4v16H6V2zm8 0v5h5" fill="none" stroke="#555555" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/></g>
+
+<text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18"><tspan x="2688" y="1218">Migrations</tspan></text>
+<text x="2688" y="1232" text-anchor="middle" font-size="13" fill="#77776f">schema changes</text>
+<text text-anchor="middle" font-size="12" fill="#6b6b66"><tspan x="2688" y="1250">Schema changes to the</tspan><tspan x="2688" y="1264">return and…</tspan></text>
+</g><circle cx="2640" cy="1152" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/><circle cx="2736" cy="1152" r="8" fill="#ffffff" stroke="#bbbbbb" stroke-width="1"/></g>
+<g><g>
+<rect x="16" y="-144" width="400" height="136" rx="4" fill="#FFF6CC" stroke="#D9B93B" stroke-width="1"/>
+<text font-size="13" fill="#3a3a35"><tspan x="30" y="-117" font-size="15" font-weight="700"><tspan>Medusa returns</tspan></tspan><tspan x="30" y="-99"><tspan>A customer or merchant opens a return, the</tspan></tspan><tspan x="30" y="-81"><tspan>warehouse receives and inspects the items,</tspan></tspan><tspan x="30" y="-63"><tspan>then a refund is issued through Stripe. See</tspan></tspan><tspan x="30" y="-45"><tspan>the </tspan><tspan text-decoration="underline">Medusa return docs</tspan><tspan> for the underlying data</tspan></tspan><tspan x="30" y="-27"><tspan>model.</tspan></tspan></text>
+</g>
+<g>
+<rect x="3904" y="528" width="320" height="120" rx="4" fill="#E8F1FC" stroke="#5B8DD9" stroke-width="1"/>
+<text font-size="13" fill="#3a3a35"><tspan x="3918" y="554" font-size="14" font-weight="700"><tspan>Return shipping</tspan></tspan><tspan x="3918" y="572"><tspan>Medusa generates the</tspan><tspan font-weight="700"> return label</tspan><tspan> ,</tspan></tspan><tspan x="3918" y="590"><tspan>the customer ships the parcel back,</tspan></tspan><tspan x="3918" y="608"><tspan>and the warehouse logs receipt</tspan></tspan><tspan x="3918" y="626"><tspan>before inspection.</tspan></tspan></text>
+</g>
+<g>
+<rect x="3312" y="368" width="320" height="152" rx="4" fill="#EAF6E9" stroke="#6FA766" stroke-width="1"/>
+<text font-size="13" fill="#3a3a35"><tspan x="3326" y="394" font-size="14" font-weight="700"><tspan>Inspection</tspan></tspan><tspan x="3326" y="412"><tspan>Items are checked by hand against</tspan></tspan><tspan x="3326" y="430"><tspan>the original order line. Notes:</tspan></tspan><tspan x="3326" y="448">•</tspan><tspan x="3340" y="448"><tspan>condition, not just quantity</tspan></tspan><tspan x="3326" y="466">•</tspan><tspan x="3340" y="466"><tspan>photos attached to the return</tspan></tspan><tspan x="3340" y="484"><tspan>record</tspan></tspan><tspan x="3326" y="502">•</tspan><tspan x="3340" y="502"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">inspect</tspan><tspan> decides the outcome</tspan></tspan></text>
+</g>
+<g>
+<rect x="2416" y="-96" width="320" height="96" rx="4" fill="#FBE3E1" stroke="#D9695B" stroke-width="1"/>
+<text font-size="13" fill="#3a3a35"><tspan x="2430" y="-71"><tspan font-weight="700">Refund exceeds cap</tspan><tspan> halts the flow —</tspan></tspan><tspan x="2430" y="-53"><tspan>a merchant must approve any refund</tspan></tspan><tspan x="2430" y="-35"><tspan>over the configured limit before</tspan></tspan><tspan x="2430" y="-17"><tspan>Stripe is called.</tspan></tspan></text>
+</g>
+<g>
+<rect x="1008" y="-48" width="320" height="96" rx="4" fill="#FBEBC9" stroke="#C99A2E" stroke-width="1"/>
+<text font-size="13" fill="#3a3a35"><tspan x="1022" y="-23"><tspan>Consider: should the refund wait</tspan></tspan><tspan x="1022" y="-5"><tspan>until inspection confirms the items</tspan></tspan><tspan x="1022" y="13"><tspan>are undamaged, or fire as soon as</tspan></tspan><tspan x="1022" y="31"><tspan>the return is marked received?</tspan></tspan></text>
+</g>
+<g>
+<rect x="2192" y="-224" width="320" height="120" rx="4" fill="#FBEBC9" stroke="#C99A2E" stroke-width="1"/>
+<text font-size="13" fill="#3a3a35"><tspan x="2206" y="-199"><tspan>Consider: with</tspan><tspan font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12"> no_notification</tspan><tspan> set,</tspan></tspan><tspan x="2206" y="-181"><tspan>the customer sees no update at all —</tspan></tspan><tspan x="2206" y="-163"><tspan>is silent processing acceptable for</tspan></tspan><tspan x="2206" y="-145"><tspan>every reason code, or only for</tspan></tspan><tspan x="2206" y="-127"><tspan>internal/test orders?</tspan></tspan></text>
+</g>
+<g>
+<rect x="1456" y="384" width="320" height="120" rx="4" fill="#FBEBC9" stroke="#C99A2E" stroke-width="1"/>
+<text font-size="13" fill="#3a3a35"><tspan x="1470" y="409"><tspan>Consider: for a partial return,</tspan></tspan><tspan x="1470" y="427"><tspan>should inventory and refund proceed</tspan></tspan><tspan x="1470" y="445"><tspan>per item as each is inspected, or</tspan></tspan><tspan x="1470" y="463"><tspan>only once the whole return is</tspan></tspan><tspan x="1470" y="481"><tspan>resolved?</tspan></tspan></text>
+</g></g>
+<g><g>
+<rect x="2127.5" y="1677" width="241" height="22" rx="4" fill="#ffffff" stroke="#d8d8d3" stroke-width="1"/>
+<text x="2248" y="1691.85" text-anchor="middle" font-size="11" fill="#4a4a46">Per-item inspection outcome for every r…</text>
+</g>
+<g>
+<rect x="2927.5" y="1677" width="241" height="22" rx="4" fill="#ffffff" stroke="#d8d8d3" stroke-width="1"/>
+<text x="3048" y="1691.85" text-anchor="middle" font-size="11" fill="#4a4a46">Quantity to exclude from restock as not…</text>
+</g>
+<g>
+<rect x="1463.5" y="349" width="241" height="22" rx="4" fill="#ffffff" stroke="#d8d8d3" stroke-width="1"/>
+<text x="1584" y="363.85" text-anchor="middle" font-size="11" fill="#4a4a46">Return id and the items approved for re…</text>
+</g>
+<g>
+<rect x="1529.5" y="1331" width="241" height="22" rx="4" fill="#ffffff" stroke="#d8d8d3" stroke-width="1"/>
+<text x="1650" y="1345.85" text-anchor="middle" font-size="11" fill="#4a4a46">Return-status-changed event for the ord…</text>
+</g>
+<g>
+<rect x="1167.5" y="1683" width="241" height="22" rx="4" fill="#ffffff" stroke="#d8d8d3" stroke-width="1"/>
+<text x="1288" y="1697.85" text-anchor="middle" font-size="11" fill="#4a4a46">Email or SMS update on the return's sta…</text>
+</g>
+<g>
+<rect x="1855.5" y="1651" width="241" height="22" rx="4" fill="#ffffff" stroke="#d8d8d3" stroke-width="1"/>
+<text x="1976" y="1665.85" text-anchor="middle" font-size="11" fill="#4a4a46">Order and return state persisted to the…</text>
+</g></g>
+</svg>

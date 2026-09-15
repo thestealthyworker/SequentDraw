@@ -161,4 +161,12 @@ module.exports = {
   handleMarkup,
   frameMarkup,
   edgeMarkup,
+  // Exported for reuse by render-svg-doc.js (the documentation export's
+  // markup builders), so node shape/icon/badge grammar is defined in
+  // exactly one place for both outputs, per "same n8n visual grammar" in
+  // docs/design/n8n-visual-style.md.
+  nodeVisualStyle,
+  nodeIconMarkup,
+  statusBadge,
+  handleDot,
 };

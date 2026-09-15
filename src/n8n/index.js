@@ -4,6 +4,7 @@
 const { validateDoc, ValidationError } = require('./validate');
 const { layoutMap } = require('./layout');
 const { renderHtml } = require('./render');
+const { buildDocSvg } = require('./render-doc');
 
 async function renderMap(doc) {
   // Validate once, then thread the SAME normalised doc through both
@@ -15,4 +16,14 @@ async function renderMap(doc) {
   return renderHtml(layout, normalized);
 }
 
-module.exports = { renderMap, layoutMap, renderHtml, validateDoc, ValidationError };
+// Documentation export: renderSvg(doc, { layers }) -> one standalone SVG
+// string. See docs/design/n8n-visual-style.md "Documentation export (SVG
+// with inline captions)". Validates the full document first, then filters
+// to the chosen layers (`base` always included) — src/n8n/render-doc.js
+// does the actual work; this is just the public surface named in the spec.
+async function renderSvg(doc, opts = {}) {
+  const { svg } = await buildDocSvg(doc, opts);
+  return svg;
+}
+
+module.exports = { renderMap, renderSvg, layoutMap, renderHtml, validateDoc, ValidationError };

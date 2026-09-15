@@ -752,4 +752,4 @@ function validateDoc(doc) {
   };
 }
 
-module.exports = { validateDoc, ValidationError };
+module.exports = { validateDoc, ValidationError, LAYER_VALUES };

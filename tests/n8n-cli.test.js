@@ -60,3 +60,81 @@ test('reports a missing input file as a clear error', () => {
     assert.deepStrictEqual(fs.readdirSync(dir), []);
   });
 });
+
+// --- documentation export (.svg) ----------------------------------------
+
+test('picks the SVG renderer from a .svg output extension', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.svg');
+    const result = runCli([FIXTURE, out], dir);
+    assert.strictEqual(result.status, 0, result.stderr);
+    const svg = fs.readFileSync(out, 'utf8');
+    assert.match(svg, /^<\?xml/);
+    assert.match(svg, /<svg/);
+    assert.doesNotMatch(svg, /<!DOCTYPE html>/);
+  });
+});
+
+test('--layers filters the SVG to the requested layers plus base', () => {
+  withTempDir(dir => {
+    const outAll = path.join(dir, 'all.svg');
+    const outBase = path.join(dir, 'base.svg');
+    const resultAll = runCli([FIXTURE, outAll, '--layers', 'business,edge,build'], dir);
+    const resultBase = runCli([FIXTURE, outBase], dir);
+    assert.strictEqual(resultAll.status, 0, resultAll.stderr);
+    assert.strictEqual(resultBase.status, 0, resultBase.stderr);
+    const svgAll = fs.readFileSync(outAll, 'utf8');
+    const svgBase = fs.readFileSync(outBase, 'utf8');
+    assert.ok(svgAll.length > svgBase.length, 'the all-layers export should carry more nodes than base alone');
+  });
+});
+
+test('rejects an unknown layer name and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.svg');
+    const result = runCli([FIXTURE, out, '--layers', 'bogus'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /Unknown layer/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('rejects --layers with no value and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.svg');
+    const result = runCli([FIXTURE, out, '--layers'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /Usage/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('rejects --layers on an .html output and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.html');
+    const result = runCli([FIXTURE, out, '--layers', 'business'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /--layers is only valid with a \.svg/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('rejects an output extension that is neither .html nor .svg, and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.txt');
+    const result = runCli([FIXTURE, out], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /must end in \.html or \.svg/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('rejects an unknown flag and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.svg');
+    const result = runCli([FIXTURE, out, '--bogus-flag'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /Usage/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});

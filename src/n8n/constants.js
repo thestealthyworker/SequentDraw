@@ -99,6 +99,38 @@ const NOTE_COLORS = {
   gray: { fill: '#F1F1EF', border: '#9C9C97' },
 };
 
+// Documentation export (SVG with inline captions). See
+// docs/design/n8n-visual-style.md "Documentation export (SVG with inline
+// captions)". Kept separate from the interactive-view constants above so
+// the interactive layout/render path never reads these.
+const CAPTION_FONT_SIZE = 12;
+const CAPTION_LINE_HEIGHT = 14;
+const CAPTION_LINES_MAX = 2;
+const CAPTION_GAP = 6; // gap between the sublabel baseline and the first caption line's top
+const CAPTION_COLOR = '#6b6b66';
+// Extra width allowance for wrapping caption text under a node, matching
+// the sublabel's own allowance (see render-svg.js truncateLine call for
+// n.sublabel) since both sit in the same centred column under the node.
+const CAPTION_WRAP_PAD = 64;
+
+const DOC_MARGIN = 32; // crop margin around the content, per the doc-export spec
+const DOC_TITLE_FONT_SIZE = 18;
+const DOC_TITLE_BLOCK_HEIGHT = 40; // vertical room reserved above the content for the title
+
+const EDGE_TEXT_FONT_SIZE = 11;
+const EDGE_TEXT_MAX_CHARS = 40;
+const EDGE_TEXT_PAD_X = 6;
+const EDGE_TEXT_PAD_Y = 4;
+const EDGE_TEXT_COLOR = '#4a4a46';
+const EDGE_TEXT_BG = '#ffffff';
+const EDGE_TEXT_BORDER = '#d8d8d3';
+
+// Single-quoted family names, not double: this stack is written straight
+// into a double-quoted SVG attribute value (see render-doc.js), and a
+// literal `"` there would end the attribute early.
+const SYSTEM_FONT_STACK =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
 function snap(value) {
   return Math.round(value / GRID) * GRID;
 }
@@ -158,5 +190,22 @@ module.exports = {
   NOTE_BULLET_INDENT,
   NOTE_BLANK_GAP,
   NOTE_COLORS,
+  CAPTION_FONT_SIZE,
+  CAPTION_LINE_HEIGHT,
+  CAPTION_LINES_MAX,
+  CAPTION_GAP,
+  CAPTION_COLOR,
+  CAPTION_WRAP_PAD,
+  DOC_MARGIN,
+  DOC_TITLE_FONT_SIZE,
+  DOC_TITLE_BLOCK_HEIGHT,
+  EDGE_TEXT_FONT_SIZE,
+  EDGE_TEXT_MAX_CHARS,
+  EDGE_TEXT_PAD_X,
+  EDGE_TEXT_PAD_Y,
+  EDGE_TEXT_COLOR,
+  EDGE_TEXT_BG,
+  EDGE_TEXT_BORDER,
+  SYSTEM_FONT_STACK,
   snap,
 };
