@@ -48,14 +48,21 @@ async function layoutFlat(doc, opts = {}) {
   // Bound the work ELK's layered algorithm can be made to do: a dense,
   // heavily-cyclic graph forces a near-total order across the reversed
   // edge set above, and edges whose endpoints land far apart in that
-  // order make ELK insert long dummy-node chains — see layout-budget.js
-  // for the full root-cause writeup and how these thresholds were
-  // measured. Below ELK_BOUNDED_OPTIONS_WORK this changes nothing (same
-  // options object as always, so an ordinary document like Medusa is
-  // byte-for-byte unaffected); above MAX_LAYOUT_WORK_UNITS we refuse to
-  // even start ELK rather than let it run unbounded.
+  // order make ELK insert long dummy-node chains. Grouped documents add a
+  // second, independent cost: with hierarchyHandling INCLUDE_CHILDREN
+  // (below), every edge crossing a group boundary forces ELK's
+  // hierarchical crossing-minimization/port-assignment machinery to route
+  // through that boundary, which measured expensive almost regardless of
+  // the flat layer-span estimate — see layout-budget.js for the full
+  // root-cause writeup, the hierarchy-aware weighting this passes in
+  // below, and how both thresholds were measured. Below
+  // ELK_BOUNDED_OPTIONS_WORK this changes nothing (same options object as
+  // always, so an ordinary document like Medusa is byte-for-byte
+  // unaffected); above MAX_LAYOUT_WORK_UNITS we refuse to even start ELK
+  // rather than let it run unbounded.
   const nodeIds = doc.nodes.map(n => n.id);
-  const estimatedWork = estimateLayoutWork(nodeIds, orientedEdges);
+  const parentIdOf = new Map(doc.nodes.map(n => [n.id, n.parentId || null]));
+  const estimatedWork = estimateLayoutWork(nodeIds, orientedEdges, { parentIdOf, groupCount: doc.groups.length });
   if (estimatedWork > MAX_LAYOUT_WORK_UNITS) {
     throw new LayoutError(
       `Graph is too complex to lay out safely (estimated layout work ${estimatedWork} exceeds ${MAX_LAYOUT_WORK_UNITS}). Reduce the number of nodes/edges or their long-range cyclic connections.`,
@@ -64,9 +71,18 @@ async function layoutFlat(doc, opts = {}) {
   }
   const bounded = estimatedWork > ELK_BOUNDED_OPTIONS_WORK;
 
+  // SEPARATE_CHILDREN lays out each container's contents independently
+  // instead of solving one hierarchy-wide compound graph — measured 5x to
+  // 40x faster than INCLUDE_CHILDREN across every grouped stress case
+  // (see layout-budget.js). Only swapped in once bounded, so a document
+  // with no groups (children never non-empty; the option is then a
+  // no-op) or one whose estimate stayed under the threshold keeps
+  // INCLUDE_CHILDREN's exact hierarchy-aware output.
+  const hierarchyHandling = bounded ? 'SEPARATE_CHILDREN' : 'INCLUDE_CHILDREN';
+
   const graph = {
     id: 'root',
-    layoutOptions: baseLayoutOptions({ 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.spacing.nodeNode': String(nodeGap) }, bounded),
+    layoutOptions: baseLayoutOptions({ 'elk.hierarchyHandling': hierarchyHandling, 'elk.spacing.nodeNode': String(nodeGap) }, bounded),
     children: [...containers.values(), ...roots],
     edges: doc.edges.map((e, i) => ({ id: `e${i}`, ...orientedEdges[i] })),
   };
