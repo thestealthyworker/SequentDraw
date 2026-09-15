@@ -57,14 +57,26 @@ function roundedOrthogonalPath(points, radius) {
 // is geometrically further right — that's just how the handles are
 // oriented — so no sign flip is needed between the forward and backward
 // cases, only a clamp for when the endpoints are close together.
+function clampStub(sx, tx, stub) {
+  return Math.max(4, Math.min(stub, Math.abs(tx - sx) / 2 || stub));
+}
+
 function detourPoints(sx, sy, tx, ty, stub, cruiseY) {
-  const s = Math.max(4, Math.min(stub, Math.abs(tx - sx) / 2 || stub));
+  const s = clampStub(sx, tx, stub);
+  return detourPointsAtX(sx, sy, tx, ty, sx + s, tx - s, cruiseY);
+}
+
+// Same shape as detourPoints, but with the drop/approach x positions given
+// explicitly rather than derived from a fixed stub length — used when the
+// stub's default position would land the vertical connector inside a frame
+// it doesn't belong to (see routing.js chooseClearDropX).
+function detourPointsAtX(sx, sy, tx, ty, dropX, approachX, cruiseY) {
   return [
     [sx, sy],
-    [sx + s, sy],
-    [sx + s, cruiseY],
-    [tx - s, cruiseY],
-    [tx - s, ty],
+    [dropX, sy],
+    [dropX, cruiseY],
+    [approachX, cruiseY],
+    [approachX, ty],
     [tx, ty],
   ];
 }
@@ -158,7 +170,9 @@ module.exports = {
   forwardBezierPath,
   forwardBezierMidpoint,
   roundedOrthogonalPath,
+  clampStub,
   detourPoints,
+  detourPointsAtX,
   polylineMidpoint,
   roundedRectPath,
   wrapLabel,

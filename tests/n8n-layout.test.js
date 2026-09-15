@@ -9,6 +9,8 @@ const path = require('node:path');
 const { layoutMap } = require('../src/n8n/layout');
 const { renderHtml } = require('../src/n8n/render');
 const { LABEL_RESERVE, GRID } = require('../src/n8n/constants');
+const { labelBoxesOf, frameTitleBoxesOf } = require('../src/n8n/obstacles');
+const { samplePath, pointInRect } = require('../src/n8n/sample-path');
 
 const FIXTURE = path.join(__dirname, '..', 'examples', 'medusa-return-flow.json');
 const doc = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
@@ -70,6 +72,20 @@ describe('n8n layout on the Medusa fixture', () => {
       const endDist = Math.hypot(endX - edge.end[0], endY - edge.end[1]);
       if (startDist > 1) bad.push(`edge ${edge.index} start off by ${startDist.toFixed(2)}px`);
       if (endDist > 1) bad.push(`edge ${edge.index} end off by ${endDist.toFixed(2)}px`);
+    }
+    assert.deepStrictEqual(bad, []);
+  });
+
+  test('no edge path crosses a label box or a frame title box', () => {
+    const labelBoxes = labelBoxesOf(layout.nodeBoxes);
+    const frameTitleBoxes = frameTitleBoxesOf(doc.groups, layout.frameBoxes);
+    const textBoxes = labelBoxes.concat(frameTitleBoxes);
+    const bad = [];
+    for (const edge of layout.edges) {
+      const pts = samplePath(edge.d);
+      for (const box of textBoxes) {
+        if (pts.some(pt => pointInRect(pt, box))) bad.push(`edge ${edge.index} crosses text box ${box.id}`);
+      }
     }
     assert.deepStrictEqual(bad, []);
   });

@@ -12,6 +12,7 @@ const {
   CANVAS_MARGIN,
 } = require('./constants');
 const { routeForward, routeBackward } = require('./routing');
+const { labelBoxesOf, frameTitleBoxesOf } = require('./obstacles');
 
 function computeFrameBoxes(doc, nodeBoxes) {
   const frameBoxes = {};
@@ -184,14 +185,24 @@ function computeEdges(doc, handles, nodeBoxes, frameBoxes) {
   doc.nodes.forEach(n => (byId[n.id] = n));
   const allNodeBoxes = Object.entries(nodeBoxes).map(([id, b]) => ({ id, ...b }));
   const allFrameBoxes = Object.entries(frameBoxes).map(([id, f]) => ({ id, ...f }));
+  // A node's label+sublabel strip is an obstacle exactly like its node box —
+  // including the edge's own endpoints, which are NOT exempt here (unlike
+  // node boxes themselves, which an edge is obviously allowed to touch at
+  // its own handle). A frame's title text is never exempt, even for the
+  // edge's own group: an edge entering its destination group legitimately
+  // has to cross the frame BODY to reach its member node, but it never has
+  // to cross the small title-text area specifically, so unlike the frame
+  // body there's no own-group carve-out for it.
+  const allLabelBoxes = labelBoxesOf(nodeBoxes);
+  const allFrameTitleBoxes = frameTitleBoxesOf(doc.groups, frameBoxes);
 
   return doc.edges.map((e, i) => {
     const s = handles[e.from].out[i];
     const t = handles[e.to].in[i];
     const forward = t.x >= s.x;
     const ownGroups = new Set([byId[e.from].parentId, byId[e.to].parentId].filter(Boolean));
-    const avoidNodeBoxes = allNodeBoxes.filter(b => b.id !== e.from && b.id !== e.to);
-    const avoidFrameBoxes = allFrameBoxes.filter(f => !ownGroups.has(f.id));
+    const avoidNodeBoxes = allNodeBoxes.filter(b => b.id !== e.from && b.id !== e.to).concat(allLabelBoxes);
+    const avoidFrameBoxes = allFrameBoxes.filter(f => !ownGroups.has(f.id)).concat(allFrameTitleBoxes);
     const { d, midpoint } = forward
       ? routeForward(s.x, s.y, t.x, t.y, avoidNodeBoxes, avoidFrameBoxes)
       : routeBackward(s.x, s.y, t.x, t.y, avoidNodeBoxes, avoidFrameBoxes);
