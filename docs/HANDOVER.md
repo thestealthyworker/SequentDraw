@@ -203,8 +203,9 @@ Revised 2026-09-15 for the n8n visual style.
    core with a CLI adapter.
 
 Each step from here ships its Claude Code / Codex skill and eval cases in the same
-PR (`docs/design/skills-and-plugin.md`). Step 1 also adds the plugin scaffold and
-`render-map`.
+PR (`docs/design/skills-and-plugin.md`). The owner-defined skills are `git-map`,
+`business-map`, `eval-build`, `grill-build` and `gitrepo-suggest`. The plugin
+scaffold arrives with the first of them, `git-map`.
 
 2. Text notes: n8n-style sticky notes from the IR `notes` array, placed by the engine
    (design in the same doc). The owner requested this on 2026-09-15.
