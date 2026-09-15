@@ -12,7 +12,21 @@ const { lookup } = require('../crosswalk');
 // ("@scope/name/sub") are both matched, crosswalk.normalise() takes the
 // last path segment as the lookup key which is intentional (matches how
 // docker image names are normalised too).
-const JS_IMPORT_RE = /\b(?:import|export)\b[^'"()\n]*?from\s*['"]([^'"]+)['"]|\bimport\s*['"]([^'"]+)['"]|\brequire\(\s*['"]([^'"]+)['"]\s*\)/g;
+//
+// The gap between "import"/"export" and "from" is bounded to 500
+// characters ({0,500}?, not the unbounded *?  an earlier version of this
+// file used). Unbounded, that lazy scan is run once per "import"/"export"
+// occurrence (the 'g' flag retries from the next position after a failed
+// match), so a file with no real "from" anywhere -- e.g. a 1MB line of
+// nothing but the word "import " repeated -- makes the engine re-scan an
+// ever-shrinking tail of the remaining string at every single occurrence:
+// O(n) work times O(n) occurrences. Measured on exactly that input, the
+// unbounded version took over 100 seconds; capped at 500 it is
+// effectively O(n). 500 characters is generous for any real import
+// statement (this class already excludes newlines, so it can only ever
+// match within one line regardless).
+const JS_IMPORT_RE =
+  /\b(?:import|export)\b[^'"()\n]{0,500}?from\s*['"]([^'"]+)['"]|\bimport\s*['"]([^'"]+)['"]|\brequire\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 // Python: `import pkg`, `import pkg.sub`, `from pkg import x`,
 // `from pkg.sub import x`. Only the top-level module name is used. The

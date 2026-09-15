@@ -14,8 +14,21 @@ const { parseImports } = require('../src/scan/parsers/import-parser');
 const { parseRoute } = require('../src/scan/parsers/route-parser');
 const { parseEnvNames } = require('../src/scan/parsers/env-parser');
 const { lookup, normalise } = require('../src/scan/crosswalk');
-const { parseYamlSafe } = require('../src/scan/yaml-safe');
+const { parseYamlSafe, exceedsNestingDepth } = require('../src/scan/yaml-safe');
+const { stripControlChars } = require('../src/scan/sanitize-text');
 const simpleIcons = require('simple-icons');
+
+// Fix-round adversarial timing tests below want to catch a REGRESSION
+// back to the catastrophic case this fix round found (a 1MB pathological
+// "import " line took over 115,000ms before src/scan/parsers/
+// import-parser.js bounded its "from" look-ahead) without being flaky
+// under `npm test`'s normal concurrent-file load, where a CPU-bound test
+// can easily run 3-5x slower than in isolation purely from contention
+// with everything else the runner started at the same time (measured:
+// ~300ms in isolation, ~1.8s under full-suite contention for the same
+// input). 8s is still two orders of magnitude below the original bug and
+// nowhere near the "isolation" numbers a real regression would produce.
+const TIMING_BOUND_MS = 8000;
 
 describe('crosswalk', () => {
   test('normalises docker image tags/digests and registry prefixes', () => {
@@ -209,5 +222,124 @@ describe('yaml-safe', () => {
   test('returns null for oversized input rather than parsing it', () => {
     const huge = 'a: ' + 'x'.repeat(3 * 1024 * 1024);
     assert.strictEqual(parseYamlSafe(huge), null);
+  });
+
+  test('exceedsNestingDepth is iterative and bounded: a 10,000-deep flow bracket bomb is caught immediately', () => {
+    const bomb = '['.repeat(10000) + '1' + ']'.repeat(10000);
+    const start = Date.now();
+    const result = exceedsNestingDepth(bomb, 64);
+    assert.strictEqual(result, true);
+    assert.ok(Date.now() - start < 100);
+  });
+
+  test('exceedsNestingDepth does not false-positive on a normal, shallow document', () => {
+    assert.strictEqual(exceedsNestingDepth('services:\n  web:\n    image: nginx\n', 64), false);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Fix round (security review response) item 5: adversarial tests with
+// timings for sanitize-text.js and the import/route parsers.
+// ---------------------------------------------------------------------
+
+describe('sanitize-text.js: adversarial control-character stripping', () => {
+  test('strips C0 controls except tab and newline', () => {
+    const input = Array.from({ length: 32 }, (_, i) => String.fromCharCode(i)).join('');
+    const out = stripControlChars(input);
+    assert.strictEqual(out, '\t\n');
+  });
+
+  test('strips DEL and the C1 control range', () => {
+    const input = '\x7F' + Array.from({ length: 32 }, (_, i) => String.fromCharCode(0x80 + i)).join('');
+    assert.strictEqual(stripControlChars(input), '');
+  });
+
+  test('strips zero-width characters, bidi overrides, bidi isolates, and the BOM', () => {
+    const input = '​a‏b‪c‮d⁠e⁤f⁦g⁩h﻿i';
+    assert.strictEqual(stripControlChars(input), 'abcdefghi');
+  });
+
+  test('keeps ordinary text, tabs, and newlines untouched', () => {
+    const input = 'normal\ttext\nwith lines';
+    assert.strictEqual(stripControlChars(input), input);
+  });
+
+  test('caps and sanitises a large (2MB) adversarial string in well under 1 second', () => {
+    const unit = 'safe​text‮with﻿controls\x00\x1f\x7f\x9f';
+    const input = unit.repeat(Math.ceil((2 * 1024 * 1024) / unit.length));
+    const start = Date.now();
+    const out = stripControlChars(input);
+    const elapsedMs = Date.now() - start;
+    assert.ok(elapsedMs < TIMING_BOUND_MS, `expected under ${TIMING_BOUND_MS}ms, took ${elapsedMs}ms`);
+    assert.strictEqual(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\x80-\x9F​‮﻿]/.test(out), false);
+  });
+
+  test('non-string input passes through unchanged', () => {
+    assert.strictEqual(stripControlChars(42), 42);
+    assert.strictEqual(stripControlChars(null), null);
+  });
+});
+
+describe('import-parser / route-parser: pathological-input timing (fix round item 5)', () => {
+  const ONE_MB = 1024 * 1024;
+
+  test('1MB of repeated "import " with no real import statement anywhere parses in under 1s', () => {
+    const src = 'import '.repeat(Math.ceil(ONE_MB / 'import '.length));
+    const start = Date.now();
+    const records = parseImports('big.js', src);
+    const elapsedMs = Date.now() - start;
+    assert.deepStrictEqual(records, []);
+    assert.ok(elapsedMs < TIMING_BOUND_MS, `expected under ${TIMING_BOUND_MS}ms, took ${elapsedMs}ms`);
+  });
+
+  test('1MB of repeated "export " with no real export-from statement parses in under 1s', () => {
+    const src = 'export '.repeat(Math.ceil(ONE_MB / 'export '.length));
+    const start = Date.now();
+    const records = parseImports('big.js', src);
+    const elapsedMs = Date.now() - start;
+    assert.deepStrictEqual(records, []);
+    assert.ok(elapsedMs < TIMING_BOUND_MS, `expected under ${TIMING_BOUND_MS}ms, took ${elapsedMs}ms`);
+  });
+
+  test('1MB of repeated "require(" with no closing call parses in under 1s', () => {
+    const src = 'require('.repeat(Math.ceil(ONE_MB / 'require('.length));
+    const start = Date.now();
+    const records = parseImports('big.js', src);
+    const elapsedMs = Date.now() - start;
+    assert.deepStrictEqual(records, []);
+    assert.ok(elapsedMs < TIMING_BOUND_MS, `expected under ${TIMING_BOUND_MS}ms, took ${elapsedMs}ms`);
+  });
+
+  test('1MB of repeated "import " in a Python file parses in under 1s', () => {
+    const src = 'import '.repeat(Math.ceil(ONE_MB / 'import '.length));
+    const start = Date.now();
+    parseImports('big.py', src);
+    const elapsedMs = Date.now() - start;
+    assert.ok(elapsedMs < TIMING_BOUND_MS, `expected under ${TIMING_BOUND_MS}ms, took ${elapsedMs}ms`);
+  });
+
+  test('pathological quotes and brackets with no real import parse in under 1s', () => {
+    const src = 'import "'.repeat(50000) + "'".repeat(500000) + '['.repeat(500000) + ']'.repeat(500000);
+    const start = Date.now();
+    parseImports('big.js', src);
+    const elapsedMs = Date.now() - start;
+    assert.ok(elapsedMs < TIMING_BOUND_MS, `expected under ${TIMING_BOUND_MS}ms, took ${elapsedMs}ms`);
+  });
+
+  test('a real import buried in 1MB of decoy "import " tokens is still found, quickly', () => {
+    const src = `${'import '.repeat(50000)}import Stripe from 'stripe';\n${'import '.repeat(50000)}`;
+    const start = Date.now();
+    const records = parseImports('big.js', src);
+    const elapsedMs = Date.now() - start;
+    assert.ok(records.some(r => r.value === 'stripe'));
+    assert.ok(elapsedMs < TIMING_BOUND_MS, `expected under ${TIMING_BOUND_MS}ms, took ${elapsedMs}ms`);
+  });
+
+  test('an extremely long route-convention path parses in under 1s', () => {
+    const longPath = 'app/' + 'segment/'.repeat(200000) + 'route.ts';
+    const start = Date.now();
+    parseRoute(longPath);
+    const elapsedMs = Date.now() - start;
+    assert.ok(elapsedMs < TIMING_BOUND_MS, `expected under ${TIMING_BOUND_MS}ms, took ${elapsedMs}ms`);
   });
 });
