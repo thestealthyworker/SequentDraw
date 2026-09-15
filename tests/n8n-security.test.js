@@ -42,7 +42,7 @@ describe('security: escaping and validation', () => {
       edges: [{ from: 'n1', to: 'n2', type: 'dashed', condition: 'C"><script>alert(6)</script>' }],
     };
 
-    const html = await renderMap(doc, { strategy: 'flat' });
+    const html = await renderMap(doc);
 
     // Exactly one <script> element should exist: the viewer's own inline
     // script. Any more means something broke out of an attribute or text
@@ -69,7 +69,7 @@ describe('security: escaping and validation', () => {
       ],
       edges: [{ from: 'a', to: 'b', type: 'solid', condition: null }],
     };
-    const html = await renderMap(doc, { strategy: 'flat' });
+    const html = await renderMap(doc);
     assert.ok(html.startsWith('<!DOCTYPE html>'));
     assert.ok(html.includes('</html>'));
   });

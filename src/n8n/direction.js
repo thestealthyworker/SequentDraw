@@ -9,9 +9,9 @@
 // This runs in two passes:
 //
 //   1. Group level: order groups (and ungrouped nodes, each its own unit)
-//      with the same topological-sort-plus-cycle-break used to stack rows
-//      in the "rows" strategy (see topo.js), then reverse any cross-group
-//      edge that points from a later group to an earlier one. Reasoning
+//      with a topological-sort-plus-cycle-break (see topo.js), then reverse
+//      any cross-group edge that points from a later group to an earlier
+//      one. Reasoning
 //      about the coarse group graph rather than individual nodes matters
 //      here — Medusa has an edge from deep inside the pipeline back to the
 //      `customer` node (a notification), and a naive node-by-node DFS can
@@ -141,4 +141,4 @@ function elkEdgeEndpoints(edge, edgeIndex, reversedSet) {
   return reversedSet.has(edgeIndex) ? { sources: [edge.to], targets: [edge.from] } : { sources: [edge.from], targets: [edge.to] };
 }
 
-module.exports = { computeReversedEdgeSet, elkEdgeEndpoints, dfsReverseLocal };
+module.exports = { computeReversedEdgeSet, elkEdgeEndpoints };
