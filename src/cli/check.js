@@ -1,30 +1,69 @@
-// `sequentdraw check --evidence bundle.json`
+// `sequentdraw check <map.json> --evidence <bundle.json>`
 //
-// Registered now, wired up in a follow-up once the scanner (src/scan/,
-// feat/git-map-scan: scanRepo, checkEvidence) merges — see
-// docs/design/git-map.md section 3. Until then this reports its
-// unavailability with exit code 2 rather than pretending to work or
-// erroring like a genuinely bad invocation (exit 1).
+// Runs validateDoc() (structural/schema validation), then checkEvidence()
+// (src/scan/check-evidence.js: every "source": "scan" node/edge in the map
+// must cite evidence that actually exists in the bundle and actually
+// supports the claim). Prints "ok" and exits 0 when both pass; otherwise
+// prints one "path  message" line per error to stderr and exits 1. Same
+// strict-argument contract as the other subcommands.
 
-const USAGE = 'Usage: sequentdraw check --evidence bundle.json';
+const fs = require('fs');
+const { validateDoc, ValidationError } = require('../n8n/validate');
+const { checkEvidence } = require('../scan');
+
+const USAGE = 'Usage: sequentdraw check <map.json> --evidence <bundle.json>';
 
 const HELP = `${USAGE}
 
-Checks that every scan-sourced node and edge in a workflow JSON document
-cites evidence that actually exists in the given scan bundle: every
-"source": "scan" node cites at least one real evidence id, and every
-"source": "scan" edge cites a dependency, import or route fact linking its
-endpoints.
+Checks a workflow JSON document: first validateDoc()'s own structural and
+schema invariants, then that every "source": "scan" node or edge cites at
+least one evidence id that exists in the given bundle and actually
+supports the claim (a depends-on, sdk-import, or route fact connecting an
+edge's two endpoints).
 
-Not implemented yet — available once the scanner (src/scan/) is merged. See
-docs/design/git-map.md section 3.
+Prints "ok" and exits 0 when the document passes both checks. Otherwise
+prints one "path  message" line per error to stderr and exits 1 -- fix a
+violation by demoting the item to "open" or "source": "model", never by
+inventing evidence.
 
 Options:
   --evidence <file>   The evidence bundle produced by "sequentdraw scan".
+                       Required.
   --help              Show this help.
 `;
 
-const UNAVAILABLE = 'sequentdraw check: available once the scanner is merged\n';
+function parseArgs(args) {
+  const positional = [];
+  let evidencePath = null;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--evidence') {
+      const value = args[i + 1];
+      if (value == null || value.startsWith('-')) return null;
+      evidencePath = value;
+      i++;
+    } else if (arg.startsWith('--evidence=')) {
+      evidencePath = arg.slice('--evidence='.length);
+      if (!evidencePath) return null;
+    } else if (arg.startsWith('-')) {
+      return null;
+    } else {
+      positional.push(arg);
+    }
+  }
+  if (positional.length !== 1) return null;
+  if (evidencePath == null) return null;
+  return { mapPath: positional[0], evidencePath };
+}
+
+function readJson(filePath, stderr) {
+  try {
+    return { value: JSON.parse(fs.readFileSync(filePath, 'utf8')) };
+  } catch (err) {
+    stderr.write(`${err.message}\n`);
+    return { error: true };
+  }
+}
 
 async function run(args, io = {}) {
   const stdout = io.stdout || process.stdout;
@@ -35,8 +74,37 @@ async function run(args, io = {}) {
     return 0;
   }
 
-  stderr.write(UNAVAILABLE);
-  return 2;
+  const parsed = parseArgs(args);
+  if (!parsed) {
+    stderr.write(`${USAGE}\n`);
+    return 1;
+  }
+
+  const docResult = readJson(parsed.mapPath, stderr);
+  if (docResult.error) return 1;
+  const bundleResult = readJson(parsed.evidencePath, stderr);
+  if (bundleResult.error) return 1;
+
+  let normalized;
+  try {
+    normalized = validateDoc(docResult.value);
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      err.errors.forEach(e => stderr.write(`${e.path || '/'}  ${e.message}\n`));
+      return 1;
+    }
+    stderr.write(`${err.message}\n`);
+    return 1;
+  }
+
+  const evidenceErrors = checkEvidence(normalized, bundleResult.value);
+  if (evidenceErrors.length > 0) {
+    evidenceErrors.forEach(e => stderr.write(`${e.path || '/'}  ${e.message}\n`));
+    return 1;
+  }
+
+  stdout.write('ok\n');
+  return 0;
 }
 
-module.exports = { run, USAGE, HELP };
+module.exports = { run, parseArgs, USAGE, HELP };

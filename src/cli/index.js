@@ -24,10 +24,13 @@ const TOP_USAGE = `Usage: sequentdraw <command> [options]
 
 Commands:
   render <in.json> <out.html|out.svg> [--layers a,b] [--fragment]
-                       Render a workflow JSON document to HTML or SVG.
-  validate <in.json>  Validate a workflow JSON document.
-  scan <path|url>      Scan a repository into an evidence bundle.
-  check --evidence <f> Check scan-sourced claims against an evidence bundle.
+                                        Render a workflow JSON document to
+                                        HTML or SVG.
+  validate <in.json>                   Validate a workflow JSON document.
+  scan <path|url> --out <bundle.json>  Scan a repository into an evidence
+                                        bundle.
+  check <map.json> --evidence <f>      Check scan-sourced claims in a map
+                                        against an evidence bundle.
 
 Run "sequentdraw <command> --help" for command-specific options.
 `;

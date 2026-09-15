@@ -165,24 +165,163 @@ test('validate --help exits 0 and prints usage', () => {
   assert.match(result.stdout, /Usage: sequentdraw validate/);
 });
 
-// --- scan / check (placeholders until the scanner merges) -----------------
+// --- scan --------------------------------------------------------------
+//
+// Against the committed fixture repos under tests/fixtures/repos/ -- no
+// network. compose-app's evidence ids are deterministic (evidence.js
+// sorts before assigning "ev1", "ev2", ...), so the fixture map JSON
+// files below can hardcode which ids exist without re-deriving them per
+// test run.
 
-test('scan: exits 2 and reports unavailability', () => {
-  const result = runCli(['scan', '.']);
-  assert.strictEqual(result.status, 2);
-  assert.match(result.stderr, /available once the scanner is merged/);
+const COMPOSE_APP = path.join(ROOT, 'tests', 'fixtures', 'repos', 'compose-app');
+
+test('scan: writes a bundle for the compose-app fixture repo', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'bundle.json');
+    const result = runCli(['scan', COMPOSE_APP, '--out', out]);
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.match(result.stdout, /wrote .*bundle\.json/);
+    const bundle = JSON.parse(fs.readFileSync(out, 'utf8'));
+    assert.strictEqual(bundle.repo.name, 'compose-app');
+    assert.ok(bundle.evidence.some(e => e.kind === 'compose-service' && e.value === 'web'));
+    assert.ok(bundle.evidence.some(e => e.kind === 'depends-on' && e.from === 'web' && e.to === 'api'));
+  });
 });
 
-test('scan --help exits 0 and prints usage', () => {
-  const result = runCli(['scan', '--help']);
-  assert.strictEqual(result.status, 0);
-  assert.match(result.stdout, /Usage: sequentdraw scan/);
+test('scan: an invalid GitHub host is rejected, prints one clear line, and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'bundle.json');
+    const result = runCli(['scan', 'https://notgithub.example/owner/repo', '--out', out]);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /git-map:.*github/i);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
 });
 
-test('check: exits 2 and reports unavailability', () => {
-  const result = runCli(['check', '--evidence', 'bundle.json']);
-  assert.strictEqual(result.status, 2);
-  assert.match(result.stderr, /available once the scanner is merged/);
+test('scan: an invalid ref is rejected, prints one clear line, and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'bundle.json');
+    const result = runCli(['scan', 'https://github.com/octocat/Hello-World/tree/--upload-pack=x', '--out', out]);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /git-map:/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('scan: a scan-timeout is reported as one clear line and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'bundle.json');
+    const result = runCli(['scan', COMPOSE_APP, '--out', out, '--timeout', '1']);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /git-map: scan exceeded 1ms and was terminated\./);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('scan: missing --out prints usage and writes nothing', () => {
+  withTempDir(dir => {
+    const result = runCli(['scan', COMPOSE_APP], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /Usage: sequentdraw scan/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('scan: unknown flag prints usage and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'bundle.json');
+    const result = runCli(['scan', COMPOSE_APP, '--out', out, '--bogus']);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /Usage: sequentdraw scan/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('scan --help exits 0, prints usage, and writes nothing', () => {
+  withTempDir(dir => {
+    const result = runCli(['scan', '--help'], dir);
+    assert.strictEqual(result.status, 0);
+    assert.match(result.stdout, /Usage: sequentdraw scan/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+// --- check ---------------------------------------------------------------
+
+function scanComposeApp(dir) {
+  const bundlePath = path.join(dir, 'bundle.json');
+  const scanResult = runCli(['scan', COMPOSE_APP, '--out', bundlePath]);
+  assert.strictEqual(scanResult.status, 0, scanResult.stderr);
+  return bundlePath;
+}
+
+test('check: a document citing real evidence ids passes with "ok"', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const mapPath = path.join(dir, 'map.json');
+    fs.writeFileSync(
+      mapPath,
+      JSON.stringify({
+        title: 'compose-app map',
+        nodes: [
+          { id: 'web', label: 'Web', kind: 'service', source: 'scan', evidence: ['ev1'] },
+          { id: 'api', label: 'Api', kind: 'service', source: 'scan', evidence: ['ev4'] },
+        ],
+        edges: [{ from: 'web', to: 'api', type: 'solid', source: 'scan', evidence: ['ev2'] }],
+      })
+    );
+    const result = runCli(['check', mapPath, '--evidence', bundlePath]);
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.strictEqual(result.stdout.trim(), 'ok');
+  });
+});
+
+test('check: an unknown evidence id and a missing citation each fail with their documented code', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const mapPath = path.join(dir, 'map.json');
+    fs.writeFileSync(
+      mapPath,
+      JSON.stringify({
+        title: 'compose-app map',
+        nodes: [
+          { id: 'web', label: 'Web', kind: 'service', source: 'scan', evidence: ['ev-does-not-exist'] },
+          { id: 'api', label: 'Api', kind: 'service', source: 'scan' },
+        ],
+        edges: [{ from: 'web', to: 'api', type: 'solid', source: 'scan', evidence: ['ev2'] }],
+      })
+    );
+    const result = runCli(['check', mapPath, '--evidence', bundlePath]);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /which is not in the scan bundle/); // unknown-evidence
+    assert.match(result.stderr, /must cite at least one evidence id/); // evidence-required
+  });
+});
+
+test('check: a structurally invalid document reports validateDoc errors and exits 1', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const mapPath = path.join(dir, 'map.json');
+    fs.writeFileSync(mapPath, JSON.stringify({ title: '', nodes: [], edges: [] }));
+    const result = runCli(['check', mapPath, '--evidence', bundlePath]);
+    assert.strictEqual(result.status, 1);
+    assert.ok(result.stderr.trim().length > 0);
+  });
+});
+
+test('check: missing --evidence prints usage and exits 1', () => {
+  const result = runCli(['check', FIXTURE]);
+  assert.strictEqual(result.status, 1);
+  assert.match(result.stderr, /Usage: sequentdraw check/);
+});
+
+test('check: unknown flag prints usage and exits 1', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const result = runCli(['check', FIXTURE, '--evidence', bundlePath, '--bogus']);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /Usage: sequentdraw check/);
+  });
 });
 
 test('check --help exits 0 and prints usage', () => {
