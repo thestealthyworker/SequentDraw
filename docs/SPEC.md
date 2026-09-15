@@ -158,7 +158,11 @@ is reproducible without re-running the model.
       "kind": "service | human | external | manual | artifact | logic",
       "icon": "string | null",    // resolved slug, null = glyph by kind
       "parentId": "string | null", // group id, null = ungrouped
-      "layers": ["base"]          // base | edge | business | build
+      "layers": ["base"],         // base | edge | business | build
+      "status": "confirmed",      // confirmed | open | suggested (see Gaps)
+      "source": "scan",           // scan | user | model, optional
+      "prompt": "string",         // optional; the open question for an open node
+      "rationale": "string"       // required on suggested nodes, not allowed elsewhere
     }
   ],
   "edges": [
@@ -166,25 +170,56 @@ is reproducible without re-running the model.
       "from": "string",           // node id
       "to": "string",             // node id
       "type": "solid | dashed | gutter",
-      "condition": "string | null" // renders as edge label
+      "condition": "string | null" // renders as a branch label
     }
+  ],
+  "notes": [                      // optional sticky notes, see docs/design/n8n-visual-style.md
+    {
+      "id": "string",
+      "content": "string",        // Markdown subset, <= 2,000 characters
+      "attachTo": ["node or group id"], // omit for a map-level note
+      "color": "yellow | gold | red | green | blue | purple | gray",
+      "layers": ["base"]
+    }
+  ],
+  "tour": [                       // optional, see Tours
+    { "order": 1, "title": "string", "description": "string", "nodeIds": ["node id"] }
   ]
 }
 ```
+
+The machine-readable version is [`schema/sequentdraw.schema.json`](../schema/sequentdraw.schema.json)
+(JSON Schema draft 2020-12). Every field carries a description, so AI tools and API
+callers can read it as documentation. A test keeps it in agreement with the validator.
 
 ### Invariants the renderer validates before drawing
 
 - every `node.parentId` exists in `groups`, or is null
 - every `edge.from` / `edge.to` exists in `nodes`
-- no node is orphaned (zero edges) unless it is the only node in its group
+- no node is orphaned (zero edges) unless it is the only node in its group (ungrouped
+  nodes count as one shared group)
 - `sublabel` is 3 words or fewer
 - an edge carrying a `condition` is `dashed`, not `solid`
-- no more than 100 nodes in one graph
 - group nesting is one level; a group may not have a `parentId`
 - every entry in `layers` is one of the four named layers
-- an edge is visible only when both endpoints are visible in the active layers
+- a `suggested` node has a `rationale`; no other node does
+- every note `attachTo` and tour `nodeIds` entry names an existing node or group
+- ids are unique across nodes, groups and notes
+- unknown fields are errors, with a "did you mean" hint for near misses (`parent_id`)
+- size caps: 100 nodes, 500 edges, 50 groups, 20 notes, 50 tour steps, 200 fields per
+  object, plus length caps on every string (title 120, label 80, sublabel 60,
+  condition 80, prompt and rationale 500 characters)
+- an edge is visible only when both endpoints are visible in the active layers (a
+  render rule, not a validation error)
 
 Fail loudly on violation. A broken diagram is worse than no diagram.
+
+**Every problem is reported at once.** Validation throws one `ValidationError` whose
+`errors` list holds `{ path, code, message }` for each problem: `path` is a JSON Pointer
+such as `/nodes/3/sublabel`, `code` is stable such as `sublabel-too-many-words`, and
+`message` names the offending item and the fix. An AI tool can repair a whole document
+in one pass. Because input is untrusted, validation is bounded: oversized arrays fail
+before per-item work, echoed input is truncated, and the list stops at 100 errors.
 
 ## Gaps and resolution
 
