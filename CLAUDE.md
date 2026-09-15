@@ -61,6 +61,19 @@ Procedure:
 7. If a gate has not passed after three re-review rounds, the lead developer stops and
    escalates to the owner with the open findings.
 
+### The CTO is internal, and is removed before completion
+
+The CTO review is an internal quality check, not a product feature. The owner requires
+it to be gone before the work is complete:
+
+- **Until then, it never ships.** Packaging (npm `files`, the plugin manifest,
+  `skills install`) must exclude `.claude/`, `CLAUDE.md` and `docs/reviews/`. No skill,
+  hook, doc for users, or `AGENTS.md` mentions the CTO.
+- **After M3 passes, a final cleanup PR** deletes `.claude/agents/sequentdraw-cto.md`
+  and `docs/reviews/`, and removes the CTO rows, the milestone-gate section and this
+  subsection from `CLAUDE.md`, plus the gate paragraph from `docs/HANDOVER.md`. The
+  work is not complete until that PR merges.
+
 ## Where things are
 
 - Product and build order: `docs/HANDOVER.md`

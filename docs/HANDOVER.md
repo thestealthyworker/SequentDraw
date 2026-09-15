@@ -220,6 +220,9 @@ scaffold arrives with the first of them, `git-map`.
 7. Suggestion agent (tool recommendations from n8n integrations), after gap detection
    is trustworthy.
 8. Tours last.
+9. **Internal cleanup, after the M3 gate passes:** remove the CTO agent, the review
+   reports and the gate process (see `CLAUDE.md`). They are internal checks, not part
+   of the product. The work is not complete until this is merged.
 
 **Milestone gates.** The CTO agent (`sequentdraw-cto`, on Fable) reviews `main` at
 three points, and only there, each after the lead developer has merged the milestone:
