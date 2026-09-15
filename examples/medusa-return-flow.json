@@ -229,7 +229,7 @@
     {
       "id": "order_version",
       "label": "Version bump",
-      "sublabel": "on request, on receipt",
+      "sublabel": "request and receipt",
       "kind": "logic",
       "icon": null,
       "parentId": "g_core",
