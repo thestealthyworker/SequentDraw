@@ -104,6 +104,64 @@ Invariants, enforced loudly like the rest of the schema:
 
 In plugin form this is how Claude or Codex writes explanations into a map.
 
+**Consideration notes.** A note that raises something the reader should think about,
+rather than describe, uses `gold` by convention and starts with "Consider:". Skills
+write these (`business-map`, `eval-build`) and never state them as fact. The Medusa
+fixture carries a few hand-written examples.
+
+### Details card (hover, tap or keyboard)
+
+Owner feedback (2026-09-15): the maps look right but say too little about what each
+node does and how the integrations connect. Shapes alone do not explain a system.
+Every node and edge therefore has a details card.
+
+IR additions, all optional:
+
+```jsonc
+{ "id": "pay_provider", "label": "Payment provider", "kind": "service", "icon": "stripe",
+  "description": "Stripe issues the refund to the customer's original payment method.",
+  "link": "https://docs.stripe.com/refunds" }
+
+{ "from": "pay_mod", "to": "pay_provider", "type": "solid",
+  "description": "Refund amount and the original payment intent id" }
+```
+
+| Field | Rule |
+|---|---|
+| node `description` | Plain text, at most 280 characters, line breaks kept. What the node does in this system, not what the product is in general. |
+| node `link` | One URL, at most 300 characters, to vendor or internal docs. The same narrowing as note links: `http` or `https` only; whitespace, quotes and angle brackets rejected by validation. |
+| edge `description` | Plain text, at most 200 characters. What passes along this connection: data, a document, a message, money. |
+
+**Node card** shows:
+- the icon, label and sublabel
+- badges for kind, group and layers, plus status
+- the description
+- for `open` nodes, the `prompt` as "Open question: …"
+- for `suggested` nodes, the `rationale` as "Why suggested: …"
+- **Receives from** and **Sends to**: every connected node, each with its edge
+  description or condition when present, derived from the edges so every map gets
+  them even with no descriptions written
+- the docs link, which opens in a new tab
+
+**Edge card** shows "From → To", what the line style means (solid: always happens;
+dashed: conditional, retry or return), the condition, and the description.
+
+Interaction:
+
+| Input | Behaviour |
+|---|---|
+| Pointer hover | Card appears after 150ms and hides on leave. The node's connected edges and neighbours are highlighted and everything else dims, the way n8n emphasises a selection. |
+| Click or tap | Pins the card. Clicking empty canvas or pressing Escape unpins. Touch devices have no hover, so this is their path. |
+| Keyboard | Nodes and edges are focusable in reading order (`tabindex="0"`, a descriptive `aria-label`). Focus shows the card; Enter pins; Escape closes. |
+| Zoom and pan | The card is an HTML overlay outside the SVG transform: it keeps a constant, readable size, sits beside its target, and flips to stay inside the viewport. |
+| Hidden layers | Connections to hidden nodes are listed with "(hidden)". |
+| Reduced motion | No fade or dim transitions under `prefers-reduced-motion`. |
+
+Security: card text comes from untrusted input. Card data is embedded inside the single
+viewer script as a JSON literal (with `<`, U+2028 and U+2029 escaped) and written to the
+DOM only through `textContent` and validated `href` attributes, never `innerHTML`.
+The output keeps exactly one `<script>` element.
+
 ### Layers
 
 Unchanged in meaning: layers are a visibility filter over one layout. The checkbox
