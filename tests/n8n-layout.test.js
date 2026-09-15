@@ -104,11 +104,16 @@ describe('n8n layout on the Medusa fixture', () => {
     assert.deepStrictEqual(bad, []);
   });
 
-  test('renderHtml produces output with no http(s) references beyond the SVG xmlns', () => {
+  test('renderHtml loads no external resources (self-contained, per SPEC.md "no dependencies")', () => {
+    // Notes may legitimately contain http(s)/mailto links (opened on click,
+    // never fetched), so this no longer bans "http" as a substring anywhere
+    // in the output — it checks for actual resource-loading references
+    // instead: a <script src>, a <link>, or an <img src> would break the
+    // "opens by double-click, survives being emailed" requirement.
     html = renderHtml(layout, doc);
-    const refs = html.match(/https?:\/\/[^\s"'<>]+/g) || [];
-    const unexpected = refs.filter(r => r !== 'http://www.w3.org/2000/svg');
-    assert.deepStrictEqual(unexpected, []);
+    assert.deepStrictEqual(html.match(/<script[^>]*\bsrc=/g) || [], []);
+    assert.deepStrictEqual(html.match(/<link\b/g) || [], []);
+    assert.deepStrictEqual(html.match(/<img\b/g) || [], []);
   });
 
   test('renderHtml output is a complete, non-empty HTML document', () => {

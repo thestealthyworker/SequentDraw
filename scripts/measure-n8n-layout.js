@@ -2,7 +2,9 @@
 // row of stats, per the brief: canvas size/aspect ratio, edge segments
 // crossing a frame they don't belong to, edge segments crossing label text
 // (node label/sublabel or frame title), backward-edge count, overlapping
-// label-box pairs, and edges crossing a node box they don't belong to.
+// label-box pairs, edges crossing a node box they don't belong to, note
+// boxes overlapping anything they shouldn't (node, label, frame title,
+// another note), and edges crossing a note box.
 
 const path = require('path');
 const fs = require('fs');
@@ -67,6 +69,39 @@ async function measure() {
     }
   }
 
+  // Note overlaps: a note box overlapping a node, a node's label strip, a
+  // frame title, or another note — any of these is a placement bug per
+  // docs/design/n8n-visual-style.md "Placement" (a frame's empty BODY is
+  // the one thing an attached note may legitimately sit over, so frame
+  // bodies are not counted here).
+  const noteEntries = Object.entries(layout.noteBoxes || {}).map(([id, b]) => ({ id, ...b }));
+  let noteOverlaps = 0;
+  for (const note of noteEntries) {
+    for (const [nodeId, box] of Object.entries(layout.nodeBoxes)) {
+      if (overlaps(note, box)) noteOverlaps++;
+    }
+    for (const lb of labelBoxes) {
+      if (overlaps(note, lb)) noteOverlaps++;
+    }
+    for (const tb of frameTitleBoxes) {
+      if (overlaps(note, tb)) noteOverlaps++;
+    }
+  }
+  for (let i = 0; i < noteEntries.length; i++) {
+    for (let j = i + 1; j < noteEntries.length; j++) {
+      if (overlaps(noteEntries[i], noteEntries[j])) noteOverlaps++;
+    }
+  }
+
+  // Edge segments crossing a note box — notes are obstacles for routing,
+  // never exempt (see layout.js computeEdges).
+  let edgeNoteCrossings = 0;
+  for (const { pts } of sampled) {
+    for (const note of noteEntries) {
+      if (pts.some(pt => pointInRect(pt, note))) edgeNoteCrossings++;
+    }
+  }
+
   return {
     width: Math.round(layout.canvas.width),
     height: Math.round(layout.canvas.height),
@@ -76,6 +111,8 @@ async function measure() {
     backwardCount,
     labelOverlaps,
     nodeViolations,
+    noteOverlaps,
+    edgeNoteCrossings,
   };
 }
 
@@ -90,6 +127,8 @@ async function measure() {
     ['backward-edges', 'backwardCount'],
     ['label-overlaps', 'labelOverlaps'],
     ['node-crossings', 'nodeViolations'],
+    ['note-overlaps', 'noteOverlaps'],
+    ['edge-note-crossings', 'edgeNoteCrossings'],
   ];
   const table = [columns.map(c => c[0]), columns.map(c => String(row[c[1]]))];
   const widths = columns.map((c, i) => Math.max(c[0].length, ...table.map(r => r[i].length)));
