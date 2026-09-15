@@ -4,3 +4,8 @@ out/
 .DS_Store
 .env
 .env.*
+# Fixture content for the git-map scan engine's tests is meant to be
+# committed, including a sanitised .env.example (see src/scan/safe-provider.js
+# and tests/fixtures/repos/next-supabase-stripe) -- carve it back out of the
+# blanket .env.* ignore above.
+!tests/fixtures/repos/**/.env.example
