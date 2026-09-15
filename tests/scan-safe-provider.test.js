@@ -356,7 +356,7 @@ describe('SafeProvider: *.yml/*.yaml is parsed with bounded settings before ever
 
       assert.strictEqual(content, null);
       assert.ok(elapsedMs < TIMING_BOUND_MS, `expected well under a catastrophic-regression bound, took ${elapsedMs}ms`);
-      assert.deepStrictEqual(provider.findings, [{ kind: 'yaml-rejected', path: 'docker-compose.yml', reason: 'nesting-too-deep' }]);
+      assert.deepStrictEqual(provider.findings, [{ kind: 'yaml-rejected', path: 'docker-compose.yml', reason: 'too-deep' }]);
     });
   });
 
@@ -379,7 +379,7 @@ describe('SafeProvider: *.yml/*.yaml is parsed with bounded settings before ever
       assert.strictEqual(content, null);
       assert.ok(elapsedMs < TIMING_BOUND_MS, `expected well under a catastrophic-regression bound, took ${elapsedMs}ms`);
       assert.ok(
-        provider.findings.some(f => f.kind === 'yaml-rejected' && f.path === '.github-workflow.yml' && f.reason === 'nesting-too-deep'),
+        provider.findings.some(f => f.kind === 'yaml-rejected' && f.path === '.github-workflow.yml' && f.reason === 'too-deep'),
       );
     });
   });
@@ -477,6 +477,28 @@ describe('SafeProvider: *.yml/*.yaml is parsed with bounded settings before ever
         assert.ok(content.includes('k0: v0'));
         assert.ok(elapsedMs < TIMING_BOUND_MS, `expected well under a catastrophic-regression bound, took ${elapsedMs}ms`);
         assert.deepStrictEqual(provider.findings, []);
+      });
+    });
+
+    test('fix round 3: an alias-count bomb is rejected with reason "too-many-aliases"', async () => {
+      await withTempDir(async base => {
+        const file = path.join(base, 'alias-bomb.yml');
+        const lines = ['a: &a [x,x,x,x,x,x,x,x,x,x]'];
+        let prev = 'a';
+        for (const letter of 'bcdefghijklmnop') {
+          lines.push(`${letter}: &${letter} [*${prev},*${prev},*${prev},*${prev},*${prev},*${prev},*${prev},*${prev},*${prev},*${prev}]`);
+          prev = letter;
+        }
+        fs.writeFileSync(file, lines.join('\n') + '\n');
+        const provider = new SafeProvider({ path: base, maxFileBytes: 10 * 1024 * 1024 });
+
+        const start = Date.now();
+        const content = await provider.open(file);
+        const elapsedMs = Date.now() - start;
+
+        assert.strictEqual(content, null);
+        assert.ok(elapsedMs < TIMING_BOUND_MS, `expected well under a catastrophic-regression bound, took ${elapsedMs}ms`);
+        assert.deepStrictEqual(provider.findings, [{ kind: 'yaml-rejected', path: 'alias-bomb.yml', reason: 'too-many-aliases' }]);
       });
     });
   });

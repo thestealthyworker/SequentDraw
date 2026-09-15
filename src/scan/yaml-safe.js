@@ -255,43 +255,73 @@ function countStructuralEntries(text, maxEntries) {
 function checkYamlLimits(text) {
   if (countLines(text) > MAX_LINES) return { ok: false, reason: 'too-many-lines' };
   if (countStructuralEntries(text, MAX_ENTRIES) > MAX_ENTRIES) return { ok: false, reason: 'too-many-entries' };
-  if (exceedsNestingDepth(text, MAX_NESTING_DEPTH)) return { ok: false, reason: 'nesting-too-deep' };
+  if (exceedsNestingDepth(text, MAX_NESTING_DEPTH)) return { ok: false, reason: 'too-deep' };
   return { ok: true };
 }
 
-// Parses YAML text and returns the resulting JS value, or null if the
-// input is oversized, too deeply nested, malformed, or expands past the
-// alias budget. Never throws.
+// The `yaml` package's own maxAliasCount rejection has no distinguishing
+// `.code`/`.name` (it surfaces as a plain ReferenceError -- see the
+// fix-round-3 investigation), only a stable message text. Matched here,
+// once, so every caller gets the same specific 'too-many-aliases' reason
+// instead of a generic 'parse-error' -- the message text itself is used
+// only to CLASSIFY the failure and is never propagated into a finding.
+function isAliasCountError(err) {
+  return !!err && typeof err.message === 'string' && err.message.includes('alias count');
+}
+
+// The single source of truth for "is this YAML content safe to use, and
+// if not, why". Every YAML refusal path in this engine -- the safe
+// provider's pre-check, the real parse, a caller that only gets told
+// null -- ultimately traces back to this function, so there is exactly
+// one place that decides the reason a caller reports.
 //
-// uniqueKeys: false turns off the `yaml` package's own duplicate-key
-// bookkeeping, which is what made a flat, very-wide document (thousands
-// of distinct top-level keys, no duplicates at all) grow
-// super-quadratically instead of linearly -- SafeProvider's
-// checkYamlLimits() above is what actually enforces a global width cap;
-// this document has already passed that by the time it reaches here, so
-// disabling the check trades "reject a document with a real duplicate
-// key" (never a real fact this engine needs to detect duplicates for)
-// for "parse in linear time".
-function parseYamlSafe(text) {
-  if (typeof text !== 'string' || text.length === 0) return null;
-  if (Buffer.byteLength(text, 'utf8') > MAX_INPUT_BYTES) return null;
-  if (exceedsNestingDepth(text, MAX_NESTING_DEPTH)) return null;
+// Returns { ok: true, value } on success, or { ok: false, reason } with
+// reason one of: 'file-too-large' | 'too-many-lines' | 'too-many-entries'
+// | 'too-deep' | 'too-many-aliases' | 'parse-error'. Never throws.
+function classifyYaml(text) {
+  if (typeof text !== 'string' || text.length === 0) return { ok: false, reason: 'parse-error' };
+  if (Buffer.byteLength(text, 'utf8') > MAX_INPUT_BYTES) return { ok: false, reason: 'file-too-large' };
+
+  const limits = checkYamlLimits(text);
+  if (!limits.ok) return limits;
+
   try {
-    return YAML.parse(text, {
+    const value = YAML.parse(text, {
       maxAliasCount: MAX_ALIAS_COUNT,
+      // uniqueKeys: false turns off the `yaml` package's own
+      // duplicate-key bookkeeping, which is what made a flat, very-wide
+      // document (thousands of distinct top-level keys, no duplicates
+      // at all) grow super-quadratically instead of linearly --
+      // checkYamlLimits() above already enforces a global width cap, so
+      // disabling the check trades "reject a document with a real
+      // duplicate key" (never a fact this engine needs the library to
+      // detect for it) for "parse in linear time".
       uniqueKeys: false,
       // Never let a document schema-tag a scalar into something other
       // than string/number/boolean/null; refuse custom tags rather than
       // silently invoking a resolver.
       customTags: [],
     });
-  } catch {
-    return null;
+    return { ok: true, value };
+  } catch (err) {
+    return { ok: false, reason: isAliasCountError(err) ? 'too-many-aliases' : 'parse-error' };
   }
+}
+
+// Parses YAML text and returns the resulting JS value, or null on any
+// failure (oversized, too wide/deep, malformed, over the alias budget).
+// Never throws. A thin wrapper around classifyYaml() for callers (the
+// compose/workflow parsers) that only ever want the parsed value, never
+// the reason -- SafeProvider.open() is what actually needs the reason,
+// via classifyYaml() directly, to build a yaml-rejected finding.
+function parseYamlSafe(text) {
+  const result = classifyYaml(text);
+  return result.ok ? result.value : null;
 }
 
 module.exports = {
   parseYamlSafe,
+  classifyYaml,
   exceedsNestingDepth,
   checkYamlLimits,
   countLines,

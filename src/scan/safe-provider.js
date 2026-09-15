@@ -27,7 +27,7 @@
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { stripControlChars } = require('./sanitize-text');
-const { parseYamlSafe, checkYamlLimits } = require('./yaml-safe');
+const { classifyYaml } = require('./yaml-safe');
 
 const DEFAULT_MAX_FILES = 20000;
 const DEFAULT_MAX_DEPTH = 25;
@@ -294,11 +294,14 @@ class SafeProvider {
     this.findings.push({ kind: 'real-env-file', path: rel });
   }
 
+  // De-duplicated by PATH alone (not path+reason): a given file must
+  // only ever produce one finding, so the first reason recorded for it
+  // is the one that sticks even if some future caller reaches open()
+  // for the same path more than once.
   _recordYamlRejected(absPath, reason) {
     const rel = this.relPath(absPath);
-    const key = `${rel} ${reason}`;
-    if (this._yamlRejectedSeen.has(key)) return;
-    this._yamlRejectedSeen.add(key);
+    if (this._yamlRejectedSeen.has(rel)) return;
+    this._yamlRejectedSeen.add(rel);
     this.findings.push({ kind: 'yaml-rejected', path: rel, reason });
   }
 
@@ -421,29 +424,39 @@ class SafeProvider {
     if (buf.subarray(0, BINARY_SNIFF_BYTES).includes(0)) return null;
 
     const text = buf.toString('utf8');
-    if (hasOverlongLine(text)) return null; // minified by content, not just by name
 
-    // Every *.yml/*.yaml file is checked and parsed with the same
+    // Fix-round-3 root cause: hasOverlongLine() is a generic "this looks
+    // minified" heuristic (*.min.js/*.min.css style single-line bundles)
+    // that used to run unconditionally, BEFORE the YAML-specific checks
+    // below. A single-line flow mapping -- "x-flood: {k0: 1, k1: 1, ...}"
+    // with thousands of entries -- IS a normal (if unusual) YAML
+    // construct, not evidence of minification, but it easily exceeds
+    // MAX_LINE_LENGTH on one line; hasOverlongLine() silently returned
+    // null for it, dropping the ENTIRE file (including a legitimate
+    // `services:` block after it) with no finding at all -- exactly the
+    // "silently partial" outcome the design doc forbids. YAML files
+    // therefore skip this generic heuristic entirely and go straight to
+    // classifyYaml(), whose own width checks (countStructuralEntries
+    // counts flow-collection commas regardless of line length) are what
+    // actually decide whether content this dense is safe, and ALWAYS
+    // record why when it is not.
+    if (!isYaml && hasOverlongLine(text)) return null; // minified by content, not just by name
+
+    // Every *.yml/*.yaml file is classified and parsed with the same
     // bounded settings BEFORE its content is ever handed back to a
     // caller -- stack-analyser's own docker and githubActions rules
     // parse repo-supplied YAML too, so this guard has to live here, not
     // only inside src/scan/parsers/*, to cover every path that reaches
-    // this content. Two layers, cheapest first: checkYamlLimits() is a
-    // linear structural pre-check (lines, apparent entry count, nesting
-    // depth) that never does a real parse, so it rejects a pathologically
-    // WIDE document (see YAML_MAX_FILE_BYTES's comment) before the real
-    // parser ever sees it; parseYamlSafe() is the actual bounded parse,
-    // a second independent check. A file that fails either is never
-    // returned; only its path and which limit fired are recorded, as a
-    // finding, never its (rejected, so possibly hostile) content.
+    // this content. classifyYaml() is the single source of truth for
+    // both the structural pre-check (lines, apparent entry count,
+    // nesting depth -- never a real parse) and the actual bounded parse;
+    // a file that fails either is never returned, and the specific
+    // reason is ALWAYS recorded as a finding, never its (rejected, so
+    // possibly hostile) content or any error text.
     if (isYaml) {
-      const limits = checkYamlLimits(text);
-      if (!limits.ok) {
-        this._recordYamlRejected(p, limits.reason);
-        return null;
-      }
-      if (parseYamlSafe(text) === null) {
-        this._recordYamlRejected(p, 'unparsable');
+      const result = classifyYaml(text);
+      if (!result.ok) {
+        this._recordYamlRejected(p, result.reason);
         return null;
       }
     }
