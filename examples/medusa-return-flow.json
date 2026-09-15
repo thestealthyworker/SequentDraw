@@ -734,5 +734,33 @@
       "type": "solid",
       "condition": null
     }
+  ],
+  "notes": [
+    {
+      "id": "n_overview",
+      "content": "# Medusa returns\nA customer or merchant opens a return, the warehouse receives and inspects the items, then a refund is issued through Stripe. See the [Medusa return docs](https://docs.medusajs.com/) for the underlying data model.",
+      "color": "yellow"
+    },
+    {
+      "id": "n_ship",
+      "content": "## Return shipping\nMedusa generates the **return label**, the customer ships the parcel back, and the warehouse logs receipt before inspection.",
+      "attachTo": ["g_ship"],
+      "color": "blue",
+      "layers": ["business"]
+    },
+    {
+      "id": "n_inspection",
+      "content": "## Inspection\nItems are checked by hand against the original order line. Notes:\n- condition, not just quantity\n- photos attached to the return record\n- `inspect` decides the outcome",
+      "attachTo": ["receive", "inspect"],
+      "color": "green",
+      "layers": ["business"]
+    },
+    {
+      "id": "n_refund_cap",
+      "content": "**Refund exceeds cap** halts the flow — a merchant must approve any refund over the configured limit before Stripe is called.",
+      "attachTo": ["refund_check"],
+      "color": "red",
+      "layers": ["edge"]
+    }
   ]
 }
