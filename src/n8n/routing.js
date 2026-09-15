@@ -9,9 +9,26 @@
 // with the "cruise" y level chosen to actually clear the obstacles in its
 // path (and, for forward edges, to avoid unrelated frames too) rather than
 // a fixed offset.
+//
+// "Obstacles" here aren't just node/frame shapes: the caller (layout.js
+// computeEdges) folds each node's reserved label+sublabel strip into
+// avoidNodeBoxes (own endpoints' labels included — an edge is allowed to
+// touch its own node's shape at the handle, but not to cut across its own
+// label text) and every frame's title text into avoidFrameBoxes (never
+// exempt, not even for the edge's own group, unlike the frame body), so
+// both the bezier-clear check and the orthogonal detours steer clear of
+// text, not just shapes.
 
 const { BACKWARD_STUB, BACKWARD_DROP, BACKWARD_CORNER_RADIUS } = require('./constants');
-const { forwardBezierPath, forwardBezierMidpoint, roundedOrthogonalPath, detourPoints, polylineMidpoint } = require('./geometry');
+const {
+  forwardBezierPath,
+  forwardBezierMidpoint,
+  roundedOrthogonalPath,
+  clampStub,
+  detourPoints,
+  detourPointsAtX,
+  polylineMidpoint,
+} = require('./geometry');
 
 const OBSTACLE_MARGIN = 18; // px clearance kept from an unrelated node box (> the reviewer's 16px bar)
 const CRUISE_CLEARANCE = 24; // px kept between a detour's cruise line and the obstacle it clears
@@ -55,8 +72,13 @@ function countHits(points, boxes, margin) {
   return boxes.reduce((n, b) => n + (pathHitsBox(points, b, margin) ? 1 : 0), 0);
 }
 
-function buildDetour(sx, sy, tx, ty, stub, cruiseY) {
-  const pts = detourPoints(sx, sy, tx, ty, stub, cruiseY);
+// `dropX`, when given, overrides where the source-side vertical connector
+// sits instead of the default sx+stub (see chooseClearDropX below); the
+// approach-side connector still uses the stub-clamped tx-s.
+function buildDetour(sx, sy, tx, ty, stub, cruiseY, dropX) {
+  const pts = dropX == null
+    ? detourPoints(sx, sy, tx, ty, stub, cruiseY)
+    : detourPointsAtX(sx, sy, tx, ty, dropX, tx - clampStub(sx, tx, stub), cruiseY);
   return { pts, d: roundedOrthogonalPath(pts, BACKWARD_CORNER_RADIUS), midpoint: polylineMidpoint(pts) };
 }
 
@@ -80,8 +102,10 @@ function refineCruiseY(sx, sy, tx, ty, stub, direction, initialY, avoidBoxes) {
   return y;
 }
 
-// avoidNodeBoxes/avoidFrameBoxes already exclude the edge's own endpoints
-// and their own group's frame — see layout.js computeEdges.
+// avoidNodeBoxes/avoidFrameBoxes already exclude the edge's own endpoint
+// node shapes and their own group's frame body, but NOT the endpoints' own
+// label boxes or any frame title, which remain obstacles; see layout.js
+// computeEdges.
 function routeForward(sx, sy, tx, ty, avoidNodeBoxes, avoidFrameBoxes) {
   const bezierPts = sampleBezier(sx, sy, tx, ty, SAMPLE_STEPS);
   const nodeBlockers = avoidNodeBoxes.filter(b => pathHitsBox(bezierPts, b, OBSTACLE_MARGIN));
@@ -121,6 +145,27 @@ function routeForward(sx, sy, tx, ty, avoidNodeBoxes, avoidFrameBoxes) {
   return best;
 }
 
+// The default source-side connector sits a fixed `stub` px right of the
+// source (see detourPoints) — fine when nothing unrelated shares that
+// x-range, but a long backward edge's drop can otherwise run straight down
+// through the body of one or more frames that just happen to sit under it
+// (e.g. a return edge dropping from a node in the rightmost frame column,
+// past two other frames stacked below it, before cutting back left). Slide
+// the connector left, toward the target, until it lands outside every
+// frame whose y-range the vertical drop actually passes through, stopping
+// at `floorX` (never past the target's own side) if no clear x is found.
+function chooseClearDropX(naiveX, floorX, yTop, yBottom, avoidFrameBoxes) {
+  const blockers = avoidFrameBoxes.filter(b => b.y < yBottom + OBSTACLE_MARGIN && b.y + b.h > yTop - OBSTACLE_MARGIN);
+  let x = naiveX;
+  for (let iter = 0; iter < 8; iter++) {
+    const hit = blockers.find(b => x > b.x - OBSTACLE_MARGIN && x < b.x + b.w + OBSTACLE_MARGIN);
+    if (!hit) break;
+    x = hit.x - OBSTACLE_MARGIN;
+    if (x <= floorX) return floorX;
+  }
+  return Math.max(x, floorX);
+}
+
 // The initial guess only has to clear node boxes, per the fix-round brief:
 // "must pass below the lowest node box in the x-range they span." The
 // refinement pass then also tries (without breaking that floor) to clear
@@ -136,7 +181,14 @@ function routeBackward(sx, sy, tx, ty, avoidNodeBoxes, avoidFrameBoxes) {
   const afterFrames = (avoidFrameBoxes || []).length
     ? refineCruiseY(sx, sy, tx, ty, BACKWARD_STUB, 1, afterNodes, avoidNodeBoxes.concat(avoidFrameBoxes))
     : afterNodes;
-  return buildDetour(sx, sy, tx, ty, BACKWARD_STUB, Math.max(afterNodes, afterFrames));
+  const cruiseY = Math.max(afterNodes, afterFrames);
+
+  const naiveDropX = sx + clampStub(sx, tx, BACKWARD_STUB);
+  const dropX = (avoidFrameBoxes || []).length
+    ? chooseClearDropX(naiveDropX, tx + BACKWARD_STUB * 2, Math.min(sy, cruiseY), Math.max(sy, cruiseY), avoidFrameBoxes)
+    : naiveDropX;
+
+  return buildDetour(sx, sy, tx, ty, BACKWARD_STUB, cruiseY, dropX);
 }
 
 module.exports = { routeForward, routeBackward };

@@ -1,4 +1,4 @@
-// ELK plumbing shared by both layout strategies. Only node/container
+// ELK plumbing for the flat layout strategy. Only node/container
 // positions are used — edge paths are computed ourselves (see geometry.js
 // and layout.js) so the visual grammar in docs/design/n8n-visual-style.md is
 // followed exactly rather than however ELK's own router would draw it.

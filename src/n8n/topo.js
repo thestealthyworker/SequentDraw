@@ -1,8 +1,7 @@
 // Kahn's algorithm topological sort with cycle-breaking by first
 // appearance: when nothing has in-degree 0 (a cycle), the earliest key in
 // `baseOrder` is picked anyway and its outgoing edges are treated as
-// satisfied. Shared by layout-rows.js (group-row stacking order) and
-// direction.js (group-level edge-reversal order for the "flat" strategy).
+// satisfied. Used by direction.js for group-level edge-reversal order.
 function topologicalOrder(keys, baseOrder, metaEdges) {
   const indegree = new Map(keys.map(k => [k, 0]));
   const adj = new Map(keys.map(k => [k, new Set()]));
