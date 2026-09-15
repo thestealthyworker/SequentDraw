@@ -221,6 +221,15 @@ scaffold arrives with the first of them, `git-map`.
    is trustworthy.
 8. Tours last.
 
+**Milestone gates.** The CTO agent (`sequentdraw-cto`, on Fable) reviews `main` at
+three points, and only there, each after the lead developer has merged the milestone:
+**M1** once extraction Mode A and `git-map` are in; **M2** once the suggestion agent
+is in (`business-map` with suggestions, `eval-build`, `grill-build`); and **M3** when
+the build order is complete. M3 includes re-testing
+against the prototype fixtures. The owner has set aside the unrecovered prototype
+files (`check.js`, `layout.js`, `stampedid-workflow.json`) until then. The procedure is
+in `CLAUDE.md`.
+
 The "two known defects" in the old build order (edges crossing containers, label overlaps)
 are re-measured against the n8n renderer rather than fixed in the legacy one.
 
