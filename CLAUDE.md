@@ -14,7 +14,7 @@ Sessions on this project work on SequentDraw only.
 | Owner | The repository owner | Product direction and final say |
 | Lead developer and reviewer | Opus (the main session) | Plans, orchestrates, reviews every change for correctness and security, merges |
 | Workers | Subagents matched to the task | Haiku for bulk search and extraction; Sonnet for research and implementation; the reviewer agent for code review |
-| CTO | `sequentdraw-cto` agent on Fable | Judges at milestone gates whether the product works, looks and feels right, and meets its purpose |
+| CTO | `sequentdraw-cto` agent on Fable 5.1, low effort | Judges at milestone gates whether the product works, looks and feels right, and meets its purpose |
 
 ## How work lands
 
