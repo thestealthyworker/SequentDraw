@@ -33,20 +33,23 @@ and it is why a canvas-document schema cannot be adopted wholesale.
 
 These are hard rules. Consistency across runs is the point.
 
+> **Rendering is now n8n style.** Sizes, shapes, colours, handles and edge routing are
+> defined in [`docs/design/n8n-visual-style.md`](design/n8n-visual-style.md), which
+> replaced this section's original 44px-circle, dashed-container and orthogonal-only
+> rules. The semantic rules here still apply: node kinds, edge types and their meaning,
+> layers, tiers, gaps and invariants.
+
 ### Nodes
 
-- The icon is the node. No box around it.
-- Icon sits in a 44px circle, brand SVG inset to 24px, centred.
-- `label` sits 18px below the icon, 14px, medium weight. The tool name.
-- `sublabel` sits 18px below the label, 12px, secondary. What it does, max 3 words.
-- Unresolved icon: same circle, neutral fill, first two letters of the label.
+- A 96px rounded-square node with the icon inside. The tool, actor or artifact name
+  sits below it.
+- `label` is the tool name; `sublabel` says what it does, max 3 words.
+- Unresolved icon: the kind glyph. Never guess a brand.
 
 ### Groups
 
-- One group per sub-workflow. Transparent fill, always.
-- Dashed border, 0.5px, one colour per group from the ramp set.
-- Group label top-left inside the container, 12px secondary.
-- 24px minimum padding between the container edge and any node.
+- One group per sub-workflow, drawn as a pastel frame behind its nodes.
+- One colour per group from the ramp set; title top-left inside the frame.
 - Groups may not nest more than one level deep.
 
 ### Edges
@@ -57,15 +60,15 @@ These are hard rules. Consistency across runs is the point.
 | `dashed` | dashed 4 4 | conditional, or a return/retry path |
 | `gutter` | solid, routed around | cross-group link; routed in the margin, never through a container |
 
-- Orthogonal routing only. No diagonals, no curves.
-- An edge may never cross a container it does not terminate in.
-- `condition` on an edge renders as a 12px label at the edge midpoint, in clear space.
+- An edge never passes through a node, and avoids frames it does not start or end in.
+- `condition` on an edge renders as a label beside that edge's own branch handle.
 
 ### Splits
 
 A split is not a node. Two or more edges leaving the same source, each carrying its
-own `condition`, render as a shared horizontal rail fanning into the targets. This
-keeps the map light and keeps the LLM's job purely semantic.
+own `condition`, render as separate labelled branch handles on that source, the way
+n8n shows IF and Switch outputs. This keeps the map light and keeps the LLM's job
+purely semantic.
 
 ### Node kinds
 
@@ -82,7 +85,7 @@ Those are nodes, not footnotes.
 | `artifact` | signed PDF, calendar export, job card | document glyph, solid ring |
 | `logic` | confidence gate, classifier, router | neutral glyph, solid ring |
 
-The ring, not the glyph, carries the boundary: dashed ring means the node sits
+The border, not the glyph, carries the boundary: a dashed border means the node sits
 outside the org. This is what makes a business-level map readable at a glance —
 you can see where control ends.
 
