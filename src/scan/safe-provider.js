@@ -27,6 +27,7 @@
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { stripControlChars } = require('./sanitize-text');
+const { parseYamlSafe } = require('./yaml-safe');
 
 const DEFAULT_MAX_FILES = 20000;
 const DEFAULT_MAX_DEPTH = 25;
@@ -49,16 +50,23 @@ const SKIP_DIR_NAMES = new Set([
 ]);
 
 const MINIFIED_SUFFIXES = ['.min.js', '.min.css'];
+const YAML_EXT_RE = /\.ya?ml$/i;
 
 // Real secret-bearing env files: ".env" itself, or ".env.<anything>"
 // except the three safe example/template names, which are handled
 // separately (read, values stripped, then treated as ordinary text).
 const SAFE_ENV_NAMES = new Set(['.env.example', '.env.sample', '.env.template']);
 
+// Compares a trimmed, lowercased name, so ".ENV", ".Env.Local" and
+// ".env " (trailing whitespace) are all still recognised as real env
+// files -- and never fall through unrecognised (and therefore openable)
+// just because of how a filesystem or archive happened to case- or
+// whitespace-mangle the name.
 function classifyEnvFile(basename) {
-  if (basename === '.env') return 'real';
-  if (!basename.startsWith('.env.')) return null;
-  return SAFE_ENV_NAMES.has(basename) ? 'safe-example' : 'real';
+  const normalised = typeof basename === 'string' ? basename.trim().toLowerCase() : '';
+  if (normalised === '.env') return 'real';
+  if (!normalised.startsWith('.env.')) return null;
+  return SAFE_ENV_NAMES.has(normalised) ? 'safe-example' : 'real';
 }
 
 function isMinifiedByName(basename) {
@@ -77,24 +85,82 @@ function hasOverlongLine(text) {
   return false;
 }
 
-// Strips the value out of every "NAME=value" line, keeping the name only,
-// so a rule (or a human) can see which variables are declared without
-// ever seeing what a real deployment sets them to. Handles a leading
-// `export `, single/double-quoted values, and a trailing inline `#`
-// comment. This is intentionally conservative about what it treats as a
-// "value" -- anything after the first `=` up to end of line/comment is
-// discarded, no exceptions.
+// Matches the start of a "NAME=" (or "# NAME=", a commented-out
+// declaration -- a real secret pasted into a comment by mistake is just
+// as much a leak as one in a live line) declaration, with an optional
+// leading `export`. Anchored to a real line start ('m' flag + '^') so it
+// is never fooled by an "=" appearing inside a preceding value.
+const DECLARATION_RE = /^([ \t]*)(#[ \t]*)?(export[ \t]+)?([A-Za-z_][A-Za-z0-9_]*)[ \t]*=/gm;
+
+// Finds the index of the next unescaped occurrence of `quoteChar` at or
+// after `startIndex` (an escaped quote, "\\\"", does not close the
+// value). Iterative, single pass; returns content.length (i.e. "runs to
+// the end of the string") if the quote is never closed, so an
+// unterminated quoted value still gets fully redacted rather than
+// leaking whatever follows it.
+function findUnescapedQuoteEnd(content, startIndex, quoteChar) {
+  let i = startIndex;
+  while (i < content.length) {
+    const ch = content[i];
+    if (ch === '\\') {
+      i += 2;
+      continue;
+    }
+    if (ch === quoteChar) return i;
+    i++;
+  }
+  return content.length;
+}
+
+// Strips the value out of every "NAME=value" declaration (and a
+// commented-out "# NAME=value"), keeping the name only, so a rule (or a
+// human) can see which variables are declared without ever seeing what a
+// real deployment sets them to. Handles a leading `export`, an inline
+// trailing `#` comment (discarded along with the value), and a
+// double/single-quoted value that spans MULTIPLE lines (some .env
+// parsers, e.g. the `dotenv` npm package, support this) -- the entire
+// quoted span, embedded newlines included, is treated as one value and
+// fully redacted, never scanned line-by-line (which would otherwise let
+// a continuation line's content leak through unstripped). CRLF and lone
+// CR line endings are normalised to LF first; downstream stripControlChars
+// removes any literal CR anyway, so no information is lost by doing so
+// here. This is intentionally conservative about what counts as a
+// "value" -- everything between the "=" and the end of that value
+// (whichever form it takes) is discarded, no exceptions.
 function stripEnvValues(content) {
-  return content
-    .split(/\r\n|\r|\n/)
-    .map(line => {
-      const trimmed = line.replace(/^﻿/, '');
-      const m = /^(\s*)(export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=.*$/.exec(trimmed);
-      if (!m) return line;
-      const [, indent, exportKw, name] = m;
-      return `${indent}${exportKw || ''}${name}=`;
-    })
-    .join('\n');
+  const normalised = content.replace(/\r\n|\r/g, '\n');
+  let result = '';
+  let cursor = 0;
+
+  DECLARATION_RE.lastIndex = 0;
+  let m;
+  while ((m = DECLARATION_RE.exec(normalised))) {
+    const matchStart = m.index;
+    const matchEnd = DECLARATION_RE.lastIndex; // index right after "="
+    const [, indent, hashPrefix, exportKw, name] = m;
+
+    result += normalised.slice(cursor, matchStart);
+
+    let valueEnd;
+    const firstValueChar = normalised[matchEnd];
+    if (firstValueChar === '"' || firstValueChar === "'") {
+      const closeIdx = findUnescapedQuoteEnd(normalised, matchEnd + 1, firstValueChar);
+      valueEnd = closeIdx < normalised.length ? closeIdx + 1 : normalised.length;
+    } else {
+      const nlIdx = normalised.indexOf('\n', matchEnd);
+      valueEnd = nlIdx === -1 ? normalised.length : nlIdx;
+    }
+
+    result += `${indent}${hashPrefix || ''}${exportKw || ''}${name}=`;
+    cursor = valueEnd;
+    // Resume scanning after the whole consumed value -- so nothing
+    // inside a multi-line quoted value (however "NAME="-shaped it might
+    // look) is ever treated as a second, independent declaration.
+    DECLARATION_RE.lastIndex = valueEnd;
+  }
+
+  result += normalised.slice(cursor);
+  return result;
 }
 
 class SafeProvider {
@@ -113,8 +179,9 @@ class SafeProvider {
     this.bytesOpened = 0;
     this._totalBytesExceeded = false;
     this._reasons = [];
-    this.findings = []; // { kind: 'real-env-file', path }
+    this.findings = []; // { kind: 'real-env-file' | 'yaml-rejected', path }
     this._realEnvSeen = new Set();
+    this._yamlRejectedSeen = new Set();
   }
 
   get truncated() {
@@ -158,6 +225,13 @@ class SafeProvider {
     if (this._realEnvSeen.has(rel)) return;
     this._realEnvSeen.add(rel);
     this.findings.push({ kind: 'real-env-file', path: rel });
+  }
+
+  _recordYamlRejected(absPath) {
+    const rel = this.relPath(absPath);
+    if (this._yamlRejectedSeen.has(rel)) return;
+    this._yamlRejectedSeen.add(rel);
+    this.findings.push({ kind: 'yaml-rejected', path: rel });
   }
 
   async listDir(pathArg) {
@@ -271,6 +345,19 @@ class SafeProvider {
 
     const text = buf.toString('utf8');
     if (hasOverlongLine(text)) return null; // minified by content, not just by name
+
+    // Every *.yml/*.yaml file is parsed with the same bounded settings
+    // (size cap, nesting-depth cap, alias-count cap) BEFORE its content
+    // is ever handed back to a caller -- stack-analyser's own docker and
+    // githubActions rules parse repo-supplied YAML too, so this guard
+    // has to live here, not only inside src/scan/parsers/*, to cover
+    // every path that reaches this content. A file that fails is never
+    // returned; only its path is recorded, as a finding, never its
+    // (rejected, so possibly hostile) content.
+    if (YAML_EXT_RE.test(base) && parseYamlSafe(text) === null) {
+      this._recordYamlRejected(p);
+      return null;
+    }
 
     this.bytesOpened += buf.length;
     if (this.bytesOpened > this.maxTotalBytes) {
