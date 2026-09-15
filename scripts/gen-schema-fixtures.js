@@ -344,4 +344,29 @@ write('crossref-node-link-quote.json', (() => {
   return d;
 })());
 
+// -----------------------------------------------------------------------
+// evidence field (git-map scan engine, src/scan/): both must accept
+// -----------------------------------------------------------------------
+
+write('evidence-valid.json', {
+  title: 'Evidence doc',
+  nodes: [
+    { id: 'a', label: 'A', kind: 'service', source: 'scan', evidence: ['ev1', 'ev2'] },
+    { id: 'b', label: 'B', kind: 'service', source: 'scan', evidence: ['ev3'] },
+  ],
+  edges: [{ from: 'a', to: 'b', type: 'solid', condition: null, source: 'scan', evidence: ['ev4'] }],
+});
+
+write('structural-too-many-evidence.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].evidence = Array.from({ length: 21 }, (_, i) => `ev${i}`);
+  return d;
+})());
+
+write('structural-invalid-evidence-id.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].evidence = ['not a valid id!'];
+  return d;
+})());
+
 console.log('wrote fixtures to', DIR);

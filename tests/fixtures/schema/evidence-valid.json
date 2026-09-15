@@ -1,0 +1,36 @@
+{
+  "title": "Evidence doc",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service",
+      "source": "scan",
+      "evidence": [
+        "ev1",
+        "ev2"
+      ]
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "kind": "service",
+      "source": "scan",
+      "evidence": [
+        "ev3"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "type": "solid",
+      "condition": null,
+      "source": "scan",
+      "evidence": [
+        "ev4"
+      ]
+    }
+  ]
+}
