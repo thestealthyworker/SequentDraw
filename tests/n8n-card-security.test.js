@@ -17,6 +17,15 @@ const { script } = require('../src/n8n/render-shell');
 const LS = '\u2028';
 const PS = '\u2029';
 
+const EMPTY_GEOMETRY = {
+  nodeBoxes: {},
+  labelReserve: 48,
+  padding: { top: 40, left: 24, right: 24, bottom: 24 },
+  grid: 16,
+  frameLabelOffsetX: 12,
+  frameLabelOffsetY: 22,
+};
+
 function hostileDoc() {
   return {
     title: 'Hostile card data',
@@ -106,7 +115,7 @@ describe('details card: hostile input never breaks the single <script>', () => {
 
 describe('viewer script: no banned DOM sinks, static check', () => {
   test('the viewer script source contains none of innerHTML, outerHTML, insertAdjacentHTML, document.write, eval', () => {
-    const src = script({ x: 0, y: 0, width: 100, height: 100 }, { nodes: [], edges: [] });
+    const src = script({ x: 0, y: 0, width: 100, height: 100 }, { nodes: [], edges: [] }, EMPTY_GEOMETRY);
     // Strip `//` line comments first: the surrounding source documents
     // this very rule in prose (naming the banned sinks so a future editor
     // knows why they are absent), which would otherwise false-positive
@@ -121,7 +130,7 @@ describe('viewer script: no banned DOM sinks, static check', () => {
   });
 
   test('no edge-stub markers remain: the stub feature was removed in favour of hiding the whole edge', () => {
-    const src = script({ x: 0, y: 0, width: 100, height: 100 }, { nodes: [], edges: [] });
+    const src = script({ x: 0, y: 0, width: 100, height: 100 }, { nodes: [], edges: [] }, EMPTY_GEOMETRY);
     assert.ok(!src.includes('edge-stub'));
     assert.ok(!src.includes('show-stub-start'));
     assert.ok(!src.includes('show-stub-end'));

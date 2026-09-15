@@ -104,12 +104,17 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#333}
 `;
 }
 
-function script(canvas, cardData) {
+function script(canvas, cardData, geometry) {
   return `
 (function(){
   var stage = document.getElementById('stage');
   var viewport = document.getElementById('viewport');
   var CANVAS = ${safeJson(canvas)};
+  // Numeric-only: node boxes plus the frame padding/label-reserve/grid
+  // constants layout.js used, so the viewer can recompute a frame's box
+  // for its currently-visible members with frameBoxFromMemberBoxes()
+  // below -- see src/n8n/frame-box.js and render.js's buildGeometryData().
+  var GEOMETRY = ${safeJson(geometry)};
   var state = { x: 0, y: 0, scale: 1 };
   var MIN_SCALE = 0.1, MAX_SCALE = 4;
   var CLICK_MOVE_THRESHOLD = 6;
@@ -148,9 +153,23 @@ function script(canvas, cardData) {
   var edges = [].slice.call(document.querySelectorAll('.n8n-edge'));
   var notes = [].slice.call(document.querySelectorAll('.n8n-note'));
   var checkboxes = [].slice.call(document.querySelectorAll('input[data-layer]'));
+  var handleEls = [].slice.call(document.querySelectorAll('.handle'));
+  var branchLabelEls = [].slice.call(document.querySelectorAll('.branch-label'));
 
-  var nodeElsById = {};
+  // Object.create(null), not {}: a node id is author-controlled and
+  // ID_RE allows "__proto__" (and "constructor", "toString", ...) as a
+  // legal id. Keying a plain {} by an attacker-chosen id like that would
+  // reach the object's prototype chain instead of storing an own
+  // property, so this and every other id-keyed lookup below uses a
+  // null-prototype object or a Map.
+  var nodeElsById = Object.create(null);
   nodes.forEach(function(n){ nodeElsById[n.dataset.id] = n; });
+
+  // Every branch (condition) edge's index, so a plain "out" handle's
+  // membership computation (below) can exclude edges that have their own
+  // dedicated branch handle instead of sharing the main-out dot.
+  var branchEdgeIndexes = {};
+  handleEls.forEach(function(h){ if (h.dataset.role === 'branch') branchEdgeIndexes[h.dataset.edgeIndex] = true; });
 
   // --- Pan via Pointer Events (covers mouse, touch, pen) plus pinch-zoom
   // when a second pointer joins, and click/tap detection for the details
@@ -255,6 +274,36 @@ function script(canvas, cardData) {
     return !!fromVisible && !!toVisible;
   }
 
+  // Single-source-of-truth copy of src/n8n/handle-visibility.js's
+  // isHandleVisible() (same reason as isEdgeVisible above): a handle is
+  // visible iff at least one edge attached to it is visible.
+  function isHandleVisible(attachedEdgeVisibilities){
+    return attachedEdgeVisibilities.some(Boolean);
+  }
+
+  // Single-source-of-truth copy of src/n8n/frame-box.js's
+  // frameBoxFromMemberBoxes() (same reason as isEdgeVisible above): the
+  // bounding box of a frame's member node boxes, padded and snapped to
+  // the grid.
+  function frameBoxFromMemberBoxes(memberBoxes, opts){
+    var labelReserve = opts.labelReserve, padding = opts.padding, grid = opts.grid;
+    var minX = Infinity;
+    var minY = Infinity;
+    var maxX = -Infinity;
+    var maxY = -Infinity;
+    memberBoxes.forEach(function(b){
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w);
+      maxY = Math.max(maxY, b.y + b.h + labelReserve);
+    });
+    var x = Math.floor((minX - padding.left) / grid) * grid;
+    var y = Math.floor((minY - padding.top) / grid) * grid;
+    var right = Math.ceil((maxX + padding.right) / grid) * grid;
+    var bottom = Math.ceil((maxY + padding.bottom) / grid) * grid;
+    return { x: x, y: y, w: right - x, h: bottom - y };
+  }
+
   function activeLayers(){
     var set = {};
     checkboxes.forEach(function(cb){ if (cb.checked) set[cb.dataset.layer] = true; });
@@ -269,7 +318,7 @@ function script(canvas, cardData) {
 
   function applyLayers(){
     var active = activeLayers();
-    var visible = {};
+    var visible = Object.create(null); // keyed by node id -- see nodeElsById above
     nodes.forEach(function(n){
       var on = nodeVisible(n, active);
       visible[n.dataset.id] = on;
@@ -277,14 +326,7 @@ function script(canvas, cardData) {
       n.setAttribute('tabindex', on ? '0' : '-1');
       if (!on) closeIfShowing(n);
     });
-    frames.forEach(function(f){
-      // Filter the already-cached node list by dataset equality instead of
-      // building a CSS selector string from data — a group id containing a
-      // quote would otherwise break out of the attribute selector.
-      var members = nodes.filter(function(n){ return n.dataset.group === f.dataset.group; });
-      var anyVisible = members.some(function(n){ return visible[n.dataset.id]; });
-      f.classList.toggle('hidden-by-layer', !anyVisible);
-    });
+
     edges.forEach(function(e){
       // Both endpoints' VISIBILITY (not just their existence), including a
       // node hidden because its own layer is off even while the group
@@ -294,6 +336,59 @@ function script(canvas, cardData) {
       e.setAttribute('tabindex', edgeOn ? '0' : '-1');
       if (!edgeOn) closeIfShowing(e);
     });
+
+    // Frames never move a node, but shrink to the bounding box of
+    // whichever members are currently visible (frameBoxFromMemberBoxes,
+    // same computation layout.js used originally) -- and hide entirely
+    // when none of their members are. The title moves with the box.
+    frames.forEach(function(f){
+      // Filter the already-cached node list by dataset equality instead of
+      // building a CSS selector string from data — a group id containing a
+      // quote would otherwise break out of the attribute selector.
+      var members = nodes.filter(function(n){ return n.dataset.group === f.dataset.group; });
+      var visibleMembers = members.filter(function(n){ return visible[n.dataset.id]; });
+      if (!visibleMembers.length) {
+        f.classList.toggle('hidden-by-layer', true);
+        return;
+      }
+      f.classList.toggle('hidden-by-layer', false);
+      var memberBoxes = visibleMembers.map(function(n){ return GEOMETRY.nodeBoxes[n.dataset.id]; });
+      var box = frameBoxFromMemberBoxes(memberBoxes, { labelReserve: GEOMETRY.labelReserve, padding: GEOMETRY.padding, grid: GEOMETRY.grid });
+      var rect = f.querySelector('rect');
+      rect.setAttribute('x', box.x);
+      rect.setAttribute('y', box.y);
+      rect.setAttribute('width', box.w);
+      rect.setAttribute('height', box.h);
+      var label = f.querySelector('.frame-label');
+      label.setAttribute('x', box.x + GEOMETRY.frameLabelOffsetX);
+      label.setAttribute('y', box.y + GEOMETRY.frameLabelOffsetY);
+    });
+
+    // Handles: a shared main-in/main-out dot is visible iff at least one
+    // of the edges attached to it is visible; a branch dot (and its
+    // condition label) follows its own single edge. A hidden node's own
+    // handles fall out of this for free, since every edge touching it is
+    // itself hidden on that end (see isEdgeVisible above).
+    var edgeVisibleByIndex = {};
+    edges.forEach(function(e){ edgeVisibleByIndex[e.dataset.index] = !e.classList.contains('hidden-by-layer'); });
+
+    handleEls.forEach(function(h){
+      var role = h.dataset.role;
+      var attached;
+      if (role === 'in') {
+        attached = edges.filter(function(e){ return e.dataset.to === h.dataset.node; }).map(function(e){ return edgeVisibleByIndex[e.dataset.index]; });
+      } else if (role === 'out') {
+        attached = edges.filter(function(e){ return e.dataset.from === h.dataset.node && !branchEdgeIndexes[e.dataset.index]; }).map(function(e){ return edgeVisibleByIndex[e.dataset.index]; });
+      } else {
+        attached = [edgeVisibleByIndex[h.dataset.edgeIndex]];
+      }
+      h.classList.toggle('hidden-by-layer', !isHandleVisible(attached));
+    });
+
+    branchLabelEls.forEach(function(t){
+      t.classList.toggle('hidden-by-layer', !isHandleVisible([edgeVisibleByIndex[t.dataset.edgeIndex]]));
+    });
+
     // A note's visibility depends only on its own layers (same rule as a
     // node — shown when any of its layers is active), independent of
     // whatever it is attached to.
@@ -312,7 +407,7 @@ function script(canvas, cardData) {
   // outerHTML, insertAdjacentHTML, document.write or eval anywhere in
   // this script (tests/n8n-security.test.js asserts that statically).
   var CARD_DATA = ${safeJson(cardData)};
-  var nodeCardsById = {};
+  var nodeCardsById = Object.create(null); // keyed by node id -- see nodeElsById above
   CARD_DATA.nodes.forEach(function(n){ nodeCardsById[n.id] = n; });
 
   var card = document.getElementById('details-card');

@@ -42,7 +42,9 @@ async function layoutFlat(doc) {
 
   const { abs } = await runElk(graph);
 
-  const nodeBoxes = {};
+  // Object.create(null): same __proto__-as-a-legal-id hazard as abs in
+  // elk-helpers.js, keyed by node id here.
+  const nodeBoxes = Object.create(null);
   doc.nodes.forEach(n => {
     const box = abs[n.id];
     nodeBoxes[n.id] = { x: snap(box.x), y: snap(box.y), w: NODE_SIZE, h: NODE_SIZE };

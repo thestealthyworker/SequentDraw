@@ -52,7 +52,13 @@ function leafElkNode(id) {
 // positions, since child coordinates are parent-relative in elkjs output.
 async function runElk(graph) {
   const result = await elk.layout(graph);
-  const abs = {};
+  // Object.create(null), not {}: a node or group id is author-controlled
+  // and ID_RE (validate.js) allows "__proto__" as a legal id. Keying a
+  // plain {} by it would silently reassign the object's prototype on
+  // write instead of storing that id's position as an own property, and
+  // every later `abs[id]` lookup for a DIFFERENT id would then resolve
+  // through the polluted prototype instead of coming up empty.
+  const abs = Object.create(null);
   (function walk(node, ox, oy) {
     (node.children || []).forEach(child => {
       const x = ox + child.x;

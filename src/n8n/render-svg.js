@@ -21,6 +21,8 @@ const {
   HANDLE_BORDER,
   GROUP_COLORS,
   GROUP_RADIUS,
+  FRAME_LABEL_OFFSET_X,
+  FRAME_LABEL_OFFSET_Y,
   LABEL_FIRST_BASELINE_OFFSET,
   LABEL_LINE_HEIGHT,
   SUBLABEL_GAP,
@@ -98,23 +100,31 @@ ${sublabelText ? `<text class="node-sublabel" x="${cx}" y="${sublabelY}" text-an
 </g>`;
 }
 
-function handleDot(cls, p) {
-  return `<circle class="handle ${cls}" cx="${p.x}" cy="${p.y}" r="${HANDLE_RADIUS}" fill="#ffffff" stroke="${HANDLE_BORDER}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+function handleDot(cls, p, nodeId, extraAttrs) {
+  return `<circle class="handle ${cls}" data-node="${esc(nodeId)}"${extraAttrs || ''} cx="${p.x}" cy="${p.y}" r="${HANDLE_RADIUS}" fill="#ffffff" stroke="${HANDLE_BORDER}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
 }
 
 // n8n branch-label style: one shared input dot, one shared output dot, and
 // (only for edges carrying a `condition`) one extra dedicated output dot
 // per branch with its condition text set beside it — replaces the old
 // per-edge handle fan-out and the floating midpoint condition chip.
+//
+// Every handle carries `data-node` and `data-role` ("in" | "out" |
+// "branch"), and a branch handle (plus its condition-label text) also
+// carries `data-edge-index`, so the viewer's layer toggler can decide,
+// per docs/design/n8n-visual-style.md, whether each handle stays visible
+// from the live visibility of the specific edges attached to it (see
+// handle-visibility.js) without guessing from geometry.
 function handleMarkup(nodeId, handles) {
   const h = handles[nodeId];
   const parts = [];
-  if (h.mainIn) parts.push(handleDot('handle-in', h.mainIn));
-  if (h.mainOut) parts.push(handleDot('handle-out', h.mainOut));
+  if (h.mainIn) parts.push(handleDot('handle-in', h.mainIn, nodeId, ' data-role="in"'));
+  if (h.mainOut) parts.push(handleDot('handle-out', h.mainOut, nodeId, ' data-role="out"'));
   h.branches.forEach(b => {
-    parts.push(handleDot('handle-out handle-branch', b.point));
+    const attrs = ` data-role="branch" data-edge-index="${b.edgeIdx}"`;
+    parts.push(handleDot('handle-out handle-branch', b.point, nodeId, attrs));
     parts.push(
-      `<text class="branch-label" x="${b.point.x + HANDLE_RADIUS + 4}" y="${b.point.y - HANDLE_RADIUS - 2}">${esc(b.label)}</text>`,
+      `<text class="branch-label" data-node="${esc(nodeId)}" data-edge-index="${b.edgeIdx}" x="${b.point.x + HANDLE_RADIUS + 4}" y="${b.point.y - HANDLE_RADIUS - 2}">${esc(b.label)}</text>`,
     );
   });
   return parts.join('');
@@ -124,7 +134,7 @@ function frameMarkup(group, box) {
   const palette = GROUP_COLORS[group.color] || GROUP_COLORS.gray;
   return `<g class="n8n-frame" data-group="${esc(group.id)}">
 <rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="${GROUP_RADIUS}" fill="${palette.fill}" stroke="${palette.border}" stroke-width="1" vector-effect="non-scaling-stroke"/>
-<text class="frame-label" x="${box.x + 12}" y="${box.y + 22}" fill="${palette.title}">${esc(group.label)}</text>
+<text class="frame-label" x="${box.x + FRAME_LABEL_OFFSET_X}" y="${box.y + FRAME_LABEL_OFFSET_Y}" fill="${palette.title}">${esc(group.label)}</text>
 </g>`;
 }
 
