@@ -81,6 +81,9 @@ spacing. Edge attachment error dropped from 1450px to 5px.
 **5. Flow direction dominates readability.** `DOWN` gives a portrait page
 (1326×1954 on the Medusa example). `RIGHT` gives an unusable 4000×669 strip. Default
 to `DOWN`.
+*Superseded 2026-09-15:* the owner chose n8n style, flowing left to right. The n8n
+renderer keeps `RIGHT` readable with a pan/zoom viewer, a feedback-arc-set pass for
+direction, and obstacle-aware routing. See `docs/design/n8n-visual-style.md`.
 
 **6. Bands do not work.** An attempt to give each layer its own horizontal band
 failed: every group in a real system spans all three layers, so banding shatters 5
@@ -95,6 +98,10 @@ services. For internals the glyph set and labels do the identification work. Ope
 design question, not a bug.
 
 ## Known defects
+
+*These describe the legacy prototype renderer (`src/render-html.js`). In the n8n
+renderer, edges crossing nodes are measured at zero and compaction is gone; see
+`docs/design/n8n-visual-style.md`.*
 
 - **15 edge segments cross containers they do not belong to.** Four candidate fixes
   are discussed at the end of the spec. Cheapest first: tune
@@ -200,7 +207,7 @@ a map describes. That request is this suggestion agent. Settled:
 Revised 2026-09-15 for the n8n visual style.
 
 1. n8n-style renderer (`docs/design/n8n-visual-style.md`), left-to-right, as a pure
-   core with a CLI adapter.
+   core with a CLI adapter. **Done (PR #8).**
 
 Each step from here ships its Claude Code / Codex skill and eval cases in the same
 PR (`docs/design/skills-and-plugin.md`). The owner-defined skills are `git-map`,

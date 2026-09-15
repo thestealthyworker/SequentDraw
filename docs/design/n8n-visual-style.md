@@ -1,6 +1,7 @@
-# Design proposal: n8n visual style
+# Design: n8n visual style
 
-Status: **proposed** · 2026-09-15
+Status: **accepted** · 2026-09-15. The owner chose n8n style, flowing left to right.
+Implemented in `src/n8n/` (PR #8).
 
 ## Decision
 
@@ -34,7 +35,7 @@ Key values were re-checked against source after the research pass: the 16px grid
 | Background | Dot grid with a 16px gap, mid-grey dots, very light neutral fill; near-black in dark theme |
 | Font | Inter, falling back to `system-ui`. No web font is loaded, so the file stays self-contained. |
 | Viewer | Pan and zoom, fit to view on load, zoom in/out/fit buttons along the bottom edge |
-| Chrome | Handles, labels and borders counter-scale with zoom and stay a constant on-screen size |
+| Chrome | Borders and edge strokes keep a constant on-screen width at any zoom (non-scaling stroke). Handles and text scale with the canvas; counter-scaling them as n8n does is not implemented. |
 
 ### Nodes
 
@@ -117,23 +118,33 @@ direction and routing findings are superseded, as listed below.
 **Engine: keep elkjs.** It handles groups as real containers, which dagre does not.
 n8n's dagre usage is a strategy reference, not a reason to switch.
 
-Left-to-right is the risk. The prototype measured an unusable 4000×669 strip for
-Medusa with `RIGHT`. n8n's defence is to split the graph into disconnected
-components and stack them vertically. **That alone does not help Medusa: it is one
-connected component.** Two candidate strategies go to a measured prototype:
+Left-to-right was the risk: the prototype measured an unusable 4000×669 strip for
+Medusa with `RIGHT`. n8n's defence, splitting the graph into disconnected components
+and stacking them vertically, does not help Medusa, which is one connected component.
 
-- **A: flat `RIGHT`.** One ELK pass across all groups, as the prototype did, but
-  shown in a pan/zoom viewer. A wide canvas is normal in n8n because nobody reads
-  it as a static page.
-- **B: group rows.** Lay out each group internally with `RIGHT`, then stack the
-  group frames top to bottom in the order the group-level graph flows. Cross-group
-  edges use the backward-edge detour where needed. This mirrors n8n treating a
-  frame as one layout unit, and stacking in the cross axis.
+**Decision: a single flat `RIGHT` layout, read in a pan/zoom viewer.** A wide canvas
+is normal in n8n because nobody reads it as a static page. Two strategies were
+prototyped and measured on Medusa:
 
-Both use n8n spacing: 128px between ranks, 96px between nodes in a rank, positions
-snapped to the 16px grid. We choose on numbers from the Medusa fixture: canvas
-aspect ratio at fit-to-view, edges crossing frames they do not belong to (a known
-defect today: 15), backward-edge count, and label collisions.
+| Strategy | Canvas | Foreign-frame crossings | Backward edges | Result |
+|---|---|---|---|---|
+| Flat: one ELK pass across all groups | 4000×1568 | 2 | 6 | **Chosen** |
+| Rows: each group laid out `RIGHT`, frames stacked top to bottom | 1856×3456 | 11 | 11 | Rejected. Medusa's groups all cycle through the order domain, so stacked full-width frames force long edges through each other. Removed from the code. |
+
+How the flat layout stays readable:
+
+- **Spacing** follows n8n: 128px between ranks, 96px between nodes in a rank, and
+  positions snapped to the 16px grid.
+- **Direction.** Real process graphs have cycles (a notification loops back to the
+  customer). A feedback-arc-set pass decides which edges to reverse for layout only.
+  It orders groups first, then nodes within each group, and prefers reversing
+  `dashed` (return or retry) edges. So the flow starts at the left, and arrows still
+  point from the true source to the true target.
+- **Routing.** An edge is a bezier only when its path is clear. Otherwise, and for
+  every backward edge, it is a rounded orthogonal route that clears node boxes, label
+  text and frame titles.
+- **Validation.** Positions are measured, not trusted: tests assert zero node
+  crossings and zero label overlaps on Medusa.
 
 ### Hidden layers
 
@@ -146,20 +157,25 @@ keep their positions, and edges into a hidden node end in a stub.
 | Source | Previous rule | Now |
 |---|---|---|
 | SPEC · Nodes | "The icon is the node. No box around it." 44px circle | 96px rounded-square node, icon inside |
-| SPEC · Edges | "Orthogonal routing only. No diagonals, no curves." | Bezier forward; orthogonal detour only for backward edges |
+| SPEC · Edges | "Orthogonal routing only. No diagonals, no curves." | Bezier where the path is clear; rounded orthogonal routes around obstacles and for backward edges |
+| SPEC · Splits | A shared horizontal rail fanning into targets | A labelled branch handle per `condition` edge |
 | SPEC · Groups | Transparent fill, dashed 0.5px border | Pastel frame, 4px radius, 1px border |
-| HANDOVER · Finding 5 | Default flow `DOWN` | `RIGHT`, with strategy A or B chosen by measurement |
+| HANDOVER · Finding 5 | Default flow `DOWN` | `RIGHT`, one flat layout |
 | HANDOVER · Known defects | Compaction when layers are hidden | Removed; gaps plus stubs, per SPEC |
 
-SPEC.md is updated once the prototype confirms the layout strategy.
+SPEC.md and HANDOVER.md carry pointers to these replacements.
 
 ## Testing
 
-- The legacy renderer and its regression test stay until the n8n renderer replaces them.
-- The new renderer ships with invariant tests on the Medusa fixture: no node overlaps;
-  every node on the 16px grid; every edge endpoint within 1px of a handle; no label
-  overlapping a node; frame boxes containing all their members.
-- Its own reference render becomes the new positional baseline.
+- The legacy renderer (`src/render-html.js`) and its regression test stay as a record
+  of the prototype until they are retired.
+- The n8n renderer has invariant tests on the Medusa fixture: no node overlaps; every
+  node on the 16px grid; every edge endpoint within 1px of a handle; no node crossed
+  by an edge; no label overlaps; frame boxes containing all their members.
+- Security tests cover hostile input: validation rejects out-of-spec values, and
+  escaping leaves exactly one script element in the output.
+- `scripts/measure-n8n-layout.js` reports canvas size, crossings, backward edges and
+  overlaps for any change to layout or routing.
 
 ## Out of scope
 

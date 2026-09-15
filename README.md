@@ -28,14 +28,25 @@ The render core stays a pure library. Each interface is a thin adapter over it.
 
 ```sh
 npm install
-mkdir -p out
-node src/render-html.js examples/medusa-return-flow.json out/medusa.html
+node src/n8n/cli.js examples/medusa-return-flow.json out/medusa.html
 npm test
+```
+
+Open `out/medusa.html` in a browser: drag to pan, scroll to zoom, and toggle layers
+from the bar at the top.
+
+In code:
+
+```js
+const { renderMap } = require('./src/n8n');
+const html = await renderMap(workflowJson); // validated, laid out, one self-contained HTML string
 ```
 
 ## Status
 
-Early. The prototype renderer runs and is pinned by a layout regression test.
+Early. The n8n-style renderer works and is covered by layout invariant and security
+tests. Next come sticky notes, then mapping a repository (`git-map`). The prototype
+renderer (`src/render-html.js`) is kept as a record.
 
 - [`docs/SPEC.md`](docs/SPEC.md) — visual grammar and IR schema
 - [`docs/HANDOVER.md`](docs/HANDOVER.md) — what was proven, known defects, build order
