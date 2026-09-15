@@ -71,7 +71,7 @@ function statusBadge(n, box) {
   return '';
 }
 
-function nodeMarkup(n, box, isEntry) {
+function nodeMarkup(n, box, isEntry, ariaLabel) {
   const style = nodeVisualStyle(n);
   const rTL = isEntry ? ENTRY_RADIUS : NODE_RADIUS;
   const rBL = isEntry ? ENTRY_RADIUS : NODE_RADIUS;
@@ -89,7 +89,7 @@ function nodeMarkup(n, box, isEntry) {
 
   const title = n.status === 'open' ? `<title>${esc(n.prompt || n.label)}</title>` : '';
 
-  return `<g class="n8n-node${style.isOpen ? ' is-open' : ''}${style.isSuggested ? ' is-suggested' : ''}" data-id="${esc(n.id)}" data-group="${esc(n.parentId || '')}" data-layers="${esc(layersOf(n).join(' '))}">
+  return `<g class="n8n-node${style.isOpen ? ' is-open' : ''}${style.isSuggested ? ' is-suggested' : ''}" data-id="${esc(n.id)}" data-group="${esc(n.parentId || '')}" data-layers="${esc(layersOf(n).join(' '))}" tabindex="0" aria-label="${esc(ariaLabel)}">
 ${title}<path class="node-shape" d="${path}" fill="${style.fill}" stroke="${style.color}" stroke-width="${style.width}" ${style.dashed ? 'stroke-dasharray="6 4"' : ''} vector-effect="non-scaling-stroke"/>
 ${nodeIconMarkup(n, cx, cy)}
 ${statusBadge(n, box)}
@@ -128,21 +128,19 @@ function frameMarkup(group, box) {
 </g>`;
 }
 
-function edgeMarkup(edge) {
+function edgeMarkup(edge, ariaLabel) {
   const dashed = edge.type === 'dashed';
   // The condition label lives beside the edge's dedicated branch handle on
   // the source node (see handleMarkup) rather than as a floating midpoint
   // chip, so it is not repeated here — n8n's branch-label convention.
-  // Pre-rendered, hidden-by-default stub markers at each handle: shown by
-  // the layer-toggle script when that specific endpoint's node is hidden
-  // but the other endpoint stays visible (SPEC.md "Edges at a visibility
-  // boundary").
-  const stubs = `<circle class="edge-stub stub-start" cx="${edge.start[0]}" cy="${edge.start[1]}" r="5"/>` +
-    `<circle class="edge-stub stub-end" cx="${edge.end[0]}" cy="${edge.end[1]}" r="5"/>`;
-  return `<g class="n8n-edge${dashed ? ' is-dashed' : ''}" data-from="${esc(edge.from)}" data-to="${esc(edge.to)}" data-index="${edge.index}">
+  // No stub markers at a hidden endpoint: the owner decided (overriding
+  // SPEC.md's per-edge "stub" rule) that an edge with either endpoint
+  // hidden is hidden entirely — see edge-visibility.js and render-shell.js
+  // applyLayers(). The details card still lists the connection as
+  // "(hidden)", so nothing is silently dropped.
+  return `<g class="n8n-edge${dashed ? ' is-dashed' : ''}" data-from="${esc(edge.from)}" data-to="${esc(edge.to)}" data-index="${edge.index}" tabindex="0" aria-label="${esc(ariaLabel)}">
 <path class="edge-hit" d="${edge.d}" fill="none" stroke="transparent" stroke-width="16"/>
 <path class="edge-line" d="${edge.d}" fill="none" stroke="${EDGE_STROKE}" stroke-width="${EDGE_WIDTH}" vector-effect="non-scaling-stroke" ${dashed ? `stroke-dasharray="${EDGE_DASH}"` : ''} marker-end="url(#n8n-arrow)"/>
-${stubs}
 </g>`;
 }
 

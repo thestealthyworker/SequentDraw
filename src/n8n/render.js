@@ -3,7 +3,21 @@
 const { esc, layersOf, nodeMarkup, handleMarkup, frameMarkup, edgeMarkup } = require('./render-svg');
 const { noteMarkup } = require('./notes-render');
 const { css, script } = require('./render-shell');
+const { buildCardData } = require('./card-data');
 const { DOT_GRID_GAP, DOT_COLOR, CANVAS_FILL } = require('./constants');
+
+// "Payment provider, service, receives from 1, sends to 2" — the exact
+// shape docs/design/n8n-visual-style.md gives as the node aria-label
+// example. Built from the same card data embedded for the details card, so
+// the accessible name and the card content can never disagree on counts.
+function nodeAriaLabel(cardNode) {
+  return `${cardNode.label}, ${cardNode.kind}, receives from ${cardNode.receivesFrom.length}, sends to ${cardNode.sendsTo.length}`;
+}
+
+function edgeAriaLabel(cardEdge) {
+  const condition = cardEdge.condition ? `, ${cardEdge.condition}` : '';
+  return `${cardEdge.fromLabel} to ${cardEdge.toLabel}, ${cardEdge.type}${condition}`;
+}
 
 const LAYER_TITLES = { base: 'Base', edge: 'Edge cases', business: 'Business', build: 'Build' };
 
@@ -46,6 +60,9 @@ function renderHtml(layout, doc) {
   const { nodeBoxes, frameBoxes, noteBoxes, handles, edges, entryIds, canvas } = layout;
   const entrySet = new Set(entryIds);
 
+  const cardData = buildCardData(doc, layout);
+  const cardNodeById = new Map(cardData.nodes.map(c => [c.id, c]));
+
   const bgPad = 4000;
   const bg = `<rect x="${canvas.x - bgPad}" y="${canvas.y - bgPad}" width="${canvas.width + bgPad * 2}" height="${canvas.height + bgPad * 2}" fill="${CANVAS_FILL}"/>` +
     `<rect x="${canvas.x - bgPad}" y="${canvas.y - bgPad}" width="${canvas.width + bgPad * 2}" height="${canvas.height + bgPad * 2}" fill="url(#dot-grid)"/>`;
@@ -54,13 +71,16 @@ function renderHtml(layout, doc) {
     .map(g => (frameBoxes[g.id] ? frameMarkup(g, frameBoxes[g.id]) : ''))
     .join('\n');
 
-  const edgesSvg = edges.map(edgeMarkup).join('\n');
+  // cardData.edges preserves doc.edges' index order exactly (see
+  // card-data.js), so edges[i] and cardData.edges[i] describe the same edge.
+  const edgesSvg = edges.map(e => edgeMarkup(e, edgeAriaLabel(cardData.edges[e.index]))).join('\n');
 
   const nodesSvg = doc.nodes
     .map(n => {
       const box = nodeBoxes[n.id];
       if (!box) return '';
-      return nodeMarkup(n, box, entrySet.has(n.id)) + handleMarkup(n.id, handles);
+      const ariaLabel = nodeAriaLabel(cardNodeById.get(n.id));
+      return nodeMarkup(n, box, entrySet.has(n.id), ariaLabel) + handleMarkup(n.id, handles);
     })
     .join('\n');
 
@@ -100,7 +120,8 @@ ${layerBarMarkup(doc)}
 <button id="zoom-fit" type="button" title="Fit to view" aria-label="Fit to view">&#9678;</button>
 <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">&#43;</button>
 </div>
-<script>${script(canvas)}</script>
+<div id="details-card" class="details-card" hidden></div>
+<script>${script(canvas, cardData)}</script>
 </body>
 </html>`;
 }

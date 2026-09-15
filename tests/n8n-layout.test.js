@@ -116,11 +116,22 @@ describe('n8n layout on the Medusa fixture', () => {
     ) || [];
     assert.deepStrictEqual(loaders, []);
 
+    // A node/edge `link` or `description` can also carry an http(s) URL,
+    // but those only ever reach the page as data inside the details-card
+    // JSON embedded in the single inline <script> (see render-shell.js) —
+    // the viewer only turns one into a clickable <a href> at runtime, on
+    // demand, exactly like a note's link is opened on click and never
+    // fetched. So a URL inside the script block is data, not a resource
+    // load, and is excluded from this check the same way an <a href> is.
+    const scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
+    const scriptContent = scriptMatch ? scriptMatch[1] : '';
+    const htmlOutsideScript = scriptMatch ? html.replace(scriptContent, '') : html;
+
     const anchorHrefs = new Set([...html.matchAll(/<a\s[^>]*\bhref="([^"]*)"/g)].map(m => m[1]));
-    const urls = (html.match(/https?:\/\/[^\s"'<>)]+/g) || [])
+    const urls = (htmlOutsideScript.match(/https?:\/\/[^\s"'<>)]+/g) || [])
       .filter(url => url !== 'http://www.w3.org/2000/svg')
       .filter(url => ![...anchorHrefs].some(href => href.startsWith(url)));
-    assert.deepStrictEqual(urls, [], 'http(s) URLs may only appear as <a href> values');
+    assert.deepStrictEqual(urls, [], 'http(s) URLs outside the inline <script> may only appear as <a href> values');
   });
 
   test('renderHtml output is a complete, non-empty HTML document', () => {
