@@ -177,19 +177,46 @@ Design constraints, learned from the gap-detection work:
 Order matters: build gap detection first. A tool that guesses at what you should add
 before it can reliably describe what you have will not be trusted.
 
+### Decisions (2026-09-15)
+
+The owner asked for the engine to recommend which tools best fit the business design
+a map describes. That request is this suggestion agent. Settled:
+
+- **Suggest, the user accepts.** Recommended tools enter only as `suggested` nodes
+  with a rationale. They are never written in as `confirmed`.
+- **The pool is n8n's integration catalogue.** Every suggestion maps to something
+  buildable as an n8n workflow, consistent with the n8n visual style
+  (`docs/design/n8n-visual-style.md`). Integration names are referenced as facts; no
+  n8n source or assets are copied.
+- **It is built after gap detection**, as ordered below.
+- **In plugin form, the host AI reasons.** Claude, Codex or another agent proposes
+  the suggestions. The engine supplies the catalogue and the constraints, and
+  validates each suggestion: a rationale is present and cites nodes that exist in the
+  graph, the pick is from the catalogue, and there are at most five per map. This
+  keeps the HTTP API usable over `curl` without an embedded model.
+
 ## Recommended build order
 
-1. Lift `render-html.js` into a proper package with the JSON schema validated on
-   input. Fail loudly on the invariants listed in the spec.
-2. Promote `check.js` into automated tests. Assert zero node overlaps, edge
-   attachment within 5px, zero label collisions. These are the regression tests that
-   make everything after this safe.
-3. Fix the two known defects above.
-4. Build extraction, Mode A first. It is the easier half and produces a testable
+Revised 2026-09-15 for the n8n visual style.
+
+1. n8n-style renderer (`docs/design/n8n-visual-style.md`), left-to-right, as a pure
+   core with a CLI adapter.
+2. Text notes: n8n-style sticky notes from the IR `notes` array, placed by the engine
+   (design in the same doc). The owner requested this on 2026-09-15.
+3. Validate the JSON schema on input, including notes. Fail loudly on the invariants
+   listed in the spec.
+4. Promote `check.js` into automated tests. Assert zero node overlaps, edge
+   attachment within tolerance, zero label collisions, no note overlapping a node.
+   These are the regression tests that make everything after this safe.
+5. Build extraction, Mode A first. It is the easier half and produces a testable
    artifact.
-5. Build Mode B as a question flow, with gap rendering.
-6. Suggestion agent, after gap detection is trustworthy.
-7. Tours last.
+6. Build Mode B as a question flow, with gap rendering.
+7. Suggestion agent (tool recommendations from n8n integrations), after gap detection
+   is trustworthy.
+8. Tours last.
+
+The "two known defects" in the old build order (edges crossing containers, label overlaps)
+are re-measured against the n8n renderer rather than fixed in the legacy one.
 
 ## Validation material
 
