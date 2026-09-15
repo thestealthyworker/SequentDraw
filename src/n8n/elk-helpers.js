@@ -15,25 +15,38 @@ const { NODE_SIZE, RANK_GAP, NODE_GAP, GROUP_PADDING } = require('./constants');
 
 const elk = new ELK();
 
-function baseLayoutOptions(extra) {
-  return Object.assign(
-    {
-      'elk.algorithm': 'layered',
-      'elk.direction': 'RIGHT',
-      'elk.json.edgeCoords': 'ROOT',
-      'elk.spacing.nodeNode': String(NODE_GAP),
-      'elk.layered.spacing.nodeNodeBetweenLayers': String(RANK_GAP),
-      'elk.spacing.edgeNode': '24',
-      'elk.spacing.edgeEdge': '16',
-      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      // We already hand ELK a pre-reversed, acyclic edge set (see
-      // direction.js), so its own cycle-breaking never has to act; this
-      // just keeps rank/crossing-minimization decisions aligned with the
-      // doc's declared node/edge order wherever ELK still has a choice.
-      'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
-    },
-    extra || {},
-  );
+// `bounded` (see layout-budget.js) swaps in an ELK option set measured to
+// stay fast on dense/cyclic graphs, at the cost of the quality NETWORK_SIMPLEX
+// placement + model-order-aware crossing minimization gives on ordinary,
+// mostly-local graphs (every real fixture this renderer has, e.g. Medusa —
+// see the fix commit for the profiling that found this). layoutFlat only
+// passes bounded: true once the graph's estimated ELK work crosses
+// ELK_BOUNDED_OPTIONS_WORK, so an ordinary document's output is completely
+// unaffected: same options object as before this parameter existed.
+function baseLayoutOptions(extra, bounded) {
+  const opts = {
+    'elk.algorithm': 'layered',
+    'elk.direction': 'RIGHT',
+    'elk.json.edgeCoords': 'ROOT',
+    'elk.spacing.nodeNode': String(NODE_GAP),
+    'elk.layered.spacing.nodeNodeBetweenLayers': String(RANK_GAP),
+    'elk.spacing.edgeNode': '24',
+    'elk.spacing.edgeEdge': '16',
+    // SIMPLE is a single linear pass (no LP solve), so its cost tracks the
+    // dummy-node count directly instead of blowing up on it the way
+    // NETWORK_SIMPLEX's optimisation does — see layout-budget.js.
+    'elk.layered.nodePlacement.strategy': bounded ? 'SIMPLE' : 'NETWORK_SIMPLEX',
+  };
+  if (!bounded) {
+    // We already hand ELK a pre-reversed, acyclic edge set (see
+    // direction.js), so its own cycle-breaking never has to act; this
+    // just keeps rank/crossing-minimization decisions aligned with the
+    // doc's declared node/edge order wherever ELK still has a choice.
+    // Measured to compound with NETWORK_SIMPLEX's cost on dense/cyclic
+    // graphs, so the bounded path drops it too.
+    opts['elk.layered.considerModelOrder.strategy'] = 'NODES_AND_EDGES';
+  }
+  return Object.assign(opts, extra || {});
 }
 
 // `nodeGap` defaults to the interactive NODE_GAP; the doc-export layout
