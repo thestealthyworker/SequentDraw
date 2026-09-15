@@ -43,14 +43,25 @@ jobs:
 
       - name: Install Claude Code
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
-        run: npm i -g @anthropic-ai/claude-code
+        # Pinned to the exact version this plugin was verified against
+        # locally (`claude --version`) -- confirmed published at
+        # https://registry.npmjs.org/@anthropic-ai/claude-code/2.1.272.
+        run: npm i -g @anthropic-ai/claude-code@2.1.272
 
       - name: Run skill evals
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        # --allow-tools "Bash(node:*)": narrow operator grant so the two
+        # output-correctness cases (doc-map-output-produces-svg,
+        # git-map-output-compose-app) can actually invoke the sequentdraw
+        # CLI -- every skill invokes it as
+        # `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...` (see
+        # skills/*/scripts/sequentdraw.sh), never anything else through
+        # Bash.
         run: |
           claude plugin eval . \
             --trust-plugin \
             --no-publish \
+            --allow-tools "Bash(node:*)" \
             --json results.json \
             --threshold 0.8 \
             --max-cost-usd 10

@@ -19,7 +19,10 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Install Claude Code
-        run: npm i -g @anthropic-ai/claude-code
+        # Pinned to the exact version this plugin was verified against
+        # locally (`claude --version`) -- confirmed published at
+        # https://registry.npmjs.org/@anthropic-ai/claude-code/2.1.272.
+        run: npm i -g @anthropic-ai/claude-code@2.1.272
       - name: Validate plugin and marketplace manifests
         run: claude plugin validate . --strict
       - name: Description-length and skill-shape checks
@@ -28,3 +31,5 @@ jobs:
         run: node --test tests/plugin-manifest.test.js
       - name: npm pack excludes internal tooling
         run: node --test tests/npm-pack-exclusions.test.js
+      - name: Skills are self-contained (no docs/ references, links resolve)
+        run: node --test tests/skill-self-contained.test.js
