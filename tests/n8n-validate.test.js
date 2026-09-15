@@ -1084,6 +1084,20 @@ describe('node.link', () => {
     assert.deepStrictEqual(codesOf(err), ['invalid-link']);
   });
 
+  test('a schemeless-authority link ("https:evil.com", no //) is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'https:evil.com';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
+  test('a single-slash link ("http:/x") is rejected', () => {
+    const doc = baseDoc();
+    doc.nodes[0].link = 'http:/x';
+    const err = invalid(doc);
+    assert.deepStrictEqual(codesOf(err), ['invalid-link']);
+  });
+
   test('a link over 300 characters is rejected as link-too-long, not invalid-link', () => {
     const doc = baseDoc();
     doc.nodes[0].link = 'https://example.com/' + 'x'.repeat(281);

@@ -214,6 +214,28 @@ write('structural-link-too-long.json', (() => {
   return d;
 })());
 
+// The link pattern requires "https?://" plus at least one more character,
+// so a non-http(s) scheme, a schemeless authority, and a single-slash
+// "http:/x" are all structural now (the schema's own pattern catches
+// them), not merely a validateDoc()-only crossref rule.
+write('structural-link-javascript-scheme.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'javascript:alert(1)';
+  return d;
+})());
+
+write('structural-link-schemeless.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'https:evil.com';
+  return d;
+})());
+
+write('structural-link-single-slash.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[0].link = 'http:/x';
+  return d;
+})());
+
 write('structural-edge-description-too-long.json', (() => {
   const d = baseTwoNodeDoc();
   d.edges[0].description = 'x'.repeat(201);
@@ -307,12 +329,6 @@ write('crossref-node-description-whitespace.json', (() => {
 write('crossref-edge-description-whitespace.json', (() => {
   const d = baseTwoNodeDoc();
   d.edges[0].description = '   ';
-  return d;
-})());
-
-write('crossref-node-link-javascript-scheme.json', (() => {
-  const d = baseTwoNodeDoc();
-  d.nodes[0].link = 'javascript:alert(1)';
   return d;
 })());
 

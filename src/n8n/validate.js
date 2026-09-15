@@ -55,7 +55,14 @@ const EDGE_DESCRIPTION_MAX = 200;
 // value carrying whitespace, a quote, or an angle bracket -- those are not a
 // real address, so they are rejected outright here rather than degraded to
 // plain text (there is no "plain text" fallback for a structured field).
-const LINK_PROTOCOL_RE = /^https?:/i;
+//
+// Requires the "//" and at least one further character -- "https:evil.com"
+// (a scheme with no authority) and "http:/x" (one slash) must NOT pass:
+// without this, the server would accept a value the viewer's own
+// client-side re-check (render-shell.js's appendDocsLink, which requires
+// a literal "http://" or "https://" prefix) then correctly refuses to use
+// as an href, so a link that validated could still silently never work.
+const LINK_PROTOCOL_RE = /^https?:\/\/./i;
 const UNSAFE_LINK_CONTENT_RE = /[\s"'<>]/;
 
 // Array-length caps. Checked BEFORE any per-item iteration: an array over

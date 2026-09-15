@@ -179,8 +179,9 @@
         "link": {
           "type": "string",
           "maxLength": 300,
+          "pattern": "^https?://.",
           "title": "Docs link",
-          "description": "A single URL to vendor or internal documentation, shown as \"Docs ↗\" in the node's details card. Optional, at most 300 characters. Must use only http or https and contain no whitespace, quote, or angle bracket -- see root description item 12, which this schema cannot fully check."
+          "description": "A single URL to vendor or internal documentation, shown as \"Docs ↗\" in the node's details card. Optional, at most 300 characters. Must start with http:// or https:// followed by at least one more character (so a schemeless authority like \"https:evil.com\" or a single-slash \"http:/x\" is rejected here too) and contain no whitespace, quote, or angle bracket -- the whitespace/quote/angle-bracket narrowing is not expressible as a single portable pattern and is left to validateDoc(), see root description item 12."
         }
       },
       "if": {

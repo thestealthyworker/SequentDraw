@@ -59,7 +59,6 @@ const CROSSREF_EXPECTED_CODE = {
   'crossref-whitespace-only-title.json': 'invalid-title',
   'crossref-node-description-whitespace.json': 'invalid-description',
   'crossref-edge-description-whitespace.json': 'invalid-description',
-  'crossref-node-link-javascript-scheme.json': 'invalid-link',
   'crossref-node-link-whitespace.json': 'invalid-link',
   'crossref-node-link-quote.json': 'invalid-link',
 };
