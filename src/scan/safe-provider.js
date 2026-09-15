@@ -27,7 +27,7 @@
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { stripControlChars } = require('./sanitize-text');
-const { parseYamlSafe } = require('./yaml-safe');
+const { parseYamlSafe, checkYamlLimits } = require('./yaml-safe');
 
 const DEFAULT_MAX_FILES = 20000;
 const DEFAULT_MAX_DEPTH = 25;
@@ -35,6 +35,16 @@ const DEFAULT_MAX_FILE_BYTES = 1 * 1024 * 1024; // 1MB
 const DEFAULT_MAX_TOTAL_BYTES = 100 * 1024 * 1024; // 100MB
 const BINARY_SNIFF_BYTES = 8192;
 const MAX_LINE_LENGTH = 5000;
+
+// A YAML file gets a tighter per-file cap than the generic
+// maxFileBytes: 256KB, checked against the file's stat size BEFORE it
+// is ever read into memory (see item 1(a) of the fix-round-2 security
+// re-check -- a flat, very-wide YAML document can make the underlying
+// parser's own bookkeeping grow super-quadratically, so this content
+// must never even reach that parser in the first place if it is
+// implausibly large for the compose/workflow files this engine
+// actually needs to read).
+const YAML_MAX_FILE_BYTES = 256 * 1024;
 
 const SKIP_DIR_NAMES = new Set([
   'node_modules',
@@ -112,17 +122,66 @@ function findUnescapedQuoteEnd(content, startIndex, quoteChar) {
   return content.length;
 }
 
+// Matches a shell-style heredoc value marker immediately after "=":
+// "<<EOF", "<<-EOF" (the "-" form allows leading tabs before the closing
+// delimiter in real shells; not load-bearing here since only the
+// delimiter text itself is used), "<<'EOF'", "<<\"EOF\"". Group 2/3/4
+// hold the delimiter, whichever quoting form matched.
+const HEREDOC_START_RE = /^<<(-)?\s*(?:"([^"\n]*)"|'([^'\n]*)'|([A-Za-z0-9_]+))/;
+
+// Finds where a heredoc value ends: the index right after the first
+// subsequent line whose content, trimmed, exactly equals `delimiter`
+// (real shell heredoc semantics -- the delimiter must appear alone on
+// its own line). `searchFrom` is the index right after the marker
+// line's own newline. Returns content.length (redact to end of file) if
+// the delimiter is never found, matching findUnescapedQuoteEnd's
+// "unterminated -> redact everything" posture.
+function findHeredocEnd(content, searchFrom, delimiter) {
+  let cursor = searchFrom;
+  while (cursor <= content.length) {
+    const nl = content.indexOf('\n', cursor);
+    const lineEnd = nl === -1 ? content.length : nl;
+    if (content.slice(cursor, lineEnd).trim() === delimiter) {
+      return nl === -1 ? content.length : nl + 1;
+    }
+    if (nl === -1) break;
+    cursor = nl + 1;
+  }
+  return content.length;
+}
+
+// Everything between (and after) declarations that is NOT itself a
+// blank line or a full-line comment is dropped rather than passed
+// through unchanged. This is a second, independent line of defence
+// against a heredoc body (or anything else shaped in a way this parser
+// does not specifically recognise) ever surviving into the returned
+// content, on top of the explicit heredoc handling in stripEnvValues()
+// below -- so even a form neither of them was written for degrades to
+// "silently removed", never "leaked verbatim".
+function filterNonDeclarationLines(segment) {
+  if (segment.length === 0) return '';
+  return segment
+    .split('\n')
+    .filter(line => line.trim() === '' || line.trimStart().startsWith('#'))
+    .join('\n');
+}
+
 // Strips the value out of every "NAME=value" declaration (and a
 // commented-out "# NAME=value"), keeping the name only, so a rule (or a
 // human) can see which variables are declared without ever seeing what a
 // real deployment sets them to. Handles a leading `export`, an inline
-// trailing `#` comment (discarded along with the value), and a
+// trailing `#` comment (discarded along with the value), a
 // double/single-quoted value that spans MULTIPLE lines (some .env
-// parsers, e.g. the `dotenv` npm package, support this) -- the entire
-// quoted span, embedded newlines included, is treated as one value and
-// fully redacted, never scanned line-by-line (which would otherwise let
-// a continuation line's content leak through unstripped). CRLF and lone
-// CR line endings are normalised to LF first; downstream stripControlChars
+// parsers, e.g. the `dotenv` npm package, support this), and a
+// shell-style heredoc value ("NAME=<<EOF" ... "EOF") -- each of these
+// spans, embedded newlines included, is treated as one value and fully
+// redacted, never scanned line-by-line (which would otherwise let a
+// continuation line's content leak through unstripped). Everything
+// between and after declarations that is not itself blank or a
+// full-line comment is ALSO dropped (filterNonDeclarationLines), as a
+// second, independent line of defence for any value-bearing shape
+// neither of the above was specifically written for. CRLF and lone CR
+// line endings are normalised to LF first; downstream stripControlChars
 // removes any literal CR anyway, so no information is lost by doing so
 // here. This is intentionally conservative about what counts as a
 // "value" -- everything between the "=" and the end of that value
@@ -139,7 +198,7 @@ function stripEnvValues(content) {
     const matchEnd = DECLARATION_RE.lastIndex; // index right after "="
     const [, indent, hashPrefix, exportKw, name] = m;
 
-    result += normalised.slice(cursor, matchStart);
+    result += filterNonDeclarationLines(normalised.slice(cursor, matchStart));
 
     let valueEnd;
     const firstValueChar = normalised[matchEnd];
@@ -147,19 +206,27 @@ function stripEnvValues(content) {
       const closeIdx = findUnescapedQuoteEnd(normalised, matchEnd + 1, firstValueChar);
       valueEnd = closeIdx < normalised.length ? closeIdx + 1 : normalised.length;
     } else {
-      const nlIdx = normalised.indexOf('\n', matchEnd);
-      valueEnd = nlIdx === -1 ? normalised.length : nlIdx;
+      const heredoc = HEREDOC_START_RE.exec(normalised.slice(matchEnd));
+      if (heredoc) {
+        const delimiter = heredoc[2] ?? heredoc[3] ?? heredoc[4];
+        const markerLineEnd = normalised.indexOf('\n', matchEnd);
+        valueEnd = markerLineEnd === -1 ? normalised.length : findHeredocEnd(normalised, markerLineEnd + 1, delimiter);
+      } else {
+        const nlIdx = normalised.indexOf('\n', matchEnd);
+        valueEnd = nlIdx === -1 ? normalised.length : nlIdx;
+      }
     }
 
     result += `${indent}${hashPrefix || ''}${exportKw || ''}${name}=`;
     cursor = valueEnd;
     // Resume scanning after the whole consumed value -- so nothing
-    // inside a multi-line quoted value (however "NAME="-shaped it might
-    // look) is ever treated as a second, independent declaration.
+    // inside a multi-line quoted value or a heredoc body (however
+    // "NAME="-shaped it might look) is ever treated as a second,
+    // independent declaration.
     DECLARATION_RE.lastIndex = valueEnd;
   }
 
-  result += normalised.slice(cursor);
+  result += filterNonDeclarationLines(normalised.slice(cursor));
   return result;
 }
 
@@ -179,7 +246,7 @@ class SafeProvider {
     this.bytesOpened = 0;
     this._totalBytesExceeded = false;
     this._reasons = [];
-    this.findings = []; // { kind: 'real-env-file' | 'yaml-rejected', path }
+    this.findings = []; // { kind: 'real-env-file', path } | { kind: 'yaml-rejected', path, reason }
     this._realEnvSeen = new Set();
     this._yamlRejectedSeen = new Set();
   }
@@ -227,11 +294,12 @@ class SafeProvider {
     this.findings.push({ kind: 'real-env-file', path: rel });
   }
 
-  _recordYamlRejected(absPath) {
+  _recordYamlRejected(absPath, reason) {
     const rel = this.relPath(absPath);
-    if (this._yamlRejectedSeen.has(rel)) return;
-    this._yamlRejectedSeen.add(rel);
-    this.findings.push({ kind: 'yaml-rejected', path: rel });
+    const key = `${rel} ${reason}`;
+    if (this._yamlRejectedSeen.has(key)) return;
+    this._yamlRejectedSeen.add(key);
+    this.findings.push({ kind: 'yaml-rejected', path: rel, reason });
   }
 
   async listDir(pathArg) {
@@ -313,6 +381,7 @@ class SafeProvider {
     if (lst.isSymbolicLink() || !lst.isFile()) return null;
 
     const base = path.basename(p);
+    const isYaml = YAML_EXT_RE.test(base);
     const envKind = classifyEnvFile(base);
     if (envKind === 'real') {
       this._recordRealEnvFile(p);
@@ -322,6 +391,14 @@ class SafeProvider {
 
     if (this._totalBytesExceeded) {
       this._markTruncated(`total bytes budget of ${this.maxTotalBytes} exceeded; later files were not opened`);
+      return null;
+    }
+
+    // A YAML file never even reaches the generic per-file cap: it gets
+    // its own tighter one, checked against the file's stat size before
+    // any of it is read into memory (see YAML_MAX_FILE_BYTES above).
+    if (isYaml && lst.size > YAML_MAX_FILE_BYTES) {
+      this._recordYamlRejected(p, 'file-too-large');
       return null;
     }
 
@@ -346,17 +423,29 @@ class SafeProvider {
     const text = buf.toString('utf8');
     if (hasOverlongLine(text)) return null; // minified by content, not just by name
 
-    // Every *.yml/*.yaml file is parsed with the same bounded settings
-    // (size cap, nesting-depth cap, alias-count cap) BEFORE its content
-    // is ever handed back to a caller -- stack-analyser's own docker and
-    // githubActions rules parse repo-supplied YAML too, so this guard
-    // has to live here, not only inside src/scan/parsers/*, to cover
-    // every path that reaches this content. A file that fails is never
-    // returned; only its path is recorded, as a finding, never its
-    // (rejected, so possibly hostile) content.
-    if (YAML_EXT_RE.test(base) && parseYamlSafe(text) === null) {
-      this._recordYamlRejected(p);
-      return null;
+    // Every *.yml/*.yaml file is checked and parsed with the same
+    // bounded settings BEFORE its content is ever handed back to a
+    // caller -- stack-analyser's own docker and githubActions rules
+    // parse repo-supplied YAML too, so this guard has to live here, not
+    // only inside src/scan/parsers/*, to cover every path that reaches
+    // this content. Two layers, cheapest first: checkYamlLimits() is a
+    // linear structural pre-check (lines, apparent entry count, nesting
+    // depth) that never does a real parse, so it rejects a pathologically
+    // WIDE document (see YAML_MAX_FILE_BYTES's comment) before the real
+    // parser ever sees it; parseYamlSafe() is the actual bounded parse,
+    // a second independent check. A file that fails either is never
+    // returned; only its path and which limit fired are recorded, as a
+    // finding, never its (rejected, so possibly hostile) content.
+    if (isYaml) {
+      const limits = checkYamlLimits(text);
+      if (!limits.ok) {
+        this._recordYamlRejected(p, limits.reason);
+        return null;
+      }
+      if (parseYamlSafe(text) === null) {
+        this._recordYamlRejected(p, 'unparsable');
+        return null;
+      }
     }
 
     this.bytesOpened += buf.length;
