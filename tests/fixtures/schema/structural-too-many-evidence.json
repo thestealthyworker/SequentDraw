@@ -1,0 +1,53 @@
+{
+  "title": "Base doc",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "Group one"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service",
+      "parentId": "g1",
+      "evidence": [
+        "ev0",
+        "ev1",
+        "ev2",
+        "ev3",
+        "ev4",
+        "ev5",
+        "ev6",
+        "ev7",
+        "ev8",
+        "ev9",
+        "ev10",
+        "ev11",
+        "ev12",
+        "ev13",
+        "ev14",
+        "ev15",
+        "ev16",
+        "ev17",
+        "ev18",
+        "ev19",
+        "ev20"
+      ]
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "kind": "service"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "type": "solid",
+      "condition": null
+    }
+  ]
+}

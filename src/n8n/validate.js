@@ -118,8 +118,14 @@ const NODE_KEYS = new Set([
   'rationale',
   'description',
   'link',
+  'evidence',
 ]);
-const EDGE_KEYS = new Set(['from', 'to', 'type', 'condition', 'description']);
+const EDGE_KEYS = new Set(['from', 'to', 'type', 'condition', 'description', 'evidence', 'source']);
+
+// evidence: an array of 1-20 evidence ids (src/scan/check-evidence.js
+// cross-references these against a scan bundle; this only checks shape).
+const EVIDENCE_MIN_COUNT = 1;
+const EVIDENCE_MAX_COUNT = 20;
 const NOTE_KEYS = new Set(['id', 'content', 'attachTo', 'color', 'layers']);
 const TOUR_KEYS = new Set(['order', 'title', 'description', 'nodeIds']);
 
@@ -379,6 +385,35 @@ function checkLayersField(value, path, errors) {
   });
 }
 
+// node.evidence / edge.evidence: optional array of 1-20 evidence id
+// strings (same id charset as node/group/note ids). Shape only -- whether
+// a cited id actually exists in a scan bundle, and whether it supports
+// the claim, is src/scan/check-evidence.js's job, not the renderer's.
+function checkEvidenceField(value, path, errors, label) {
+  if (value == null) return;
+  if (!Array.isArray(value)) {
+    errors.push({ path, code: 'invalid-evidence', message: `${label} evidence must be an array of evidence ids.` });
+    return;
+  }
+  if (value.length < EVIDENCE_MIN_COUNT || value.length > EVIDENCE_MAX_COUNT) {
+    errors.push({
+      path,
+      code: 'invalid-evidence',
+      message: `${label} evidence has ${value.length} entries, must be between ${EVIDENCE_MIN_COUNT} and ${EVIDENCE_MAX_COUNT}.`,
+    });
+    return;
+  }
+  value.forEach((id, i) => {
+    if (typeof id !== 'string' || !ID_RE.test(id)) {
+      errors.push({
+        path: `${path}/${i}`,
+        code: 'invalid-evidence',
+        message: `${label} evidence id ${displayValue(id)} is invalid: must be ${ID_RE_DESCRIPTION}.`,
+      });
+    }
+  });
+}
+
 // --- main entry point --------------------------------------------------
 
 function validateDoc(doc) {
@@ -559,6 +594,7 @@ function validateDoc(doc) {
         label: `Node "${truncate(n.id)}" description`,
       });
       checkLink(n.link, { path: `${path}/link`, errors, label: `Node "${truncate(n.id)}"` });
+      checkEvidenceField(n.evidence, `${path}/evidence`, errors, `Node "${truncate(n.id)}"`);
     });
     checkDuplicateIds(
       rawNodes.map((n, index) => ({ id: isPlainObjectish(n) ? n.id : undefined, index })),
@@ -608,6 +644,8 @@ function validateDoc(doc) {
         code: 'description',
         label: `Edge #${i} description`,
       });
+      checkEvidenceField(e.evidence, `${path}/evidence`, errors, `Edge #${i}`);
+      checkEnum(e.source, { path: `${path}/source`, errors, required: false, values: SOURCE_VALUES, code: 'source', label: 'Edge source' });
     });
   }
 

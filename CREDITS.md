@@ -8,7 +8,9 @@ Licences were checked against each repository on 2026-09-15.
 | Project | Used for | Licence |
 |---|---|---|
 | [elkjs](https://github.com/kieler/elkjs) — JavaScript build of the [Eclipse Layout Kernel](https://github.com/eclipse/elk) | Every node, container and edge coordinate. The layered algorithm with orthogonal edge routing does all layout. | EPL-2.0 OR GPL-3.0-or-later |
-| [Simple Icons](https://github.com/simple-icons/simple-icons) | Brand icon paths and colours, looked up by slug in `src/icons.js`. | CC0-1.0 |
+| [Simple Icons](https://github.com/simple-icons/simple-icons) | Brand icon paths and colours, looked up by slug in `src/icons.js` and `src/scan/crosswalk.js`. | CC0-1.0 |
+| [@specfy/stack-analyser](https://github.com/specfy/stack-analyser), pinned to exactly `1.27.6` | The `git-map` scan engine's technology and dependency detector (`src/scan/scan.js`), run only against SequentDraw's own safe, limited, read-only provider (`src/scan/safe-provider.js`) — never given direct filesystem access. Licence verified against the GitHub repository on 2026-09-16 via `gh api repos/specfy/stack-analyser/license`. | MIT |
+| [yaml](https://github.com/eemeli/yaml), pinned to exactly `2.9.1` | Bounded YAML parsing for docker-compose and GitHub Actions workflow files (`src/scan/yaml-safe.js`), with `maxAliasCount`, a nesting-depth cap, and an input-size cap so a crafted "alias bomb" or deeply-nested document cannot exhaust memory, overflow the stack, or hang the scan. Pinned above the version `@specfy/stack-analyser` itself depends on (`2.8.0`, which has a published stack-overflow advisory on deeply nested YAML); `package.json`'s `overrides` field additionally forces stack-analyser's own nested copy to `2.9.1` too, so `npm ls yaml` resolves to a single deduped install and `npm audit --omit=dev` reports 0 vulnerabilities. `src/scan/safe-provider.js` also runs every `*.yml`/`*.yaml` file it opens through these same bounded settings before returning its content to any caller, as a second line of defence that holds even for a downstream install that does not respect `overrides` (a different package manager, or one that ignores it). | ISC |
 
 Brand icons are trademarks of their respective owners. Showing one in a map
 identifies the tool; it does not imply endorsement. The example map shows Next.js,
@@ -49,3 +51,18 @@ licensed under the Sustainable Use License, with Enterprise-licensed `.ee` files
 was written by hand from Medusa's published documentation on order returns (RMA).
 It describes the flow; it contains no Medusa source code. Medusa is MIT-licensed,
 except for Enterprise Edition materials.
+
+**Scan-engine fixture repos** (`tests/fixtures/repos/compose-app`,
+`tests/fixtures/repos/next-supabase-stripe`, `tests/fixtures/repos/fastapi-celery`).
+Small, hand-written synthetic repositories used to test `src/scan/`'s evidence
+extraction end to end. Written by the SequentDraw project for this purpose; MIT,
+not derived from any other repository. The "hostile" fixture used by
+`tests/scan-hostile.test.js` (symlinks, an oversized/binary file, a real `.env`
+with a fake secret, a YAML alias bomb, prompt-injection text, and 25,000 empty
+files) is generated at test time by `tests/fixtures/build-hostile-repo.js` rather
+than committed.
+
+**[dockersamples/example-voting-app](https://github.com/dockersamples/example-voting-app)**
+(Apache-2.0). Cloned at a pinned commit only by the gated integration test
+`tests/scan-network.test.js` (`SEQUENTDRAW_NETWORK_TESTS=1`), never vendored into
+this repository.
