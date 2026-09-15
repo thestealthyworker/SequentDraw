@@ -36,10 +36,16 @@ function baseLayoutOptions(extra) {
   );
 }
 
-function containerLayoutOptions() {
+// `nodeGap` defaults to the interactive NODE_GAP; the doc-export layout
+// pass (src/n8n/doc-layout.js) passes a larger value so ELK's own initial
+// placement already leaves room for the tallest caption in play, instead
+// of relying solely on the post-layout overlap-resolution sweep in
+// layout.js. Passing the default value reproduces the exact same options
+// object as before this parameter existed.
+function containerLayoutOptions(nodeGap) {
   return {
     'elk.padding': `[top=${GROUP_PADDING.top},left=${GROUP_PADDING.left},bottom=${GROUP_PADDING.bottom},right=${GROUP_PADDING.right}]`,
-    'elk.spacing.nodeNode': String(NODE_GAP),
+    'elk.spacing.nodeNode': String(nodeGap == null ? NODE_GAP : nodeGap),
     'elk.layered.spacing.nodeNodeBetweenLayers': String(RANK_GAP),
   };
 }

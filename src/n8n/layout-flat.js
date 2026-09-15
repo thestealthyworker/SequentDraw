@@ -1,18 +1,28 @@
 // One ELK layered pass across the whole graph, direction RIGHT, groups as
 // real containers via hierarchyHandling INCLUDE_CHILDREN.
 
-const { snap, NODE_SIZE } = require('./constants');
+const { snap, NODE_SIZE, NODE_GAP, LABEL_RESERVE } = require('./constants');
 const { baseLayoutOptions, containerLayoutOptions, leafElkNode, runElk } = require('./elk-helpers');
 const { computeReversedEdgeSet, elkEdgeEndpoints } = require('./direction');
 
-async function layoutFlat(doc) {
+// `opts.labelReserve`, when larger than the interactive LABEL_RESERVE
+// (the doc-export layout pass passes the tallest caption's reserve — see
+// doc-layout.js), grows the perpendicular-to-flow ELK spacing by the same
+// amount, so nodes stacked in one rank already leave room for a caption
+// below the shorter one instead of relying only on the post-layout
+// overlap sweep in layout.js. Omitting opts (the interactive path) keeps
+// the exact same spacing as before this parameter existed.
+async function layoutFlat(doc, opts = {}) {
+  const labelReserve = opts.labelReserve == null ? LABEL_RESERVE : opts.labelReserve;
+  const nodeGap = NODE_GAP + Math.max(0, labelReserve - LABEL_RESERVE);
+
   const containers = new Map();
   doc.groups.forEach(g => {
     containers.set(g.id, {
       id: g.id,
       labels: [{ text: g.label }],
       children: [],
-      layoutOptions: containerLayoutOptions(),
+      layoutOptions: containerLayoutOptions(nodeGap),
     });
   });
 
@@ -35,7 +45,7 @@ async function layoutFlat(doc) {
 
   const graph = {
     id: 'root',
-    layoutOptions: baseLayoutOptions({ 'elk.hierarchyHandling': 'INCLUDE_CHILDREN' }),
+    layoutOptions: baseLayoutOptions({ 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.spacing.nodeNode': String(nodeGap) }),
     children: [...containers.values(), ...roots],
     edges: doc.edges.map((e, i) => ({ id: `e${i}`, ...elkEdgeEndpoints(e, i, reversedSet) })),
   };

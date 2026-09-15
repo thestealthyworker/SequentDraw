@@ -9,14 +9,18 @@ const { LABEL_RESERVE } = require('./constants');
 
 // Matches the footprint already used for node-vs-node label-overlap
 // checks (see layout.js resolveOverlaps / the layout test's `footprint`
-// helper): the node's own width, LABEL_RESERVE tall, starting at the
-// node's bottom edge.
-function nodeLabelBox(nodeBox) {
-  return { x: nodeBox.x, y: nodeBox.y + nodeBox.h, w: nodeBox.w, h: LABEL_RESERVE };
+// helper): the node's own width, `labelReserve` tall, starting at the
+// node's bottom edge. `labelReserve` defaults to the interactive
+// LABEL_RESERVE; the doc-export layout pass (doc-layout.js) passes a
+// taller value so this same box also covers caption text underneath the
+// label/sublabel, keeping routing and note placement clear of captions
+// without a second, duplicate obstacle box.
+function nodeLabelBox(nodeBox, labelReserve) {
+  return { x: nodeBox.x, y: nodeBox.y + nodeBox.h, w: nodeBox.w, h: labelReserve == null ? LABEL_RESERVE : labelReserve };
 }
 
-function labelBoxesOf(nodeBoxes) {
-  return Object.entries(nodeBoxes).map(([id, b]) => ({ id, ...nodeLabelBox(b) }));
+function labelBoxesOf(nodeBoxes, labelReserve) {
+  return Object.entries(nodeBoxes).map(([id, b]) => ({ id, ...nodeLabelBox(b, labelReserve) }));
 }
 
 // Rough bounding box for a frame's title text, matching its render-svg.js
