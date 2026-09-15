@@ -154,7 +154,8 @@ Interaction:
 | Click or tap | Pins the card. Clicking empty canvas or pressing Escape unpins. Touch devices have no hover, so this is their path. |
 | Keyboard | Nodes and edges are focusable in reading order (`tabindex="0"`, a descriptive `aria-label`). Focus shows the card; Enter pins; Escape closes. |
 | Zoom and pan | The card is an HTML overlay outside the SVG transform: it keeps a constant, readable size, sits beside its target, and flips to stay inside the viewport. |
-| Hidden layers | Connections to hidden nodes are listed with "(hidden)". |
+| Hidden layers | Connections to hidden nodes are listed with "(hidden)". Hidden nodes and edges are not focusable, and a pinned card closes if its target is hidden. |
+| Deep link | Opening the file with `#focus=<node id>` or `#focus=<from>-><to>` pins that card and pans it into view. The hash is only compared against ids in the data; it never builds a selector. Useful for sharing a link to one node, and for automated screenshots. |
 | Reduced motion | No fade or dim transitions under `prefers-reduced-motion`. |
 
 Security: card text comes from untrusted input. Card data is embedded inside the single
@@ -235,14 +236,28 @@ How the flat layout stays readable:
 
 ### Hidden layers
 
-Drop the prototype's compaction. It degraded routing (a known defect), and n8n
-never moves nodes when things are hidden. Return to the spec's rule: hidden nodes
-keep their positions, and edges into a hidden node end in a stub.
+Drop the prototype's compaction. It degraded routing (a known defect), and n8n never
+moves nodes when things are hidden. Hidden nodes keep their positions.
+
+Owner rule (2026-09-15): toggling a layer leaves no leftovers.
+
+- An edge is shown only when both of its endpoints are visible; otherwise the whole
+  edge is hidden, with no stub marker.
+- A handle with no visible edge is hidden, and a branch handle hides with its own edge
+  and label.
+- A group frame shrinks to the bounding box of its visible members (same padding, title
+  moving with it), and is hidden when none are visible. Edges are not re-routed.
+- The details card lists connections to hidden nodes as "(hidden)", so nothing is lost.
+
+The visibility rules live in small pure functions (`edge-visibility.js`,
+`handle-visibility.js`, `frame-box.js`), shared with the viewer. Tests keep the
+viewer's inlined copies identical to the tested source.
 
 ## What this supersedes
 
 | Source | Previous rule | Now |
 |---|---|---|
+| SPEC · Edges at a visibility boundary | An edge into a hidden node ends in a stub marker | The whole edge hides; handles and frames follow; the details card lists hidden connections |
 | SPEC · Nodes | "The icon is the node. No box around it." 44px circle | 96px rounded-square node, icon inside |
 | SPEC · Edges | "Orthogonal routing only. No diagonals, no curves." | Bezier where the path is clear; rounded orthogonal routes around obstacles and for backward edges |
 | SPEC · Splits | A shared horizontal rail fanning into targets | A labelled branch handle per `condition` edge |

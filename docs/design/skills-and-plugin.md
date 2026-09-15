@@ -203,9 +203,9 @@ Skills ship in the same PR as the engine feature they drive:
 
 1. **n8n renderer + CLI.** Done; no skill.
 2. **Text notes.** Done; engine capability, no skill.
-3. **Schema validation and layout tests.** Hardens every output grader.
+3. **Schema validation and layout tests.** Done; hardens every output grader.
 3a. **Details cards** (node and edge descriptions, hover, tap and keyboard) and
-    consideration notes. Engine capability; no skill.
+    consideration notes. Done; engine capability, no skill.
 3b. **Documentation export** (SVG with inline captions). Engine capability; its skill,
     `doc-map`, ships in step 4 once the plugin scaffold exists.
 4. **Extraction Mode A** → `git-map` and `doc-map`, plus the plugin scaffold
@@ -213,5 +213,9 @@ Skills ship in the same PR as the engine feature they drive:
 5. **Mode B + gap detection** → `business-map`, without its suggestion step.
 6. **Suggestion agent** → the `business-map` suggestion step, `eval-build` and
    `grill-build`.
+6a. **Correction mode** (after M2): semantic edits in the viewer, exported as corrected
+    JSON; no stored positions (see `docs/HANDOVER.md` step 7a). No new skill: every
+    skill from `git-map` on already accepts conversational corrections and re-validates
+    before rendering.
 7. **GitHub repository search with licence verification** → `gitrepo-suggest`.
 8. Tours, then the MCP server and HTTP API, then `skills install` for other agents.
