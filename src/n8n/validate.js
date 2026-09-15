@@ -10,6 +10,9 @@ const KIND_VALUES = new Set(['service', 'human', 'external', 'manual', 'artifact
 const STATUS_VALUES = new Set(['open', 'confirmed', 'suggested']);
 const EDGE_TYPE_VALUES = new Set(['solid', 'dashed', 'gutter']);
 const GROUP_COLOR_VALUES = new Set(['purple', 'teal', 'coral', 'pink', 'blue', 'green', 'amber', 'gray']);
+const NOTE_COLOR_VALUES = new Set(['yellow', 'gold', 'red', 'green', 'blue', 'purple', 'gray']);
+const NOTE_CONTENT_MAX_LENGTH = 2000;
+const NOTES_MAX_COUNT = 20;
 
 function checkId(id, what) {
   if (typeof id !== 'string' || !ID_RE.test(id)) {
@@ -82,7 +85,45 @@ function validateDoc(doc) {
     }
   }
 
-  return { title, groups, nodes: doc.nodes, edges: doc.edges };
+  const notes = Array.isArray(doc.notes) ? doc.notes : [];
+  if (notes.length > NOTES_MAX_COUNT) {
+    throw new Error(`Too many notes: ${notes.length} (max ${NOTES_MAX_COUNT})`);
+  }
+
+  const noteIds = new Set();
+  for (const note of notes) {
+    checkId(note && note.id, 'Note');
+    if (nodeIds.has(note.id) || groupIds.has(note.id)) {
+      throw new Error(`Note "${note.id}" id collides with a node or group id`);
+    }
+    if (noteIds.has(note.id)) {
+      throw new Error(`Duplicate note id: "${note.id}"`);
+    }
+    noteIds.add(note.id);
+
+    if (typeof note.content !== 'string' || note.content.trim().length === 0) {
+      throw new Error(`Note "${note.id}" content must be a non-empty string`);
+    }
+    if (note.content.length > NOTE_CONTENT_MAX_LENGTH) {
+      throw new Error(`Note "${note.id}" content is ${note.content.length} chars, max ${NOTE_CONTENT_MAX_LENGTH}`);
+    }
+    if (note.color != null && !NOTE_COLOR_VALUES.has(note.color)) {
+      throw new Error(`Note "${note.id}" has color "${note.color}", expected one of ${[...NOTE_COLOR_VALUES].join(', ')}`);
+    }
+    if (note.attachTo != null) {
+      if (!Array.isArray(note.attachTo)) {
+        throw new Error(`Note "${note.id}".attachTo must be an array`);
+      }
+      for (const targetId of note.attachTo) {
+        if (!nodeIds.has(targetId) && !groupIds.has(targetId)) {
+          throw new Error(`Note "${note.id}".attachTo references "${targetId}" which is not a declared node or group`);
+        }
+      }
+    }
+    checkLayers(note.layers, `Note "${note.id}"`);
+  }
+
+  return { title, groups, nodes: doc.nodes, edges: doc.edges, notes };
 }
 
 module.exports = { validateDoc };
