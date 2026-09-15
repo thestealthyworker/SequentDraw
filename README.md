@@ -12,6 +12,18 @@ input  →  workflow.json  →  ELK layout  →  HTML render
          (semantic only)   (deterministic)  (deterministic)
 ```
 
+## Distribution target
+
+SequentDraw is built to be called by AI tools, not only run by hand. Every
+capability should be reachable through:
+
+- a **Claude Code plugin** (skills and commands)
+- **Codex and other agents**, via MCP and an `AGENTS.md`-style entry point
+- a **CLI** (`npx sequentdraw ...`)
+- an **HTTP API** that works with plain `curl`: post a workflow JSON, get HTML back
+
+The render core stays a pure library. Each interface is a thin adapter over it.
+
 ## Status
 
 Early. The prototype renderer is being brought into this repo.

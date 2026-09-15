@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "examples/reference/medusa-return-flow.html"
+        ],
+        "createdAt": "2026-09-15T10:59:57.484Z",
+        "reason": "Claude: frozen reference render from the web prototype, kept as a fixture; must not be edited"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "examples/reference/medusa-return-flow.html"
+        ],
+        "createdAt": "2026-09-15T10:59:57.566Z",
+        "reason": "Claude: frozen reference render from the web prototype, kept as a fixture; must not be edited"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "src/render-html.js"
+        ],
+        "createdAt": "2026-09-15T10:59:57.651Z",
+        "reason": "Claude: transition targets SVG rect geometry (x/y/width/height) on group containers, which does not reflow the HTML document; intentional motion when containers resize after layer toggles"
+      }
+    ]
+  }
+}
