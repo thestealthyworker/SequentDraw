@@ -21,8 +21,12 @@ What the HTML could not recover:
 - **`kind` on brand-icon nodes.** When a brand icon resolves, the renderer ignores
   `kind`, so those seven nodes are set to `service`.
 
-Replace this file with the original if it turns up. The regression test will show
-whether the layout still matches.
+**Sticky notes.** Four `notes` were added after the rebuild to exercise that feature:
+a map-level note, one attached to the Fulfillment group, one on the `business` layer
+attached to `receive` and `inspect`, and a red `edge`-layer note on `refund_check`.
+The legacy renderer ignores `notes`, so the regression test above is unaffected.
+
+The owner has set aside the original JSON until the final-product re-test.
 
 ## `reference/medusa-return-flow.html`
 
@@ -32,5 +36,5 @@ values are the same and the rendering is unaffected.
 
 ## `stampedid-workflow.json`
 
-Not recovered yet. 15 nodes from a real project, intended for testing extraction
-accuracy later.
+Not recovered. 15 nodes from a real project, intended for testing extraction
+accuracy. The owner has set it aside until the final-product re-test.

@@ -1,6 +1,7 @@
 // renderHtml(layout, doc) -> self-contained HTML string. Pure function, no IO.
 
 const { esc, layersOf, nodeMarkup, handleMarkup, frameMarkup, edgeMarkup } = require('./render-svg');
+const { noteMarkup } = require('./notes-render');
 const { css, script } = require('./render-shell');
 const { DOT_GRID_GAP, DOT_COLOR, CANVAS_FILL } = require('./constants');
 
@@ -9,6 +10,7 @@ const LAYER_TITLES = { base: 'Base', edge: 'Edge cases', business: 'Business', b
 function presentLayers(doc) {
   const set = new Set(['base']);
   doc.nodes.forEach(n => layersOf(n).forEach(l => set.add(l)));
+  (doc.notes || []).forEach(n => layersOf(n).forEach(l => set.add(l)));
   // Keep the spec's declared order where possible, then anything extra.
   const order = ['base', 'edge', 'business', 'build'];
   return order.filter(l => set.has(l)).concat([...set].filter(l => !order.includes(l)));
@@ -41,7 +43,7 @@ function svgDefs() {
 }
 
 function renderHtml(layout, doc) {
-  const { nodeBoxes, frameBoxes, handles, edges, entryIds, canvas } = layout;
+  const { nodeBoxes, frameBoxes, noteBoxes, handles, edges, entryIds, canvas } = layout;
   const entrySet = new Set(entryIds);
 
   const bgPad = 4000;
@@ -62,6 +64,14 @@ function renderHtml(layout, doc) {
     })
     .join('\n');
 
+  const notesSvg = (doc.notes || [])
+    .map(n => {
+      const box = noteBoxes[n.id];
+      if (!box) return '';
+      return noteMarkup(n, box);
+    })
+    .join('\n');
+
   const svg = `<svg id="canvas-svg" xmlns="http://www.w3.org/2000/svg">
 ${svgDefs()}
 <g id="viewport">
@@ -69,6 +79,7 @@ ${bg}
 <g class="frames-layer">${framesSvg}</g>
 <g class="edges-layer">${edgesSvg}</g>
 <g class="nodes-layer">${nodesSvg}</g>
+<g class="notes-layer">${notesSvg}</g>
 </g>
 </svg>`;
 

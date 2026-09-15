@@ -13,6 +13,7 @@ const {
 } = require('./constants');
 const { routeForward, routeBackward } = require('./routing');
 const { labelBoxesOf, frameTitleBoxesOf } = require('./obstacles');
+const { computeNoteBoxes } = require('./notes');
 
 function computeFrameBoxes(doc, nodeBoxes) {
   const frameBoxes = {};
@@ -180,7 +181,7 @@ function computeHandles(doc, nodeBoxes) {
   return handles;
 }
 
-function computeEdges(doc, handles, nodeBoxes, frameBoxes) {
+function computeEdges(doc, handles, nodeBoxes, frameBoxes, noteBoxes) {
   const byId = {};
   doc.nodes.forEach(n => (byId[n.id] = n));
   const allNodeBoxes = Object.entries(nodeBoxes).map(([id, b]) => ({ id, ...b }));
@@ -192,16 +193,18 @@ function computeEdges(doc, handles, nodeBoxes, frameBoxes) {
   // edge's own group: an edge entering its destination group legitimately
   // has to cross the frame BODY to reach its member node, but it never has
   // to cross the small title-text area specifically, so unlike the frame
-  // body there's no own-group carve-out for it.
+  // body there's no own-group carve-out for it. A note box is never exempt
+  // either — no edge routes through a sticky note, own group's or not.
   const allLabelBoxes = labelBoxesOf(nodeBoxes);
   const allFrameTitleBoxes = frameTitleBoxesOf(doc.groups, frameBoxes);
+  const allNoteBoxes = Object.entries(noteBoxes || {}).map(([id, b]) => ({ id, x: b.x, y: b.y, w: b.w, h: b.h }));
 
   return doc.edges.map((e, i) => {
     const s = handles[e.from].out[i];
     const t = handles[e.to].in[i];
     const forward = t.x >= s.x;
     const ownGroups = new Set([byId[e.from].parentId, byId[e.to].parentId].filter(Boolean));
-    const avoidNodeBoxes = allNodeBoxes.filter(b => b.id !== e.from && b.id !== e.to).concat(allLabelBoxes);
+    const avoidNodeBoxes = allNodeBoxes.filter(b => b.id !== e.from && b.id !== e.to).concat(allLabelBoxes).concat(allNoteBoxes);
     const avoidFrameBoxes = allFrameBoxes.filter(f => !ownGroups.has(f.id)).concat(allFrameTitleBoxes);
     const { d, midpoint } = forward
       ? routeForward(s.x, s.y, t.x, t.y, avoidNodeBoxes, avoidFrameBoxes)
@@ -221,7 +224,7 @@ function computeEdges(doc, handles, nodeBoxes, frameBoxes) {
   });
 }
 
-function computeCanvasBounds(nodeBoxes, frameBoxes) {
+function computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes) {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -237,6 +240,12 @@ function computeCanvasBounds(nodeBoxes, frameBoxes) {
     minY = Math.min(minY, f.y);
     maxX = Math.max(maxX, f.x + f.w);
     maxY = Math.max(maxY, f.y + f.h);
+  });
+  Object.values(noteBoxes || {}).forEach(b => {
+    minX = Math.min(minX, b.x);
+    minY = Math.min(minY, b.y);
+    maxX = Math.max(maxX, b.x + b.w);
+    maxY = Math.max(maxY, b.y + b.h);
   });
   const x = minX - CANVAS_MARGIN;
   const y = minY - CANVAS_MARGIN;
@@ -254,14 +263,18 @@ async function layoutMap(doc) {
   resolveOverlaps(nodeBoxes);
 
   const frameBoxes = computeFrameBoxes(validated, nodeBoxes);
+  // Notes are placed before edges are routed — they are obstacles routing
+  // must avoid, like label strips (see computeEdges above).
+  const noteBoxes = computeNoteBoxes(validated, nodeBoxes, frameBoxes);
   const entrySet = computeEntrySet(validated);
   const handles = computeHandles(validated, nodeBoxes);
-  const edges = computeEdges(validated, handles, nodeBoxes, frameBoxes);
-  const canvas = computeCanvasBounds(nodeBoxes, frameBoxes);
+  const edges = computeEdges(validated, handles, nodeBoxes, frameBoxes, noteBoxes);
+  const canvas = computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes);
 
   return {
     nodeBoxes,
     frameBoxes,
+    noteBoxes,
     handles,
     edges,
     entryIds: [...entrySet],
