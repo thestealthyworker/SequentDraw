@@ -29,6 +29,13 @@ decisions were adopted from it, as recorded in [`docs/SPEC.md`](docs/SPEC.md#pri
 Licensing there is mixed: `packages/core`, `packages/cli` and `packages/mcp` are MIT;
 the repository root and the VS Code extension are AGPL-3.0.
 
+**[n8n](https://github.com/n8n-io/n8n)** by n8n GmbH. The map's visual style
+(node shape, handles, edge curves, canvas grid, frames) and layout strategy follow
+n8n's workflow canvas. They are re-implemented from a written description; no n8n
+source, styles or assets are included. See
+[`docs/design/n8n-visual-style.md`](docs/design/n8n-visual-style.md). n8n is
+licensed under the Sustainable Use License, with Enterprise-licensed `.ee` files.
+
 ## Example material
 
 **[Medusa](https://github.com/medusajs/medusa).** `examples/medusa-return-flow.json`
