@@ -66,6 +66,41 @@ the sticky-note look: 4px radius, 1px border, a pastel fill from a fixed palette
 (one swatch per SequentDraw group colour), and the title at top-left. Frames sit
 behind nodes. Groups remain the only spatial axis (handover finding 6).
 
+### Notes (text boxes)
+
+n8n workflows use sticky notes to explain what a section does. SequentDraw adds them
+to the IR as a top-level `notes` array. Like everything else, a note stores meaning,
+not position.
+
+```jsonc
+"notes": [
+  {
+    "id": "n_inspection",
+    "content": "## Inspection\nItems are checked by hand. **Damaged** stock is not resold.",
+    "attachTo": ["receive", "inspect"],   // node or group ids; omit for a map-level note
+    "color": "yellow",                    // yellow | gold | red | green | blue | purple | gray
+    "layers": ["business"]                // same visibility rules as nodes; default ["base"]
+  }
+]
+```
+
+| Aspect | Rule |
+|---|---|
+| Look | n8n sticky-note look: 4px radius, 1px border, pastel fill from seven swatches, yellow by default. Width 240–480px, height fits the content. |
+| Content | A Markdown subset: `#` and `##` headings, bold, italic, inline code, bullet lists, line breaks, and links (opened in a new tab). All raw HTML is escaped before Markdown is applied. Images are not supported, so the file stays self-contained. |
+| Attached note | Placed by the engine beside the bounding box of the nodes or group it names, never overlapping a node, label or frame title. Its placement comes from the layout, so it is deterministic. |
+| Map-level note | A note without `attachTo` sits at the top-left of the canvas and describes the whole workflow. |
+| Layers | A note is shown when any of its layers is visible. |
+
+Invariants, enforced loudly like the rest of the schema:
+
+- every `attachTo` id exists as a node or group
+- `content` is non-empty and at most 2,000 characters
+- `color` is one of the seven swatches
+- at most 20 notes per map
+
+In plugin form this is how Claude or Codex writes explanations into a map.
+
 ### Layers
 
 Unchanged in meaning: layers are a visibility filter over one layout. The checkbox
