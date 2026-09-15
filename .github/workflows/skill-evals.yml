@@ -1,0 +1,64 @@
+name: skill-evals
+
+# `pull_request`, never `pull_request_target` -- see
+# docs/design/skills-and-plugin.md, "CI": a PR from a fork must never
+# receive CLAUDE_CODE_OAUTH_TOKEN, and pull_request (unlike
+# pull_request_target) runs with the fork's own read-only, secret-less
+# token by default. The job below additionally no-ops when the secret is
+# absent, which is exactly the fork-PR case.
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - "evals/**"
+      - "hooks/**"
+      - ".claude-plugin/**"
+      - "bin/**"
+
+permissions:
+  contents: read
+
+jobs:
+  skill-evals:
+    runs-on: ubuntu-latest
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip gracefully when the eval credential is unavailable (fork PRs)
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN == '' }}
+        run: |
+          echo "::notice::CLAUDE_CODE_OAUTH_TOKEN is not set (expected for a fork PR)."
+          echo "::notice::Skipping skill evals -- they require the owner's Claude subscription credential."
+
+      - uses: actions/setup-node@v4
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+
+      - name: Install Claude Code
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: npm i -g @anthropic-ai/claude-code
+
+      - name: Run skill evals
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          claude plugin eval . \
+            --trust-plugin \
+            --no-publish \
+            --json results.json \
+            --threshold 0.8 \
+            --max-cost-usd 10
+
+      - name: Upload eval results
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-eval-results
+          path: results.json
+          if-no-files-found: warn
