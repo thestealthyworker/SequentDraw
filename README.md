@@ -14,6 +14,7 @@ input  →  workflow.json  →  ELK layout  →  HTML render
 
 ## Status
 
-Early. The prototype renderer is being brought into this repo. See
-[`docs/HANDOVER.md`](docs/HANDOVER.md) for what was proven, known defects, and the
-build order.
+Early. The prototype renderer is being brought into this repo.
+
+- [`docs/SPEC.md`](docs/SPEC.md) — visual grammar and IR schema
+- [`docs/HANDOVER.md`](docs/HANDOVER.md) — what was proven, known defects, build order

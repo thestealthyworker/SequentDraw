@@ -4,7 +4,7 @@
 > name; the tool is now **SequentDraw**.
 
 Prototype is working. This document is the brief for turning it into a repo and a
-Claude plugin. Read `workflow-designer-spec.md` first for the product design; this
+Claude plugin. Read [`SPEC.md`](SPEC.md) (originally `workflow-designer-spec.md`) first for the product design; this
 file covers what was built, what was proven, and what is left.
 
 ## What this tool is

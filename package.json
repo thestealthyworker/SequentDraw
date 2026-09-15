@@ -1,0 +1,19 @@
+{
+  "name": "sequentdraw",
+  "version": "0.1.0",
+  "description": "Generates interactive architecture and business-process maps from a semantic JSON model",
+  "main": "src/render-html.js",
+  "scripts": {
+    "render": "node src/render-html.js",
+    "check": "node src/check.js"
+  },
+  "dependencies": {
+    "elkjs": "^0.12.0",
+    "simple-icons": "^15.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thestealthyworker/SequentDraw.git"
+  },
+  "license": "MIT"
+}
