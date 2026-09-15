@@ -90,6 +90,7 @@ not position.
 |---|---|
 | Look | n8n sticky-note look: 4px radius, 1px border, pastel fill from seven swatches, yellow by default. Width 240–480px, height fits the content. |
 | Content | A Markdown subset: `#` and `##` headings, bold, italic, inline code, bullet lists, line breaks, and links (opened in a new tab). All raw HTML is escaped before Markdown is applied. Images are not supported, so the file stays self-contained. |
+| Links | Content is untrusted, so links are narrow. Only `http`, `https` and `mailto` URLs become links. A URL containing whitespace, a quote or an angle bracket renders as plain text. A `mailto` link keeps only the address; query parameters such as `cc`, `bcc` and `body` are dropped, so a note cannot add hidden recipients. Every other scheme (`javascript:`, `data:`, protocol-relative `//`) renders as plain text. |
 | Attached note | Placed by the engine beside the bounding box of the nodes or group it names, never overlapping a node, label or frame title. Its placement comes from the layout, so it is deterministic. |
 | Map-level note | A note without `attachTo` sits at the top-left of the canvas and describes the whole workflow. |
 | Layers | A note is shown when any of its layers is visible. |

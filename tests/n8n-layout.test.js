@@ -105,15 +105,22 @@ describe('n8n layout on the Medusa fixture', () => {
   });
 
   test('renderHtml loads no external resources (self-contained, per SPEC.md "no dependencies")', () => {
-    // Notes may legitimately contain http(s)/mailto links (opened on click,
-    // never fetched), so this no longer bans "http" as a substring anywhere
-    // in the output — it checks for actual resource-loading references
-    // instead: a <script src>, a <link>, or an <img src> would break the
-    // "opens by double-click, survives being emailed" requirement.
+    // Notes may contain http(s) links, which are opened on click and never
+    // fetched. So an http(s) URL is allowed only as the href of an <a>, and
+    // every element or construct that loads a resource on open is banned
+    // outright, SVG-native ones included. The map must open by double-click
+    // and survive being emailed.
     html = renderHtml(layout, doc);
-    assert.deepStrictEqual(html.match(/<script[^>]*\bsrc=/g) || [], []);
-    assert.deepStrictEqual(html.match(/<link\b/g) || [], []);
-    assert.deepStrictEqual(html.match(/<img\b/g) || [], []);
+    const loaders = html.match(
+      /<script[^>]*\bsrc\s*=|<link\b|<img\b|<image\b|<use\b|<iframe\b|<object\b|<embed\b|<foreignObject\b|@import|url\(\s*['"]?\s*(?:https?:)?\/\/|xlink:href\s*=\s*["']?\s*(?:https?:)?\/\/|\bsrcset\s*=/gi
+    ) || [];
+    assert.deepStrictEqual(loaders, []);
+
+    const anchorHrefs = new Set([...html.matchAll(/<a\s[^>]*\bhref="([^"]*)"/g)].map(m => m[1]));
+    const urls = (html.match(/https?:\/\/[^\s"'<>)]+/g) || [])
+      .filter(url => url !== 'http://www.w3.org/2000/svg')
+      .filter(url => ![...anchorHrefs].some(href => href.startsWith(url)));
+    assert.deepStrictEqual(urls, [], 'http(s) URLs may only appear as <a href> values');
   });
 
   test('renderHtml output is a complete, non-empty HTML document', () => {

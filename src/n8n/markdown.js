@@ -38,6 +38,23 @@ function escapeHtml(s) {
 // content" in tests/n8n-notes.test.js.
 const ALLOWED_LINK_PROTOCOLS = /^(https?|mailto):/i;
 
+// The URL has already been HTML-escaped, so a quote or angle bracket shows up
+// as an entity. A link whose URL contains whitespace, a quote or an angle
+// bracket is not a real address, and it renders as plain text rather than
+// being carried into an href. `&amp;` stays allowed for query strings.
+const UNSAFE_URL_CONTENT = /\s|&quot;|&#39;|&lt;|&gt;/i;
+
+// Returns the href to use, or null when the link should render as plain text.
+// Note content is untrusted, so a mailto link keeps only the address: query
+// parameters (cc, bcc, subject, body) would let a note silently add recipients
+// to an email the reader composes.
+function safeHref(rawUrl) {
+  const url = rawUrl.trim();
+  if (!ALLOWED_LINK_PROTOCOLS.test(url) || UNSAFE_URL_CONTENT.test(url)) return null;
+  if (/^mailto:/i.test(url)) return url.split('?')[0];
+  return url;
+}
+
 // Tries, at each scan position, code / link / bold / italic in that order,
 // so (for example) an asterisk inside a code span is never re-read as
 // italic — the code branch already consumed the whole span. No nesting
@@ -57,13 +74,9 @@ function parseInline(escapedText) {
     if (code != null) {
       runs.push({ text: code, code: true });
     } else if (linkText != null) {
-      const url = linkUrl.trim();
-      if (ALLOWED_LINK_PROTOCOLS.test(url)) {
-        runs.push({ text: linkText, href: url });
-      } else {
-        // Disallowed scheme: keep the visible label, drop the URL.
-        runs.push({ text: linkText });
-      }
+      const href = safeHref(linkUrl);
+      // A rejected URL keeps its visible label and drops the link.
+      runs.push(href ? { text: linkText, href } : { text: linkText });
     } else if (bold != null) {
       runs.push({ text: bold, bold: true });
     } else if (italic != null) {
@@ -133,21 +146,32 @@ function wrapRuns(runs, maxChars) {
   });
   if (cur.length) lines.push(cur);
 
+  const sameStyle = (a, b) => a.bold === b.bold && a.italic === b.italic && a.code === b.code && a.href === b.href;
+
   return lines.map(lineWords => {
     const grouped = [];
     lineWords.forEach(w => {
       const prev = grouped[grouped.length - 1];
-      const sameStyle = prev && prev.bold === w.bold && prev.italic === w.italic && prev.code === w.code && prev.href === w.href;
-      if (sameStyle) {
+      const run = { text: w.word, bold: w.bold, italic: w.italic, code: w.code, href: w.href };
+      if (!prev) {
+        grouped.push(run);
+      } else if (sameStyle(prev, run)) {
         prev.text += ' ' + w.word;
+      } else if (!run.href) {
+        // A run boundary becomes a sibling tspan with no x reset, so the space
+        // must live inside one tspan's text or it is lost: "**cap** halts"
+        // would render "caphalts". The space leads the new, non-link run.
+        run.text = ' ' + run.text;
+        grouped.push(run);
+      } else if (!prev.href) {
+        // The new run is a link: the space trails the text before it, so it
+        // stays outside the link's underline.
+        prev.text += ' ';
+        grouped.push(run);
       } else {
-        // A run boundary (e.g. bold -> plain) becomes a new sibling tspan
-        // in notes-render.js with no x reset, so the space between the two
-        // words has to be part of one tspan's own text content or it is
-        // lost visually ("**cap** halts" would otherwise render "caphalts").
-        // Only the very first run on a line must NOT get a leading space.
-        const text = grouped.length ? ' ' + w.word : w.word;
-        grouped.push({ text, bold: w.bold, italic: w.italic, code: w.code, href: w.href });
+        // Two different links meet: the space belongs to neither.
+        grouped.push({ text: ' ', bold: false, italic: false, code: false, href: null });
+        grouped.push(run);
       }
     });
     return grouped;
