@@ -6,10 +6,10 @@ when_to_use: Use once a SequentDraw map (JSON or an already-rendered map) exists
 
 # doc-map
 
-Export an existing SequentDraw workflow map as a static SVG figure with inline
-captions (`docs/design/n8n-visual-style.md`, "Documentation export"). This
-skill never invents structure -- it only exports what is already there, plus
-node descriptions the user explicitly confirms.
+Export an existing SequentDraw workflow map as a static SVG figure with
+inline captions (see `references/svg-export.md` for the full output
+contract). This skill never invents structure -- it only exports what is
+already there, plus node descriptions the user explicitly confirms.
 
 ## Steps
 
@@ -35,10 +35,13 @@ node descriptions the user explicitly confirms.
    <sequentdraw> validate map.json
    <sequentdraw> render map.json map.svg --layers <chosen-layers>
    ```
-   (`<sequentdraw>` = `scripts/sequentdraw.sh`, which resolves the CLI --
-   see that script.) If validation fails, fix only the descriptions just
-   confirmed and re-run; never patch around an unrelated existing error
-   without telling the user.
+   `<sequentdraw>` means `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...`
+   when that variable is set (an installed Claude Code plugin), falling
+   back to `npx sequentdraw ...` when it is not (Codex, or any other host)
+   -- `scripts/sequentdraw.sh` implements exactly that resolution. If
+   validation fails, fix only the descriptions just confirmed and re-run;
+   never patch around an unrelated existing error without telling the
+   user.
 
 5. **Output like an artifact -- see `references/artifact-output.md`.** In
    Claude Code: publish a private Claude artifact (an HTML page that shows

@@ -1,8 +1,8 @@
 # Artifact output rule
 
 This is the rule every SequentDraw skill follows for anything it produces
-(map, figure or review) -- see `docs/design/skills-and-plugin.md`, "Rules
-every skill keeps".
+(map, figure or review): publish a private artifact plus a local copy,
+write into the repository only on request.
 
 ## In Claude Code
 
@@ -20,9 +20,9 @@ every skill keeps".
    needs for their docs comes from the local copy on disk, not from the
    published page -- the artifact is for *viewing*, the local file is for
    *using*.
-4. Write into the repository **only when the user asks** (e.g. "save it to
-   docs/architecture"), and **ask before overwriting** anything already
-   there.
+4. Write into the repository **only when the user asks** (e.g. "save it
+   into our architecture folder"), and **ask before overwriting** anything
+   already there.
 5. A conversational correction ("make the Payment description shorter")
    edits the local files and republishes to the *same* artifact, rather
    than creating a new one.

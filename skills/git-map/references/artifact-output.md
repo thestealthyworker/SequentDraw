@@ -1,8 +1,7 @@
 # Artifact output rule
 
-The same rule every SequentDraw skill follows -- see
-`docs/design/skills-and-plugin.md`, "Rules every skill keeps", and
-`docs/design/git-map.md` section 4.
+The same rule every SequentDraw skill follows: publish a private artifact
+plus a local copy, write into the repository only on request.
 
 ## In Claude Code
 
@@ -15,7 +14,7 @@ The same rule every SequentDraw skill follows -- see
    even when this skill is running as a forked subagent (`context: fork`),
    since the fork has no other way to hand the result back to the user.
 3. Write into the repository **only when the user asks**
-   ("save it to docs/architecture"), and **ask before overwriting**
+   ("save it into our architecture folder"), and **ask before overwriting**
    anything already there.
 4. A conversational correction ("Stripe belongs in Payment") edits the
    JSON, re-validates, re-checks evidence, and republishes to the *same*

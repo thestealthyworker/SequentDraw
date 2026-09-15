@@ -1,7 +1,6 @@
 # SVG export contract
 
-What `sequentdraw render <in.json> <out.svg> --layers a,b` (see
-`docs/design/n8n-visual-style.md`, "Documentation export") guarantees, so
+What `sequentdraw render <in.json> <out.svg> --layers a,b` guarantees, so
 this skill knows what it can and cannot rely on:
 
 | Aspect | Guarantee |
