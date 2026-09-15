@@ -24,9 +24,31 @@ capability should be reachable through:
 
 The render core stays a pure library. Each interface is a thin adapter over it.
 
+## Quick start
+
+```sh
+npm install
+mkdir -p out
+node src/render-html.js examples/medusa-return-flow.json out/medusa.html
+npm test
+```
+
 ## Status
 
-Early. The prototype renderer is being brought into this repo.
+Early. The prototype renderer runs and is pinned by a layout regression test.
 
 - [`docs/SPEC.md`](docs/SPEC.md) — visual grammar and IR schema
 - [`docs/HANDOVER.md`](docs/HANDOVER.md) — what was proven, known defects, build order
+- [`examples/README.md`](examples/README.md) — fixtures and where they came from
+
+## Credits
+
+Layout by [elkjs](https://github.com/kieler/elkjs) (Eclipse Layout Kernel). Brand
+icons from [Simple Icons](https://github.com/simple-icons/simple-icons). Some schema
+design decisions adopted from [cc-wf-studio](https://github.com/breaking-brake/cc-wf-studio).
+Example flow based on [Medusa](https://github.com/medusajs/medusa)'s documentation.
+Full details and licences in [`CREDITS.md`](CREDITS.md).
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).

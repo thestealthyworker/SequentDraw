@@ -5,7 +5,10 @@
   "main": "src/render-html.js",
   "scripts": {
     "render": "node src/render-html.js",
-    "check": "node src/check.js"
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "elkjs": "^0.12.0",
