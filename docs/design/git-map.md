@@ -195,6 +195,31 @@ without evidence; every `open` node carries a prompt.
 for the deterministic-plus-LLM split, no code used); the fixture repos above. All go
 into `CREDITS.md` with the implementation.
 
+### Supply chain
+
+Adopting `@specfy/stack-analyser@1.27.6` brought in 5 advisories under
+`npm audit --omit=dev` (main had none), all through its own dependencies:
+
+| Package | Severity | Reachable from a scanned repo? |
+|---|---|---|
+| Nested `yaml` 2.8.x | Moderate | **Yes.** Its docker and GitHub Actions rules parse repository YAML, and deeply nested YAML can overflow the stack. |
+| `nanoid` 5.1.5 | High | No. Needs a caller-supplied zero or negative size. |
+| `undici`, via `@actions/http-client` | High and moderate | No. Only its GitHub Action entry point loads it, and the scanner makes no network calls. |
+
+How this is handled:
+
+1. **npm `overrides`** pin stack-analyser's `yaml` to 2.9.1 and `nanoid` to 5.1.16, and
+   `undici` to 6.28.1. The audit returns to 0 for this repository, CI and plugin
+   installs.
+2. **The safe provider refuses dangerous YAML** before stack-analyser sees it (nesting
+   depth, alias count, size) and records a `yaml-rejected` finding. This protects installs
+   where overrides do not apply.
+3. **Required before publishing to npm:** npm ignores a dependency's `overrides`, so
+   SequentDraw installed as a package would inherit these advisories. Before the first npm
+   publish, vendor only the detection rules SequentDraw uses into `src/scan/rules/`, keeping
+   stack-analyser's MIT notice, and drop the dependency and its transitive tree. Tracked in
+   `docs/HANDOVER.md`.
+
 ## 8. M1 gate
 
 After merge, the lead developer briefs the CTO on that `main` commit: install the plugin

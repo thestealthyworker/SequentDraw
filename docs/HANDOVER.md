@@ -225,6 +225,10 @@ plugin scaffold arrives with the first of them, `git-map`.
     leftovers. **Done (details-cards PR).**
 3b. Documentation export: a static SVG with inline captions for screenshots and docs,
     because hover cannot appear in an image. Its skill `doc-map` ships with step 5.
+    **Done (PR #17).**
+3c. Layout performance: dense cyclic graphs within the validation caps (100 nodes, 500
+    edges) could stall rendering for over 90 seconds, a denial of service for the future
+    API and MCP surfaces. It is fixed and bounded before any skill ships.
 4. Promote `check.js` into automated tests. Assert zero node overlaps, edge
    attachment within tolerance, zero label collisions, no note overlapping a node.
    These are the regression tests that make everything after this safe.
@@ -242,6 +246,10 @@ plugin scaffold arrives with the first of them, `git-map`.
     and the documentation export. Conversational correction ("move Stripe into
     Payment") is available earlier, through the skills from `git-map` on.
 8. Tours last.
+8a. **Before the first npm publish:** vendor the stack-analyser detection rules SequentDraw
+    uses into `src/scan/rules/`, keeping the MIT notice, and drop the dependency. npm
+    ignores a dependency's `overrides`, so downstream installs would otherwise inherit its
+    transitive advisories (see `docs/design/git-map.md`, "Supply chain").
 9. **Internal cleanup, after the M3 gate passes:** remove the CTO agent, the review
    reports and the gate process (see `CLAUDE.md`). They are internal checks, not part
    of the product. The work is not complete until this is merged.
