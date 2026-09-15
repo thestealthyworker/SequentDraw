@@ -1,0 +1,18 @@
+{
+  "title": "Unknown edge target",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "does-not-exist",
+      "type": "solid",
+      "condition": null
+    }
+  ]
+}

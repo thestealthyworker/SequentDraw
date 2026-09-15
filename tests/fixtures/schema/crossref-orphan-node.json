@@ -1,0 +1,24 @@
+{
+  "title": "Orphan node",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "G"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service",
+      "parentId": "g1"
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "kind": "service",
+      "parentId": "g1"
+    }
+  ],
+  "edges": []
+}

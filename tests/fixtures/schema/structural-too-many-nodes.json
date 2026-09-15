@@ -1,0 +1,1112 @@
+{
+  "title": "Too many nodes",
+  "nodes": [
+    {
+      "id": "n0",
+      "label": "N0",
+      "kind": "service"
+    },
+    {
+      "id": "n1",
+      "label": "N1",
+      "kind": "service"
+    },
+    {
+      "id": "n2",
+      "label": "N2",
+      "kind": "service"
+    },
+    {
+      "id": "n3",
+      "label": "N3",
+      "kind": "service"
+    },
+    {
+      "id": "n4",
+      "label": "N4",
+      "kind": "service"
+    },
+    {
+      "id": "n5",
+      "label": "N5",
+      "kind": "service"
+    },
+    {
+      "id": "n6",
+      "label": "N6",
+      "kind": "service"
+    },
+    {
+      "id": "n7",
+      "label": "N7",
+      "kind": "service"
+    },
+    {
+      "id": "n8",
+      "label": "N8",
+      "kind": "service"
+    },
+    {
+      "id": "n9",
+      "label": "N9",
+      "kind": "service"
+    },
+    {
+      "id": "n10",
+      "label": "N10",
+      "kind": "service"
+    },
+    {
+      "id": "n11",
+      "label": "N11",
+      "kind": "service"
+    },
+    {
+      "id": "n12",
+      "label": "N12",
+      "kind": "service"
+    },
+    {
+      "id": "n13",
+      "label": "N13",
+      "kind": "service"
+    },
+    {
+      "id": "n14",
+      "label": "N14",
+      "kind": "service"
+    },
+    {
+      "id": "n15",
+      "label": "N15",
+      "kind": "service"
+    },
+    {
+      "id": "n16",
+      "label": "N16",
+      "kind": "service"
+    },
+    {
+      "id": "n17",
+      "label": "N17",
+      "kind": "service"
+    },
+    {
+      "id": "n18",
+      "label": "N18",
+      "kind": "service"
+    },
+    {
+      "id": "n19",
+      "label": "N19",
+      "kind": "service"
+    },
+    {
+      "id": "n20",
+      "label": "N20",
+      "kind": "service"
+    },
+    {
+      "id": "n21",
+      "label": "N21",
+      "kind": "service"
+    },
+    {
+      "id": "n22",
+      "label": "N22",
+      "kind": "service"
+    },
+    {
+      "id": "n23",
+      "label": "N23",
+      "kind": "service"
+    },
+    {
+      "id": "n24",
+      "label": "N24",
+      "kind": "service"
+    },
+    {
+      "id": "n25",
+      "label": "N25",
+      "kind": "service"
+    },
+    {
+      "id": "n26",
+      "label": "N26",
+      "kind": "service"
+    },
+    {
+      "id": "n27",
+      "label": "N27",
+      "kind": "service"
+    },
+    {
+      "id": "n28",
+      "label": "N28",
+      "kind": "service"
+    },
+    {
+      "id": "n29",
+      "label": "N29",
+      "kind": "service"
+    },
+    {
+      "id": "n30",
+      "label": "N30",
+      "kind": "service"
+    },
+    {
+      "id": "n31",
+      "label": "N31",
+      "kind": "service"
+    },
+    {
+      "id": "n32",
+      "label": "N32",
+      "kind": "service"
+    },
+    {
+      "id": "n33",
+      "label": "N33",
+      "kind": "service"
+    },
+    {
+      "id": "n34",
+      "label": "N34",
+      "kind": "service"
+    },
+    {
+      "id": "n35",
+      "label": "N35",
+      "kind": "service"
+    },
+    {
+      "id": "n36",
+      "label": "N36",
+      "kind": "service"
+    },
+    {
+      "id": "n37",
+      "label": "N37",
+      "kind": "service"
+    },
+    {
+      "id": "n38",
+      "label": "N38",
+      "kind": "service"
+    },
+    {
+      "id": "n39",
+      "label": "N39",
+      "kind": "service"
+    },
+    {
+      "id": "n40",
+      "label": "N40",
+      "kind": "service"
+    },
+    {
+      "id": "n41",
+      "label": "N41",
+      "kind": "service"
+    },
+    {
+      "id": "n42",
+      "label": "N42",
+      "kind": "service"
+    },
+    {
+      "id": "n43",
+      "label": "N43",
+      "kind": "service"
+    },
+    {
+      "id": "n44",
+      "label": "N44",
+      "kind": "service"
+    },
+    {
+      "id": "n45",
+      "label": "N45",
+      "kind": "service"
+    },
+    {
+      "id": "n46",
+      "label": "N46",
+      "kind": "service"
+    },
+    {
+      "id": "n47",
+      "label": "N47",
+      "kind": "service"
+    },
+    {
+      "id": "n48",
+      "label": "N48",
+      "kind": "service"
+    },
+    {
+      "id": "n49",
+      "label": "N49",
+      "kind": "service"
+    },
+    {
+      "id": "n50",
+      "label": "N50",
+      "kind": "service"
+    },
+    {
+      "id": "n51",
+      "label": "N51",
+      "kind": "service"
+    },
+    {
+      "id": "n52",
+      "label": "N52",
+      "kind": "service"
+    },
+    {
+      "id": "n53",
+      "label": "N53",
+      "kind": "service"
+    },
+    {
+      "id": "n54",
+      "label": "N54",
+      "kind": "service"
+    },
+    {
+      "id": "n55",
+      "label": "N55",
+      "kind": "service"
+    },
+    {
+      "id": "n56",
+      "label": "N56",
+      "kind": "service"
+    },
+    {
+      "id": "n57",
+      "label": "N57",
+      "kind": "service"
+    },
+    {
+      "id": "n58",
+      "label": "N58",
+      "kind": "service"
+    },
+    {
+      "id": "n59",
+      "label": "N59",
+      "kind": "service"
+    },
+    {
+      "id": "n60",
+      "label": "N60",
+      "kind": "service"
+    },
+    {
+      "id": "n61",
+      "label": "N61",
+      "kind": "service"
+    },
+    {
+      "id": "n62",
+      "label": "N62",
+      "kind": "service"
+    },
+    {
+      "id": "n63",
+      "label": "N63",
+      "kind": "service"
+    },
+    {
+      "id": "n64",
+      "label": "N64",
+      "kind": "service"
+    },
+    {
+      "id": "n65",
+      "label": "N65",
+      "kind": "service"
+    },
+    {
+      "id": "n66",
+      "label": "N66",
+      "kind": "service"
+    },
+    {
+      "id": "n67",
+      "label": "N67",
+      "kind": "service"
+    },
+    {
+      "id": "n68",
+      "label": "N68",
+      "kind": "service"
+    },
+    {
+      "id": "n69",
+      "label": "N69",
+      "kind": "service"
+    },
+    {
+      "id": "n70",
+      "label": "N70",
+      "kind": "service"
+    },
+    {
+      "id": "n71",
+      "label": "N71",
+      "kind": "service"
+    },
+    {
+      "id": "n72",
+      "label": "N72",
+      "kind": "service"
+    },
+    {
+      "id": "n73",
+      "label": "N73",
+      "kind": "service"
+    },
+    {
+      "id": "n74",
+      "label": "N74",
+      "kind": "service"
+    },
+    {
+      "id": "n75",
+      "label": "N75",
+      "kind": "service"
+    },
+    {
+      "id": "n76",
+      "label": "N76",
+      "kind": "service"
+    },
+    {
+      "id": "n77",
+      "label": "N77",
+      "kind": "service"
+    },
+    {
+      "id": "n78",
+      "label": "N78",
+      "kind": "service"
+    },
+    {
+      "id": "n79",
+      "label": "N79",
+      "kind": "service"
+    },
+    {
+      "id": "n80",
+      "label": "N80",
+      "kind": "service"
+    },
+    {
+      "id": "n81",
+      "label": "N81",
+      "kind": "service"
+    },
+    {
+      "id": "n82",
+      "label": "N82",
+      "kind": "service"
+    },
+    {
+      "id": "n83",
+      "label": "N83",
+      "kind": "service"
+    },
+    {
+      "id": "n84",
+      "label": "N84",
+      "kind": "service"
+    },
+    {
+      "id": "n85",
+      "label": "N85",
+      "kind": "service"
+    },
+    {
+      "id": "n86",
+      "label": "N86",
+      "kind": "service"
+    },
+    {
+      "id": "n87",
+      "label": "N87",
+      "kind": "service"
+    },
+    {
+      "id": "n88",
+      "label": "N88",
+      "kind": "service"
+    },
+    {
+      "id": "n89",
+      "label": "N89",
+      "kind": "service"
+    },
+    {
+      "id": "n90",
+      "label": "N90",
+      "kind": "service"
+    },
+    {
+      "id": "n91",
+      "label": "N91",
+      "kind": "service"
+    },
+    {
+      "id": "n92",
+      "label": "N92",
+      "kind": "service"
+    },
+    {
+      "id": "n93",
+      "label": "N93",
+      "kind": "service"
+    },
+    {
+      "id": "n94",
+      "label": "N94",
+      "kind": "service"
+    },
+    {
+      "id": "n95",
+      "label": "N95",
+      "kind": "service"
+    },
+    {
+      "id": "n96",
+      "label": "N96",
+      "kind": "service"
+    },
+    {
+      "id": "n97",
+      "label": "N97",
+      "kind": "service"
+    },
+    {
+      "id": "n98",
+      "label": "N98",
+      "kind": "service"
+    },
+    {
+      "id": "n99",
+      "label": "N99",
+      "kind": "service"
+    },
+    {
+      "id": "n100",
+      "label": "N100",
+      "kind": "service"
+    }
+  ],
+  "edges": [
+    {
+      "from": "n0",
+      "to": "n1",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n1",
+      "to": "n2",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n2",
+      "to": "n3",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n3",
+      "to": "n4",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n4",
+      "to": "n5",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n5",
+      "to": "n6",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n6",
+      "to": "n7",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n7",
+      "to": "n8",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n8",
+      "to": "n9",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n9",
+      "to": "n10",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n10",
+      "to": "n11",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n11",
+      "to": "n12",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n12",
+      "to": "n13",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n13",
+      "to": "n14",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n14",
+      "to": "n15",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n15",
+      "to": "n16",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n16",
+      "to": "n17",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n17",
+      "to": "n18",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n18",
+      "to": "n19",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n19",
+      "to": "n20",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n20",
+      "to": "n21",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n21",
+      "to": "n22",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n22",
+      "to": "n23",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n23",
+      "to": "n24",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n24",
+      "to": "n25",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n25",
+      "to": "n26",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n26",
+      "to": "n27",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n27",
+      "to": "n28",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n28",
+      "to": "n29",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n29",
+      "to": "n30",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n30",
+      "to": "n31",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n31",
+      "to": "n32",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n32",
+      "to": "n33",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n33",
+      "to": "n34",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n34",
+      "to": "n35",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n35",
+      "to": "n36",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n36",
+      "to": "n37",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n37",
+      "to": "n38",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n38",
+      "to": "n39",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n39",
+      "to": "n40",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n40",
+      "to": "n41",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n41",
+      "to": "n42",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n42",
+      "to": "n43",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n43",
+      "to": "n44",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n44",
+      "to": "n45",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n45",
+      "to": "n46",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n46",
+      "to": "n47",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n47",
+      "to": "n48",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n48",
+      "to": "n49",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n49",
+      "to": "n50",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n50",
+      "to": "n51",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n51",
+      "to": "n52",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n52",
+      "to": "n53",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n53",
+      "to": "n54",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n54",
+      "to": "n55",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n55",
+      "to": "n56",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n56",
+      "to": "n57",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n57",
+      "to": "n58",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n58",
+      "to": "n59",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n59",
+      "to": "n60",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n60",
+      "to": "n61",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n61",
+      "to": "n62",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n62",
+      "to": "n63",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n63",
+      "to": "n64",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n64",
+      "to": "n65",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n65",
+      "to": "n66",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n66",
+      "to": "n67",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n67",
+      "to": "n68",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n68",
+      "to": "n69",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n69",
+      "to": "n70",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n70",
+      "to": "n71",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n71",
+      "to": "n72",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n72",
+      "to": "n73",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n73",
+      "to": "n74",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n74",
+      "to": "n75",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n75",
+      "to": "n76",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n76",
+      "to": "n77",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n77",
+      "to": "n78",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n78",
+      "to": "n79",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n79",
+      "to": "n80",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n80",
+      "to": "n81",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n81",
+      "to": "n82",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n82",
+      "to": "n83",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n83",
+      "to": "n84",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n84",
+      "to": "n85",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n85",
+      "to": "n86",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n86",
+      "to": "n87",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n87",
+      "to": "n88",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n88",
+      "to": "n89",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n89",
+      "to": "n90",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n90",
+      "to": "n91",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n91",
+      "to": "n92",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n92",
+      "to": "n93",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n93",
+      "to": "n94",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n94",
+      "to": "n95",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n95",
+      "to": "n96",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n96",
+      "to": "n97",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n97",
+      "to": "n98",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n98",
+      "to": "n99",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n99",
+      "to": "n100",
+      "type": "solid",
+      "condition": null
+    }
+  ]
+}

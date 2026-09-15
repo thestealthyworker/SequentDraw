@@ -18,5 +18,8 @@
     "type": "git",
     "url": "https://github.com/thestealthyworker/SequentDraw.git"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "ajv": "^8.20.0"
+  }
 }

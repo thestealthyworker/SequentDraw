@@ -1,0 +1,34 @@
+{
+  "title": "Tour doc",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "kind": "service"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "type": "solid",
+      "condition": null
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "How it starts",
+      "description": "A hands off to B.",
+      "nodeIds": [
+        "a",
+        "b"
+      ]
+    }
+  ]
+}

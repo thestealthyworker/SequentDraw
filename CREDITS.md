@@ -14,6 +14,12 @@ Brand icons are trademarks of their respective owners. Showing one in a map
 identifies the tool; it does not imply endorsement. The example map shows Next.js,
 React, Stripe, Redis, PostgreSQL, GitHub Actions and Jest.
 
+## Development dependencies
+
+| Project | Used for | Licence |
+|---|---|---|
+| [ajv](https://github.com/ajv-validator/ajv) | Validates `schema/sequentdraw.schema.json` against fixtures in `tests/schema-parity.test.js`, proving the published JSON Schema agrees with `validateDoc()`. Dev-only: not a runtime dependency, not shipped in any rendered output. | MIT |
+
 ## Design prior art
 
 **[cc-wf-studio](https://github.com/breaking-brake/cc-wf-studio)** by breaking-brake.

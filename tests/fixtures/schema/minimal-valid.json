@@ -1,0 +1,11 @@
+{
+  "title": "Minimal doc",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    }
+  ],
+  "edges": []
+}

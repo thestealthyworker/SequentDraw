@@ -1,0 +1,12 @@
+{
+  "title": "Unknown group",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service",
+      "parentId": "does-not-exist"
+    }
+  ],
+  "edges": []
+}

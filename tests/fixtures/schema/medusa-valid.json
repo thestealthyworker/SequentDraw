@@ -1,0 +1,766 @@
+{
+  "title": "Medusa order return (RMA) flow",
+  "groups": [
+    {
+      "id": "g_entry",
+      "label": "Request",
+      "color": "purple"
+    },
+    {
+      "id": "g_core",
+      "label": "Order domain",
+      "color": "teal"
+    },
+    {
+      "id": "g_ship",
+      "label": "Fulfillment",
+      "color": "coral"
+    },
+    {
+      "id": "g_money",
+      "label": "Payment",
+      "color": "green"
+    },
+    {
+      "id": "g_infra",
+      "label": "Platform",
+      "color": "gray"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "customer",
+      "label": "Customer",
+      "sublabel": "buyer",
+      "kind": "external",
+      "icon": null,
+      "parentId": null,
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "req_store",
+      "label": "Request return",
+      "sublabel": "from storefront",
+      "kind": "manual",
+      "icon": null,
+      "parentId": "g_entry",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "req_admin",
+      "label": "Create return",
+      "sublabel": "merchant in admin",
+      "kind": "manual",
+      "icon": null,
+      "parentId": "g_entry",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "merchant",
+      "label": "Merchant",
+      "sublabel": "store operator",
+      "kind": "human",
+      "icon": null,
+      "parentId": null,
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "rma_label",
+      "label": "Return label",
+      "sublabel": "shipping document",
+      "kind": "artifact",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "ship_back",
+      "label": "Ship items back",
+      "sublabel": "customer posts",
+      "kind": "manual",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "receive",
+      "label": "Receive parcel",
+      "sublabel": "at warehouse",
+      "kind": "human",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "inspect",
+      "label": "Inspect items",
+      "sublabel": "condition check",
+      "kind": "human",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "mark_recv",
+      "label": "Mark received",
+      "sublabel": "in admin",
+      "kind": "manual",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "refund_out",
+      "label": "Refund issued",
+      "sublabel": "money returned",
+      "kind": "artifact",
+      "icon": null,
+      "parentId": "g_money",
+      "layers": [
+        "business"
+      ]
+    },
+    {
+      "id": "storefront",
+      "label": "Storefront",
+      "sublabel": "Next.js",
+      "kind": "service",
+      "icon": "nextdotjs",
+      "parentId": "g_entry",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "admin_ui",
+      "label": "Admin dashboard",
+      "sublabel": "merchant UI",
+      "kind": "service",
+      "icon": "react",
+      "parentId": "g_entry",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "store_api",
+      "label": "Store API",
+      "sublabel": "public routes",
+      "kind": "service",
+      "icon": null,
+      "parentId": "g_entry",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "admin_api",
+      "label": "Admin API",
+      "sublabel": "authenticated",
+      "kind": "service",
+      "icon": null,
+      "parentId": "g_entry",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "wf_engine",
+      "label": "Workflow engine",
+      "sublabel": "orchestration",
+      "kind": "service",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "order_mod",
+      "label": "Order module",
+      "sublabel": "lifecycle",
+      "kind": "service",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "return_model",
+      "label": "Return model",
+      "sublabel": "return record",
+      "kind": "artifact",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "return_item",
+      "label": "ReturnItem",
+      "sublabel": "per line item",
+      "kind": "artifact",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "order_version",
+      "label": "Version bump",
+      "sublabel": "request and receipt",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "ful_mod",
+      "label": "Fulfillment module",
+      "sublabel": "shipping",
+      "kind": "service",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "ship_opt",
+      "label": "Return option",
+      "sublabel": "is_return rule",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "ful_provider",
+      "label": "Fulfillment provider",
+      "sublabel": "carrier",
+      "kind": "external",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "inv_mod",
+      "label": "Inventory module",
+      "sublabel": "stock levels",
+      "kind": "service",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "pay_mod",
+      "label": "Payment module",
+      "sublabel": "refunds",
+      "kind": "service",
+      "icon": null,
+      "parentId": "g_money",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "pay_provider",
+      "label": "Payment provider",
+      "sublabel": "Stripe",
+      "kind": "service",
+      "icon": "stripe",
+      "parentId": "g_money",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "order_txn",
+      "label": "OrderTransaction",
+      "sublabel": "refund record",
+      "kind": "artifact",
+      "icon": null,
+      "parentId": "g_money",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "event_bus",
+      "label": "Event bus",
+      "sublabel": "Redis",
+      "kind": "service",
+      "icon": "redis",
+      "parentId": "g_infra",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "notif_mod",
+      "label": "Notification module",
+      "sublabel": "customer updates",
+      "kind": "service",
+      "icon": null,
+      "parentId": "g_infra",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "postgres",
+      "label": "Postgres",
+      "sublabel": "persistence",
+      "kind": "service",
+      "icon": "postgresql",
+      "parentId": "g_infra",
+      "layers": [
+        "base"
+      ]
+    },
+    {
+      "id": "guest_path",
+      "label": "Guest return",
+      "sublabel": "no auth required",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_entry",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "mismatch",
+      "label": "Item mismatch",
+      "sublabel": "sent vs received",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "damaged",
+      "label": "Damaged quantity",
+      "sublabel": "not resellable",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_ship",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "req_action",
+      "label": "requires_action",
+      "sublabel": "process halts",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "refund_check",
+      "label": "Refund exceeds cap",
+      "sublabel": "validation",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_money",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "partial",
+      "label": "Partially returned",
+      "sublabel": "some items only",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "cancel",
+      "label": "Cancel return",
+      "sublabel": "before receipt",
+      "kind": "manual",
+      "icon": null,
+      "parentId": "g_core",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "no_notif",
+      "label": "no_notification",
+      "sublabel": "silence updates",
+      "kind": "logic",
+      "icon": null,
+      "parentId": "g_infra",
+      "layers": [
+        "edge"
+      ]
+    },
+    {
+      "id": "ci",
+      "label": "CI pipeline",
+      "sublabel": "GitHub Actions",
+      "kind": "service",
+      "icon": "githubactions",
+      "parentId": "g_infra",
+      "layers": [
+        "build"
+      ]
+    },
+    {
+      "id": "int_tests",
+      "label": "Integration tests",
+      "sublabel": "module suites",
+      "kind": "service",
+      "icon": "jest",
+      "parentId": "g_infra",
+      "layers": [
+        "build"
+      ]
+    },
+    {
+      "id": "migrations",
+      "label": "Migrations",
+      "sublabel": "schema changes",
+      "kind": "artifact",
+      "icon": null,
+      "parentId": "g_infra",
+      "layers": [
+        "build"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "customer",
+      "to": "req_store",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "merchant",
+      "to": "req_admin",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "req_store",
+      "to": "storefront",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "req_admin",
+      "to": "admin_ui",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "storefront",
+      "to": "store_api",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "admin_ui",
+      "to": "admin_api",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "store_api",
+      "to": "wf_engine",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "admin_api",
+      "to": "wf_engine",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "guest_path",
+      "to": "store_api",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "wf_engine",
+      "to": "order_mod",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "order_mod",
+      "to": "return_model",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "return_model",
+      "to": "return_item",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "return_model",
+      "to": "order_version",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "order_mod",
+      "to": "ful_mod",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "ful_mod",
+      "to": "ship_opt",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "ship_opt",
+      "to": "ful_provider",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "ful_provider",
+      "to": "rma_label",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "rma_label",
+      "to": "ship_back",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "ship_back",
+      "to": "receive",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "receive",
+      "to": "inspect",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "inspect",
+      "to": "mark_recv",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "inspect",
+      "to": "mismatch",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "inspect",
+      "to": "damaged",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "mismatch",
+      "to": "req_action",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "mark_recv",
+      "to": "admin_api",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "return_item",
+      "to": "inv_mod",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "damaged",
+      "to": "inv_mod",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "order_mod",
+      "to": "pay_mod",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "pay_mod",
+      "to": "refund_check",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "refund_check",
+      "to": "req_action",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "pay_mod",
+      "to": "pay_provider",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "pay_provider",
+      "to": "order_txn",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "order_txn",
+      "to": "refund_out",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "order_mod",
+      "to": "partial",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "return_model",
+      "to": "cancel",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "order_mod",
+      "to": "event_bus",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "event_bus",
+      "to": "notif_mod",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "no_notif",
+      "to": "notif_mod",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "notif_mod",
+      "to": "customer",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "order_mod",
+      "to": "postgres",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "inv_mod",
+      "to": "postgres",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "migrations",
+      "to": "postgres",
+      "type": "dashed",
+      "condition": null
+    },
+    {
+      "from": "ci",
+      "to": "int_tests",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "int_tests",
+      "to": "migrations",
+      "type": "solid",
+      "condition": null
+    }
+  ],
+  "notes": [
+    {
+      "id": "n_overview",
+      "content": "# Medusa returns\nA customer or merchant opens a return, the warehouse receives and inspects the items, then a refund is issued through Stripe. See the [Medusa return docs](https://docs.medusajs.com/) for the underlying data model.",
+      "color": "yellow"
+    },
+    {
+      "id": "n_ship",
+      "content": "## Return shipping\nMedusa generates the **return label**, the customer ships the parcel back, and the warehouse logs receipt before inspection.",
+      "attachTo": ["g_ship"],
+      "color": "blue",
+      "layers": ["business"]
+    },
+    {
+      "id": "n_inspection",
+      "content": "## Inspection\nItems are checked by hand against the original order line. Notes:\n- condition, not just quantity\n- photos attached to the return record\n- `inspect` decides the outcome",
+      "attachTo": ["receive", "inspect"],
+      "color": "green",
+      "layers": ["business"]
+    },
+    {
+      "id": "n_refund_cap",
+      "content": "**Refund exceeds cap** halts the flow — a merchant must approve any refund over the configured limit before Stripe is called.",
+      "attachTo": ["refund_check"],
+      "color": "red",
+      "layers": ["edge"]
+    }
+  ]
+}
