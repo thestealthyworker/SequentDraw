@@ -25,8 +25,17 @@ function safeJson(value) {
     .replace(/\u2029/g, '\\u2029');
 }
 
-function css() {
-  return `
+// `opts.fragment`: appends one extra rule after the normal sheet, setting an
+// explicit background on the map root (`#stage`, which is already
+// `position:fixed;inset:0` so it covers the full viewport with or without a
+// `<body>`). Needed because the fragment build (renderMap(doc, { fragment:
+// true })) has no `<html>`/`<body>` for the `html,body{background:...}` rule
+// above to land on — the artifact skeleton around it may not share that
+// background. Called with no args (the default) this returns EXACTLY the
+// previous string, byte for byte — tests/n8n-render-golden.test.js pins the
+// full-document output and must not change.
+function css(opts = {}) {
+  const sheet = `
 :root{color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;height:100%;background:${CANVAS_FILL};overflow:hidden}
@@ -102,6 +111,8 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#333}
 .n8n-node,.n8n-edge,.n8n-frame,.n8n-note rect,.n8n-edge .edge-line{transition:none!important}
 }
 `;
+  if (!opts.fragment) return sheet;
+  return `${sheet}#stage{background:${CANVAS_FILL}}\n`;
 }
 
 function script(canvas, cardData, geometry) {
