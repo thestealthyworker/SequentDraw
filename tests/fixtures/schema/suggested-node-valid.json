@@ -1,0 +1,25 @@
+{
+  "title": "Suggestion doc",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    },
+    {
+      "id": "b",
+      "label": "Job queue",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "Three long-running steps run synchronously."
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "type": "solid",
+      "condition": null
+    }
+  ]
+}

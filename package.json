@@ -5,7 +5,7 @@
   "main": "src/render-html.js",
   "scripts": {
     "render": "node src/render-html.js",
-    "test": "node --test"
+    "test": "node --expose-gc --test"
   },
   "engines": {
     "node": ">=18"
@@ -18,5 +18,8 @@
     "type": "git",
     "url": "https://github.com/thestealthyworker/SequentDraw.git"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "ajv": "^8.20.0"
+  }
 }

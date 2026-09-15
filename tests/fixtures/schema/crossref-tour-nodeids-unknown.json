@@ -1,0 +1,21 @@
+{
+  "title": "Unknown tour node",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    }
+  ],
+  "edges": [],
+  "tour": [
+    {
+      "order": 1,
+      "title": "T",
+      "description": "D",
+      "nodeIds": [
+        "does-not-exist"
+      ]
+    }
+  ]
+}

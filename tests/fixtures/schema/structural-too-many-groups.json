@@ -1,0 +1,217 @@
+{
+  "title": "Too many groups",
+  "groups": [
+    {
+      "id": "g0",
+      "label": "Group 0"
+    },
+    {
+      "id": "g1",
+      "label": "Group 1"
+    },
+    {
+      "id": "g2",
+      "label": "Group 2"
+    },
+    {
+      "id": "g3",
+      "label": "Group 3"
+    },
+    {
+      "id": "g4",
+      "label": "Group 4"
+    },
+    {
+      "id": "g5",
+      "label": "Group 5"
+    },
+    {
+      "id": "g6",
+      "label": "Group 6"
+    },
+    {
+      "id": "g7",
+      "label": "Group 7"
+    },
+    {
+      "id": "g8",
+      "label": "Group 8"
+    },
+    {
+      "id": "g9",
+      "label": "Group 9"
+    },
+    {
+      "id": "g10",
+      "label": "Group 10"
+    },
+    {
+      "id": "g11",
+      "label": "Group 11"
+    },
+    {
+      "id": "g12",
+      "label": "Group 12"
+    },
+    {
+      "id": "g13",
+      "label": "Group 13"
+    },
+    {
+      "id": "g14",
+      "label": "Group 14"
+    },
+    {
+      "id": "g15",
+      "label": "Group 15"
+    },
+    {
+      "id": "g16",
+      "label": "Group 16"
+    },
+    {
+      "id": "g17",
+      "label": "Group 17"
+    },
+    {
+      "id": "g18",
+      "label": "Group 18"
+    },
+    {
+      "id": "g19",
+      "label": "Group 19"
+    },
+    {
+      "id": "g20",
+      "label": "Group 20"
+    },
+    {
+      "id": "g21",
+      "label": "Group 21"
+    },
+    {
+      "id": "g22",
+      "label": "Group 22"
+    },
+    {
+      "id": "g23",
+      "label": "Group 23"
+    },
+    {
+      "id": "g24",
+      "label": "Group 24"
+    },
+    {
+      "id": "g25",
+      "label": "Group 25"
+    },
+    {
+      "id": "g26",
+      "label": "Group 26"
+    },
+    {
+      "id": "g27",
+      "label": "Group 27"
+    },
+    {
+      "id": "g28",
+      "label": "Group 28"
+    },
+    {
+      "id": "g29",
+      "label": "Group 29"
+    },
+    {
+      "id": "g30",
+      "label": "Group 30"
+    },
+    {
+      "id": "g31",
+      "label": "Group 31"
+    },
+    {
+      "id": "g32",
+      "label": "Group 32"
+    },
+    {
+      "id": "g33",
+      "label": "Group 33"
+    },
+    {
+      "id": "g34",
+      "label": "Group 34"
+    },
+    {
+      "id": "g35",
+      "label": "Group 35"
+    },
+    {
+      "id": "g36",
+      "label": "Group 36"
+    },
+    {
+      "id": "g37",
+      "label": "Group 37"
+    },
+    {
+      "id": "g38",
+      "label": "Group 38"
+    },
+    {
+      "id": "g39",
+      "label": "Group 39"
+    },
+    {
+      "id": "g40",
+      "label": "Group 40"
+    },
+    {
+      "id": "g41",
+      "label": "Group 41"
+    },
+    {
+      "id": "g42",
+      "label": "Group 42"
+    },
+    {
+      "id": "g43",
+      "label": "Group 43"
+    },
+    {
+      "id": "g44",
+      "label": "Group 44"
+    },
+    {
+      "id": "g45",
+      "label": "Group 45"
+    },
+    {
+      "id": "g46",
+      "label": "Group 46"
+    },
+    {
+      "id": "g47",
+      "label": "Group 47"
+    },
+    {
+      "id": "g48",
+      "label": "Group 48"
+    },
+    {
+      "id": "g49",
+      "label": "Group 49"
+    },
+    {
+      "id": "g50",
+      "label": "Group 50"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    }
+  ],
+  "edges": []
+}

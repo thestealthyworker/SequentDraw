@@ -1,0 +1,29 @@
+{
+  "title": "Base doc",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "Group one"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "parentId": "g1"
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "kind": "service"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "type": "solid",
+      "condition": null
+    }
+  ]
+}

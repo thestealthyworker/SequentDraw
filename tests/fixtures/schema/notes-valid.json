@@ -1,0 +1,34 @@
+{
+  "title": "Notes doc",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "Group one",
+      "color": "blue"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service",
+      "parentId": "g1"
+    }
+  ],
+  "edges": [],
+  "notes": [
+    {
+      "id": "n_map",
+      "content": "Map-level note."
+    },
+    {
+      "id": "n_attached",
+      "content": "Attached note.",
+      "attachTo": [
+        "a",
+        "g1"
+      ],
+      "color": "gold"
+    }
+  ]
+}

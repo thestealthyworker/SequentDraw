@@ -1,0 +1,16 @@
+{
+  "title": "Duplicate node id",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    },
+    {
+      "id": "a",
+      "label": "A2",
+      "kind": "service"
+    }
+  ],
+  "edges": []
+}

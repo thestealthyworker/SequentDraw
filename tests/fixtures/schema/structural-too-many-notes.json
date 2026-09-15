@@ -1,0 +1,116 @@
+{
+  "title": "Base doc",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "Group one"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service",
+      "parentId": "g1"
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "kind": "service"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "type": "solid",
+      "condition": null
+    }
+  ],
+  "notes": [
+    {
+      "id": "note0",
+      "content": "hi"
+    },
+    {
+      "id": "note1",
+      "content": "hi"
+    },
+    {
+      "id": "note2",
+      "content": "hi"
+    },
+    {
+      "id": "note3",
+      "content": "hi"
+    },
+    {
+      "id": "note4",
+      "content": "hi"
+    },
+    {
+      "id": "note5",
+      "content": "hi"
+    },
+    {
+      "id": "note6",
+      "content": "hi"
+    },
+    {
+      "id": "note7",
+      "content": "hi"
+    },
+    {
+      "id": "note8",
+      "content": "hi"
+    },
+    {
+      "id": "note9",
+      "content": "hi"
+    },
+    {
+      "id": "note10",
+      "content": "hi"
+    },
+    {
+      "id": "note11",
+      "content": "hi"
+    },
+    {
+      "id": "note12",
+      "content": "hi"
+    },
+    {
+      "id": "note13",
+      "content": "hi"
+    },
+    {
+      "id": "note14",
+      "content": "hi"
+    },
+    {
+      "id": "note15",
+      "content": "hi"
+    },
+    {
+      "id": "note16",
+      "content": "hi"
+    },
+    {
+      "id": "note17",
+      "content": "hi"
+    },
+    {
+      "id": "note18",
+      "content": "hi"
+    },
+    {
+      "id": "note19",
+      "content": "hi"
+    },
+    {
+      "id": "note20",
+      "content": "hi"
+    }
+  ]
+}

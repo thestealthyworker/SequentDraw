@@ -1,0 +1,309 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/thestealthyworker/SequentDraw/blob/main/schema/sequentdraw.schema.json",
+  "title": "SequentDraw workflow document",
+  "description": "The IR (intermediate representation) SequentDraw renders as a self-contained n8n-style HTML map. Structural rules are enforced here (types, enums, lengths, id shape, the suggested-node-requires-rationale rule, the fact that a group has no parentId at all, and the array/field caps below). Array length caps mirror validateDoc()'s fail-fast checks exactly, so an oversized document is rejected by ajv without ever running item validation: nodes maxItems 100, edges maxItems 500, groups maxItems 50, notes maxItems 20, tour maxItems 50. Every object in the document (the document itself, and every group/node/edge/note/tour entry) also carries maxProperties: 200, matching validateDoc()'s MAX_OWN_KEYS guard against a document with an unbounded number of fields. The following rules are cross-references this schema CANNOT express and are enforced instead by validateDoc() in src/n8n/validate.js: (1) every node.parentId, when set, must reference a declared group id; (2) every edge.from and edge.to must reference a declared node id; (3) no node may be orphaned (zero edges) unless it is the only node in its group (nodes sharing the same parentId, including the ungrouped bucket); (4) node.sublabel, when present, must be 3 words or fewer by word count, not just <=60 characters; (5) an edge whose condition is non-null must have type \"dashed\"; (6) node, group, and note ids share one namespace, so no id may be duplicated within its own array or collide across nodes/groups/notes; (7) note.attachTo entries must reference a declared node or group id; (8) tour[].order values must be unique across the tour array; (9) tour[].nodeIds entries must reference declared node ids; (10) required strings (title, label, content, tour title/description) must be non-empty after trimming whitespace -- this schema's minLength:1 accepts a whitespace-only string that validateDoc() rejects.",
+  "type": "object",
+  "additionalProperties": false,
+  "maxProperties": 200,
+  "required": ["title", "nodes", "edges"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "title": "Schema reference",
+      "description": "Optional pointer to this JSON Schema file, for editor tooling. Not validated further."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "title": "Map title",
+      "description": "The document title, shown in the HTML page title and the floating title bar. Required, non-empty, at most 120 characters."
+    },
+    "groups": {
+      "type": "array",
+      "maxItems": 50,
+      "title": "Groups",
+      "description": "One entry per sub-workflow, drawn as a pastel frame behind its member nodes. Optional; omit or leave empty for an ungrouped map. Capped at 50 groups per map.",
+      "items": { "$ref": "#/$defs/group" }
+    },
+    "nodes": {
+      "type": "array",
+      "maxItems": 100,
+      "title": "Nodes",
+      "description": "Every tool, actor, or artifact in the workflow, drawn as its own 96px icon node. Required. Capped at 100 nodes per map to keep layout readable.",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 500,
+      "title": "Edges",
+      "description": "Directed connections between nodes: solid (deterministic flow), dashed (conditional, or a return/retry path), or gutter (cross-group link routed in the margin). Required; may be empty only for a single-node document. Capped at 500 edges per map.",
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "notes": {
+      "type": "array",
+      "maxItems": 20,
+      "title": "Sticky notes",
+      "description": "n8n-style sticky notes carrying Markdown explanations, optionally attached to a node or group. Optional. Capped at 20 notes per map.",
+      "items": { "$ref": "#/$defs/note" }
+    },
+    "tour": {
+      "type": "array",
+      "maxItems": 50,
+      "title": "Tour",
+      "description": "An ordered list of steps, each spotlighting one or more nodes with a short narration, for walking a reader through the map. Optional; generated on request, not by default. Capped at 50 tour entries per map.",
+      "items": { "$ref": "#/$defs/tourEntry" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+      "title": "Identifier",
+      "description": "1-64 characters: letters, digits, underscore, period, colon, or hyphen. Referenced by other parts of the document to link nodes, groups, and notes together."
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 200,
+      "required": ["id", "label"],
+      "title": "Group",
+      "description": "A sub-workflow container drawn as a pastel frame. Groups may not nest: this object intentionally has no parentId property, so a group with one present is rejected by additionalProperties:false. See root description item (6) for the shared id namespace this schema cannot check.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id",
+          "title": "Group id",
+          "description": "Unique identifier for this group, referenced by node.parentId."
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "title": "Group label",
+          "description": "Title shown top-left inside the group's frame. Required, non-empty, at most 80 characters."
+        },
+        "color": {
+          "type": "string",
+          "enum": ["purple", "teal", "coral", "pink", "blue", "green", "amber", "gray"],
+          "title": "Group color",
+          "description": "Frame fill/border color, one swatch from the fixed group palette. Optional; the renderer picks a default when omitted."
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 200,
+      "required": ["id", "label", "kind"],
+      "title": "Node",
+      "description": "A tool, actor, or artifact in the workflow. See root description items (1), (3), (4), (6) for cross-reference rules this schema cannot express on its own.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id",
+          "title": "Node id",
+          "description": "Unique identifier for this node, referenced by edge.from, edge.to, node.parentId (on other nodes it does not apply to itself), note.attachTo, and tour[].nodeIds."
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "title": "Node label",
+          "description": "The tool, actor, or artifact name, shown below the node. Required, non-empty, at most 80 characters."
+        },
+        "sublabel": {
+          "type": "string",
+          "maxLength": 60,
+          "title": "Sublabel",
+          "description": "What the node does here, shown under the label in smaller type. Optional, at most 60 characters. SPEC also requires 3 words or fewer, which this schema cannot count -- see root description item (4)."
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["service", "human", "external", "manual", "artifact", "logic"],
+          "title": "Node kind",
+          "description": "The category of thing this node represents, which selects its glyph and border style. Required."
+        },
+        "icon": {
+          "type": ["string", "null"],
+          "title": "Icon slug",
+          "description": "Resolved simple-icons or Iconify slug for the node's brand icon. Null falls back to the kind glyph; never guess a brand. Optional."
+        },
+        "parentId": {
+          "type": ["string", "null"],
+          "title": "Parent group id",
+          "description": "The id of the group this node belongs to, or null/omitted if ungrouped. Must reference a declared group -- see root description item (1), which this schema cannot check."
+        },
+        "layers": {
+          "type": "array",
+          "title": "Layers",
+          "description": "Which named overlays this node is visible in: base (happy path, always visible), edge (failures/retries/disputes), business (human actors, artifacts, external parties), build (CI/eval/deployment). Optional; a node with no layers behaves as if it were only in \"base\".",
+          "items": {
+            "type": "string",
+            "enum": ["base", "edge", "business", "build"]
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "confirmed", "suggested"],
+          "default": "confirmed",
+          "title": "Node status",
+          "description": "confirmed: established from the input. open: a gap the tool could not establish, rendered with a dotted ring. suggested: proposed by a suggestion agent, rendered distinctly and requiring a rationale. Optional; defaults to confirmed."
+        },
+        "source": {
+          "type": "string",
+          "enum": ["scan", "user", "model"],
+          "title": "Node source",
+          "description": "Where this node came from: an automated repo scan, a user's answer, or a model's inference/suggestion. Optional."
+        },
+        "prompt": {
+          "type": "string",
+          "maxLength": 500,
+          "title": "Gap prompt",
+          "description": "The open question shown to the user for a status:\"open\" node, e.g. why the tool could not resolve it. Optional, at most 500 characters."
+        },
+        "rationale": {
+          "type": "string",
+          "maxLength": 500,
+          "title": "Suggestion rationale",
+          "description": "Why this node was suggested, tied to something concrete in the user's own design (not a generic best-practice claim). Required and non-empty when status is \"suggested\"; not allowed on any other node -- see the if/then/else below."
+        }
+      },
+      "if": {
+        "properties": { "status": { "const": "suggested" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["rationale"],
+        "properties": {
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      },
+      "else": {
+        "not": { "required": ["rationale"] }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 200,
+      "required": ["from", "to", "type"],
+      "title": "Edge",
+      "description": "A directed connection between two nodes. See root description items (2), (5) for cross-reference rules this schema cannot express on its own.",
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Source node id",
+          "description": "The id of the node this edge starts at. Must reference a declared node -- see root description item (2), which this schema cannot check."
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1,
+          "title": "Target node id",
+          "description": "The id of the node this edge ends at. Must reference a declared node -- see root description item (2), which this schema cannot check."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["solid", "dashed", "gutter"],
+          "title": "Edge type",
+          "description": "solid: deterministic flow, always happens. dashed: conditional, or a return/retry path. gutter: cross-group link routed in the margin, never through a container. Required."
+        },
+        "condition": {
+          "type": ["string", "null"],
+          "maxLength": 80,
+          "title": "Condition label",
+          "description": "The branch condition rendered beside this edge's own handle, e.g. an IF/Switch branch label. Optional; when set to a non-null string, type must be \"dashed\" (enforced below)."
+        }
+      },
+      "if": {
+        "properties": { "condition": { "type": "string" } },
+        "required": ["condition"]
+      },
+      "then": {
+        "properties": { "type": { "const": "dashed" } }
+      }
+    },
+    "note": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 200,
+      "required": ["id", "content"],
+      "title": "Sticky note",
+      "description": "A Markdown text box, optionally attached to a node or group. See root description item (7) for a cross-reference rule this schema cannot express on its own.",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id",
+          "title": "Note id",
+          "description": "Unique identifier for this note. Shares an id namespace with nodes and groups -- see root description item (6), which this schema cannot check."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "title": "Note content",
+          "description": "Markdown subset: headings, bold, italic, inline code, bullet lists, line breaks, and http(s)/mailto links. Required, non-empty, at most 2000 characters."
+        },
+        "attachTo": {
+          "type": "array",
+          "title": "Attach targets",
+          "description": "Node or group ids this note is placed beside. Omit, or leave empty, for a map-level note pinned at the top-left. Each entry must reference a declared node or group -- see root description item (7), which this schema cannot check.",
+          "items": { "type": "string" }
+        },
+        "color": {
+          "type": "string",
+          "enum": ["yellow", "gold", "red", "green", "blue", "purple", "gray"],
+          "title": "Note color",
+          "description": "One of the seven sticky-note swatches. Optional; defaults to yellow."
+        },
+        "layers": {
+          "type": "array",
+          "title": "Layers",
+          "description": "Same visibility rule as node.layers: the note is shown when any of these overlays is active. Optional; defaults to base.",
+          "items": {
+            "type": "string",
+            "enum": ["base", "edge", "business", "build"]
+          }
+        }
+      }
+    },
+    "tourEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "maxProperties": 200,
+      "required": ["order", "title", "description", "nodeIds"],
+      "title": "Tour step",
+      "description": "One step of a tour: a spotlight over one or more nodes with a short narration. See root description items (8), (9) for cross-reference rules this schema cannot express on its own.",
+      "properties": {
+        "order": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "Step order",
+          "description": "This step's 1-based position in the tour. Must be a positive integer, and unique across the whole tour array -- uniqueness is a cross-reference rule this schema cannot check, see root description item (8)."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "title": "Step title",
+          "description": "Short heading for this tour step. Required, non-empty, at most 80 characters."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "title": "Step narration",
+          "description": "The narration shown for this step. Required, non-empty, at most 500 characters."
+        },
+        "nodeIds": {
+          "type": "array",
+          "minItems": 1,
+          "title": "Spotlighted node ids",
+          "description": "The nodes this step spotlights; everything else is dimmed. Required, non-empty. Each entry must reference a declared node -- see root description item (9), which this schema cannot check.",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -3,7 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { renderMap } = require('./index');
+const { renderMap, ValidationError } = require('./index');
 
 const USAGE = 'Usage: node src/n8n/cli.js <in.json> <out.html>';
 
@@ -26,6 +26,12 @@ async function main() {
 }
 
 main().catch(err => {
+  if (err instanceof ValidationError) {
+    for (const e of err.errors) {
+      console.error(`${e.path || '/'}  ${e.message}`);
+    }
+    process.exit(1);
+  }
   console.error(err.message);
   process.exit(1);
 });
