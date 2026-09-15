@@ -14,10 +14,10 @@
 // computeEdges) folds each node's reserved label+sublabel strip into
 // avoidNodeBoxes (own endpoints' labels included — an edge is allowed to
 // touch its own node's shape at the handle, but not to cut across its own
-// label text) and each frame's title text into avoidFrameBoxes (exempt for
-// the edge's own group, same as the frame body already is), so both the
-// bezier-clear check and the orthogonal detours steer clear of text, not
-// just shapes.
+// label text) and every frame's title text into avoidFrameBoxes (never
+// exempt, not even for the edge's own group, unlike the frame body), so
+// both the bezier-clear check and the orthogonal detours steer clear of
+// text, not just shapes.
 
 const { BACKWARD_STUB, BACKWARD_DROP, BACKWARD_CORNER_RADIUS } = require('./constants');
 const {
@@ -103,8 +103,8 @@ function refineCruiseY(sx, sy, tx, ty, stub, direction, initialY, avoidBoxes) {
 }
 
 // avoidNodeBoxes/avoidFrameBoxes already exclude the edge's own endpoint
-// node shapes and their own group's frame body/title — but NOT the
-// endpoints' own label boxes, which remain obstacles — see layout.js
+// node shapes and their own group's frame body, but NOT the endpoints' own
+// label boxes or any frame title, which remain obstacles; see layout.js
 // computeEdges.
 function routeForward(sx, sy, tx, ty, avoidNodeBoxes, avoidFrameBoxes) {
   const bezierPts = sampleBezier(sx, sy, tx, ty, SAMPLE_STEPS);
