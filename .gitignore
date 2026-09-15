@@ -9,3 +9,4 @@ out/
 # and tests/fixtures/repos/next-supabase-stripe) -- carve it back out of the
 # blanket .env.* ignore above.
 !tests/fixtures/repos/**/.env.example
+evals/results/
