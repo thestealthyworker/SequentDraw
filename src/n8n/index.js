@@ -5,6 +5,7 @@ const { validateDoc, ValidationError } = require('./validate');
 const { layoutMap } = require('./layout');
 const { renderHtml } = require('./render');
 const { buildDocSvg } = require('./render-doc');
+const { LayoutError } = require('./layout-budget');
 
 async function renderMap(doc) {
   // Validate once, then thread the SAME normalised doc through both
@@ -26,4 +27,4 @@ async function renderSvg(doc, opts = {}) {
   return svg;
 }
 
-module.exports = { renderMap, renderSvg, layoutMap, renderHtml, validateDoc, ValidationError };
+module.exports = { renderMap, renderSvg, layoutMap, renderHtml, validateDoc, ValidationError, LayoutError };

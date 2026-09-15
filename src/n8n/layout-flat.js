@@ -4,6 +4,7 @@
 const { snap, NODE_SIZE, NODE_GAP, LABEL_RESERVE } = require('./constants');
 const { baseLayoutOptions, containerLayoutOptions, leafElkNode, runElk } = require('./elk-helpers');
 const { computeReversedEdgeSet, elkEdgeEndpoints } = require('./direction');
+const { estimateLayoutWork, LayoutError, ELK_BOUNDED_OPTIONS_WORK, MAX_LAYOUT_WORK_UNITS } = require('./layout-budget');
 
 // `opts.labelReserve`, when larger than the interactive LABEL_RESERVE
 // (the doc-export layout pass passes the tallest caption's reserve — see
@@ -42,12 +43,32 @@ async function layoutFlat(doc, opts = {}) {
   // order instead of an arbitrary greedy cycle-break that can put the
   // entry group on the wrong side of the canvas.
   const reversedSet = computeReversedEdgeSet(doc.nodes, doc.edges);
+  const orientedEdges = doc.edges.map((e, i) => elkEdgeEndpoints(e, i, reversedSet));
+
+  // Bound the work ELK's layered algorithm can be made to do: a dense,
+  // heavily-cyclic graph forces a near-total order across the reversed
+  // edge set above, and edges whose endpoints land far apart in that
+  // order make ELK insert long dummy-node chains — see layout-budget.js
+  // for the full root-cause writeup and how these thresholds were
+  // measured. Below ELK_BOUNDED_OPTIONS_WORK this changes nothing (same
+  // options object as always, so an ordinary document like Medusa is
+  // byte-for-byte unaffected); above MAX_LAYOUT_WORK_UNITS we refuse to
+  // even start ELK rather than let it run unbounded.
+  const nodeIds = doc.nodes.map(n => n.id);
+  const estimatedWork = estimateLayoutWork(nodeIds, orientedEdges);
+  if (estimatedWork > MAX_LAYOUT_WORK_UNITS) {
+    throw new LayoutError(
+      `Graph is too complex to lay out safely (estimated layout work ${estimatedWork} exceeds ${MAX_LAYOUT_WORK_UNITS}). Reduce the number of nodes/edges or their long-range cyclic connections.`,
+      'layout-too-complex',
+    );
+  }
+  const bounded = estimatedWork > ELK_BOUNDED_OPTIONS_WORK;
 
   const graph = {
     id: 'root',
-    layoutOptions: baseLayoutOptions({ 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.spacing.nodeNode': String(nodeGap) }),
+    layoutOptions: baseLayoutOptions({ 'elk.hierarchyHandling': 'INCLUDE_CHILDREN', 'elk.spacing.nodeNode': String(nodeGap) }, bounded),
     children: [...containers.values(), ...roots],
-    edges: doc.edges.map((e, i) => ({ id: `e${i}`, ...elkEdgeEndpoints(e, i, reversedSet) })),
+    edges: doc.edges.map((e, i) => ({ id: `e${i}`, ...orientedEdges[i] })),
   };
 
   const { abs } = await runElk(graph);
