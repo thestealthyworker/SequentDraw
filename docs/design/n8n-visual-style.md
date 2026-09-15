@@ -131,6 +131,9 @@ prototyped and measured on Medusa:
 | Flat: one ELK pass across all groups | 4000×1568 | 2 | 6 | **Chosen** |
 | Rows: each group laid out `RIGHT`, frames stacked top to bottom | 1856×3456 | 11 | 11 | Rejected. Medusa's groups all cycle through the order domain, so stacked full-width frames force long edges through each other. Removed from the code. |
 
+After the routing polish that followed, the flat layout measures 0 foreign-frame
+crossings, 0 edges through label text and 0 edges through nodes, on the same canvas.
+
 How the flat layout stays readable:
 
 - **Spacing** follows n8n: 128px between ranks, 96px between nodes in a rank, and
@@ -144,7 +147,8 @@ How the flat layout stays readable:
   every backward edge, it is a rounded orthogonal route that clears node boxes, label
   text and frame titles.
 - **Validation.** Positions are measured, not trusted: tests assert zero node
-  crossings and zero label overlaps on Medusa.
+  crossings, zero edges through label or frame-title text, and zero label overlaps
+  on Medusa.
 
 ### Hidden layers
 
