@@ -211,13 +211,18 @@ Revised 2026-09-15 for the n8n visual style.
 
 Each step from here ships its Claude Code / Codex skill and eval cases in the same
 PR (`docs/design/skills-and-plugin.md`). The owner-defined skills are `git-map`,
-`business-map`, `eval-build`, `grill-build` and `gitrepo-suggest`. The plugin
-scaffold arrives with the first of them, `git-map`.
+`business-map`, `eval-build`, `grill-build`, `gitrepo-suggest` and `doc-map`. The
+plugin scaffold arrives with the first of them, `git-map`.
 
 2. Text notes: n8n-style sticky notes from the IR `notes` array, placed by the engine
-   (design in the same doc). The owner requested this on 2026-09-15.
+   (design in the same doc). The owner requested this on 2026-09-15. **Done (PR #11).**
 3. Validate the JSON schema on input, including notes. Fail loudly on the invariants
-   listed in the spec.
+   listed in the spec, report every error at once, and publish a JSON Schema.
+3a. Details cards: optional node and edge descriptions shown on hover, tap or keyboard,
+    with derived connections, plus gold "Consider:" notes. Requested by the owner after
+    reviewing the maps.
+3b. Documentation export: a static SVG with inline captions for screenshots and docs,
+    because hover cannot appear in an image. Its skill `doc-map` ships with step 5.
 4. Promote `check.js` into automated tests. Assert zero node overlaps, edge
    attachment within tolerance, zero label collisions, no note overlapping a node.
    These are the regression tests that make everything after this safe.

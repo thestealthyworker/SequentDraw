@@ -35,7 +35,7 @@ Terminology: **skill evals** are the automated tests that prove a skill works.
 
 ## Skills
 
-Five user-facing skills, as named by the owner. Skill names use lowercase and hyphens
+Six user-facing skills, as named by the owner. Skill names use lowercase and hyphens
 (an Agent Skills naming rule), so `/Git-Map` becomes `/sequentdraw:git-map`.
 
 | Skill | The user wants | Does |
@@ -45,10 +45,12 @@ Five user-facing skills, as named by the owner. Skill names use lowercase and hy
 | `eval-build` | A balanced review of the current architecture | Reads the existing map, building one with `git-map` first if none exists. Runs gap checks and the suggestion agent in review mode. Findings become `open` nodes and sticky notes; improvements become `suggested` nodes; plus a short written summary. |
 | `grill-build` | A harsh critique with stronger alternatives | Same inputs as `eval-build`, but adversarial. Challenges each tool choice on cost, lock-in, single points of failure, scaling and operational burden. Proposes stronger alternative tools as `suggested` replacements, each with trade-offs. |
 | `gitrepo-suggest` | Open-source code that could improve the design | For the map's weakest or most custom-built nodes, searches GitHub for relevant **MIT-licensed** repositories. Verifies each licence through the GitHub licence API (SPDX `MIT` exactly), checks activity and fit, and attaches candidates as sticky notes linked to the node. |
+| `doc-map` | A static figure of a map for documentation, with no hover | Reads an existing map, asks which layers to include, and writes a minimal description (about 12 words, never more than 2 lines) for each included node that has none, marking them for the user to confirm. Exports an SVG with inline captions (`docs/design/n8n-visual-style.md`, "Documentation export"). Adds nothing else to the map. |
 
 Shared capabilities, used by every skill rather than exposed as skills:
 
-- **Rendering** (`sequentdraw render`): the n8n-style HTML map.
+- **Rendering** (`sequentdraw render`): the n8n-style interactive HTML map, and the
+  static SVG with inline captions.
 - **Sticky notes**: explanations attached to nodes or groups in the `notes` array.
 - **Gap detection** (`sequentdraw check`): completeness checks that emit `open` nodes.
 - **Suggestion validation**: rationale present and citing existing nodes, pick from
@@ -82,6 +84,8 @@ Each description states what the skill is not for, and skill evals assert it.
 | "Build me an n8n workflow that emails leads" | n8n's own skills; SequentDraw designs flows, it does not deploy them | any SequentDraw skill |
 | "Find a library for PDF parsing" (no map) | Not SequentDraw | `gitrepo-suggest` |
 | "Map this repo" vs "map my business" | `git-map` vs `business-map` | each other |
+| "Give me an image of this map for our docs", "export the workflow for a slide" | `doc-map` | any skill that changes the design |
+| "Draw a map of our repo for the docs" (no map exists yet) | `git-map` first, then `doc-map` | `doc-map` alone, which never invents structure |
 
 `business-map` runs inline and never as a forked subagent, because it is a
 conversation with the user. `git-map` may run as `context: fork`, because it reads
@@ -197,11 +201,15 @@ hand before each release, using the same eval prompts as a script.
 
 Skills ship in the same PR as the engine feature they drive:
 
-1. **n8n renderer + CLI.** In progress; no skill yet.
-2. **Text notes.** Engine capability; no skill.
+1. **n8n renderer + CLI.** Done; no skill.
+2. **Text notes.** Done; engine capability, no skill.
 3. **Schema validation and layout tests.** Hardens every output grader.
-4. **Extraction Mode A** → `git-map`, plus the plugin scaffold (`plugin.json`,
-   `marketplace.json`, hooks, `using-sequentdraw`) and the eval CI job.
+3a. **Details cards** (node and edge descriptions, hover, tap and keyboard) and
+    consideration notes. Engine capability; no skill.
+3b. **Documentation export** (SVG with inline captions). Engine capability; its skill,
+    `doc-map`, ships in step 4 once the plugin scaffold exists.
+4. **Extraction Mode A** → `git-map` and `doc-map`, plus the plugin scaffold
+   (`plugin.json`, `marketplace.json`, hooks, `using-sequentdraw`) and the eval CI job.
 5. **Mode B + gap detection** → `business-map`, without its suggestion step.
 6. **Suggestion agent** → the `business-map` suggestion step, `eval-build` and
    `grill-build`.
