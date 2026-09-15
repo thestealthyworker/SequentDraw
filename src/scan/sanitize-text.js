@@ -6,24 +6,33 @@
 // terminal escape sequence) and have no legitimate place in source we
 // scan or in a value that might later be printed to a terminal.
 //
-// Ranges stripped:
-//   - C0 controls, U+0000-U+001F, EXCEPT U+0009 (tab) and U+000A (LF),
-//     which are kept because they are structurally meaningful in file
-//     content (indentation, line splitting). U+000D (CR) IS stripped --
-//     downstream line-splitting already matches "\r\n|\r|\n", so
-//     removing a bare CR still leaves every LF-based split working, and
-//     a lone CR has no other legitimate meaning here. (The character
-//     class below is written as two ranges, \x00-\x08 and \x0B-\x1F, so
-//     that only \x09/\x0A fall outside it -- \x0D sits inside \x0B-\x1F.)
-//   - U+007F (DEL) and the C1 controls, U+0080-U+009F
-//   - zero-width characters: U+200B-U+200F (zero-width space/joiners,
-//     marks), U+2060-U+2064 (word joiner and invisible operators),
-//     U+FEFF (byte-order mark / zero-width no-break space)
-//   - bidirectional overrides, U+202A-U+202E, and bidirectional
-//     isolates, U+2066-U+2069 (LRI/RLI/FSI/PDI)
-const CONTROL_CHARS_RE =
-  // eslint-disable-next-line no-control-regex -- the whole point is matching C0/C1 control characters
-  /[\x00-\x08\x0B-\x1F\x7F\x80-\x9F​-‏‪-‮⁠-⁤⁦-⁩﻿]/g;
+// Fix round 2, item 3: the previous version of this file hand-listed
+// specific code point ranges (zero-width characters, bidi overrides, the
+// C0/C1 control ranges). That style of allow/deny-list reliably misses
+// characters nobody thought to add by hand -- this branch's own security
+// re-check found U+2028 (LINE SEPARATOR), U+2029 (PARAGRAPH SEPARATOR),
+// U+00AD (SOFT HYPHEN, invisible but can silently split or hyphenate a
+// word) and U+061C (ARABIC LETTER MARK, a bidi control) all missing.
+// Unicode's own general-category properties are used instead, so the
+// class is complete by construction rather than by enumeration:
+//   - \p{Cc} (control): every C0 and C1 control character, MINUS U+0009
+//     (tab) and U+000A (LF) via the negative lookahead below -- those two
+//     are structurally meaningful in file content (indentation, line
+//     splitting) and are kept. U+000D (CR) is NOT excluded, so it is
+//     still stripped: downstream line-splitting already matches
+//     "\r\n|\r|\n", so removing a bare CR still leaves every LF-based
+//     split working, and a lone CR has no other legitimate meaning here.
+//   - \p{Cf} (format): every zero-width character, bidi override and
+//     isolate, the byte-order mark, the soft hyphen, and the Arabic
+//     letter mark are ALL format characters -- one property covers every
+//     case the previous hand-picked ranges tried to enumerate, plus the
+//     ones they missed.
+//   - \p{Zl} / \p{Zp} (line/paragraph separator): U+2028 and U+2029,
+//     which a naive "\n" line-splitter would not recognise as a line
+//     break, but which some renderers treat as one anyway -- a value
+//     containing one can visually look like several lines without any
+//     of this engine's own newline-aware logic seeing it that way.
+const CONTROL_CHARS_RE = /((?!\t|\n)\p{Cc})|\p{Cf}|\p{Zl}|\p{Zp}/gu;
 
 // A hard sanity cap on how much text this utility will process/return in
 // one call, independent of any caller's own size limits (SafeProvider

@@ -278,6 +278,33 @@ describe('sanitize-text.js: adversarial control-character stripping', () => {
     assert.strictEqual(stripControlChars(42), 42);
     assert.strictEqual(stripControlChars(null), null);
   });
+
+  describe('fix round 2, item 3: specific code points the previous hand-listed ranges missed', () => {
+    // Built from code points via String.fromCodePoint rather than \u
+    // escapes in this test's own source, so the exact character under
+    // test is unambiguous in a diff.
+    const strippedCases = [
+      [0x2028, 'LINE SEPARATOR'],
+      [0x2029, 'PARAGRAPH SEPARATOR'],
+      [0x00ad, 'SOFT HYPHEN'],
+      [0x061c, 'ARABIC LETTER MARK'],
+      [0x200b, 'ZERO WIDTH SPACE (regression check)'],
+      [0x202e, 'RIGHT-TO-LEFT OVERRIDE (regression check)'],
+      [0x2066, 'LEFT-TO-RIGHT ISOLATE (regression check)'],
+      [0xfeff, 'BYTE ORDER MARK (regression check)'],
+    ];
+
+    for (const [codePoint, name] of strippedCases) {
+      test(`strips U+${codePoint.toString(16).toUpperCase().padStart(4, '0')} (${name})`, () => {
+        const ch = String.fromCodePoint(codePoint);
+        assert.strictEqual(stripControlChars(`before${ch}after`), 'beforeafter');
+      });
+    }
+
+    test('still keeps tab and newline after the property-class rewrite', () => {
+      assert.strictEqual(stripControlChars('a\tb\nc'), 'a\tb\nc');
+    });
+  });
 });
 
 describe('import-parser / route-parser: pathological-input timing (fix round item 5)', () => {
