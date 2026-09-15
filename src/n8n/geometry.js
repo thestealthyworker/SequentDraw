@@ -48,16 +48,23 @@ function roundedOrthogonalPath(points, radius) {
   return d.join(' ');
 }
 
-// Backward (target left of source) detour: right off the source, down to
-// sourceY+drop, across, then a stub into the target from the left.
-function backwardDetourPoints(sx, sy, tx, ty, stub, drop) {
-  const midY = sy + drop;
+// Six-point orthogonal detour shared by the backward-edge route and by the
+// forward obstacle-avoidance route in routing.js: a stub rightward out of
+// the source's output handle, travel to a shared "cruise" y level clear of
+// whatever it needs to avoid, cross to above/below the target, then a stub
+// rightward into the target's input handle. The source always exits right
+// and the target is always entered from the left regardless of which side
+// is geometrically further right — that's just how the handles are
+// oriented — so no sign flip is needed between the forward and backward
+// cases, only a clamp for when the endpoints are close together.
+function detourPoints(sx, sy, tx, ty, stub, cruiseY) {
+  const s = Math.max(4, Math.min(stub, Math.abs(tx - sx) / 2 || stub));
   return [
     [sx, sy],
-    [sx + stub, sy],
-    [sx + stub, midY],
-    [tx - stub, midY],
-    [tx - stub, ty],
+    [sx + s, sy],
+    [sx + s, cruiseY],
+    [tx - s, cruiseY],
+    [tx - s, ty],
     [tx, ty],
   ];
 }
@@ -151,7 +158,7 @@ module.exports = {
   forwardBezierPath,
   forwardBezierMidpoint,
   roundedOrthogonalPath,
-  backwardDetourPoints,
+  detourPoints,
   polylineMidpoint,
   roundedRectPath,
   wrapLabel,

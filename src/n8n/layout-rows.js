@@ -6,6 +6,8 @@
 
 const { snap, NODE_SIZE, NODE_GAP, RANK_GAP, ROW_GAP, LABEL_RESERVE, GROUP_PADDING } = require('./constants');
 const { baseLayoutOptions, leafElkNode, runElk } = require('./elk-helpers');
+const { topologicalOrder } = require('./topo');
+const { dfsReverseLocal, elkEdgeEndpoints } = require('./direction');
 
 function groupMembersOf(doc) {
   const members = new Map();
@@ -60,40 +62,17 @@ function rowKeyFor(node, attachment) {
   return a ? `group:${a.groupId}` : `solo:${node.id}`;
 }
 
-// Kahn's algorithm, breaking ties (and cycles) by first appearance in doc.
-function orderRows(rowKeys, baseOrder, metaEdges) {
-  const indegree = new Map(rowKeys.map(k => [k, 0]));
-  const adj = new Map(rowKeys.map(k => [k, new Set()]));
-  for (const [a, b] of metaEdges) {
-    if (a === b || !adj.has(a) || !adj.has(b)) continue;
-    if (!adj.get(a).has(b)) {
-      adj.get(a).add(b);
-      indegree.set(b, indegree.get(b) + 1);
-    }
-  }
-  const rank = new Map(baseOrder.map((k, i) => [k, i]));
-  const remaining = new Set(rowKeys);
-  const byBaseOrder = list => list.slice().sort((x, y) => (rank.get(x) ?? 1e9) - (rank.get(y) ?? 1e9));
-  const result = [];
-  while (remaining.size) {
-    const ready = byBaseOrder([...remaining].filter(k => indegree.get(k) === 0));
-    const pick = ready.length ? ready[0] : byBaseOrder([...remaining])[0]; // cycle break
-    result.push(pick);
-    remaining.delete(pick);
-    for (const succ of adj.get(pick)) {
-      if (remaining.has(succ)) indegree.set(succ, Math.max(0, indegree.get(succ) - 1));
-    }
-  }
-  return result;
-}
-
 async function layoutGroupInternal(memberIds, internalEdges) {
   if (memberIds.length === 0) return { abs: {}, width: 0, height: 0 };
+  // Same reasoning as the flat strategy's root graph (see direction.js):
+  // feed ELK an already-acyclic edge set so a local cycle inside this
+  // group can't flip which end reads as the start.
+  const reversedSet = dfsReverseLocal(memberIds, internalEdges);
   const graph = {
     id: 'root',
     layoutOptions: baseLayoutOptions(),
     children: memberIds.map(leafElkNode),
-    edges: internalEdges.map((e, i) => ({ id: `ie${i}`, sources: [e.from], targets: [e.to] })),
+    edges: internalEdges.map((e, i) => ({ id: `ie${i}`, ...elkEdgeEndpoints(e, i, reversedSet) })),
   };
   const { abs } = await runElk(graph);
   let minX = Infinity;
@@ -154,7 +133,7 @@ async function layoutRows(doc) {
     }
   }
 
-  const orderedRowKeys = orderRows(rowKeys, baseOrder, metaEdges);
+  const orderedRowKeys = topologicalOrder(rowKeys, baseOrder, metaEdges);
 
   const nodeBoxes = {};
   let cursorY = 0;

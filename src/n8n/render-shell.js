@@ -2,7 +2,16 @@
 // inlined into the output file — no external requests, per docs/SPEC.md
 // ("Output ... No build step, no server, no dependencies").
 
-const { DOT_COLOR, CANVAS_FILL } = require('./constants');
+const { CANVAS_FILL } = require('./constants');
+
+// Safe to serialise any value into an inline <script>: JSON.stringify alone
+// does not escape "<", so a string value containing "</script>" would
+// otherwise terminate the tag early. `canvas` is numeric-only today, but
+// this keeps the inline script safe by construction rather than by
+// convention if that ever changes.
+function safeJson(value) {
+  return JSON.stringify(value).replace(/</g, '\\u003c');
+}
 
 function css() {
   return `
@@ -20,8 +29,8 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#333}
 .node-label{font-size:16px;font-weight:500;fill:#333;text-anchor:middle;font-family:inherit}
 .node-sublabel{font-size:13px;font-weight:400;fill:#888;font-family:inherit}
 .badge-glyph{font-size:11px;font-weight:700;font-family:inherit}
-.edge-chip-bg{fill:${CANVAS_FILL};fill-opacity:.9;stroke:rgba(0,0,0,.08);stroke-width:1}
-.edge-chip-text{font-size:12px;fill:#555;text-anchor:middle;font-family:inherit}
+.branch-label{font-size:12px;fill:#555;font-family:inherit;paint-order:stroke;stroke:${CANVAS_FILL};stroke-width:3px}
+.handle-branch{cursor:default}
 
 .n8n-edge .edge-line{transition:stroke .12s}
 .n8n-edge:hover .edge-line{stroke:#8f8f8f}
@@ -51,7 +60,7 @@ function script(canvas) {
 (function(){
   var stage = document.getElementById('stage');
   var viewport = document.getElementById('viewport');
-  var CANVAS = ${JSON.stringify(canvas)};
+  var CANVAS = ${safeJson(canvas)};
   var state = { x: 0, y: 0, scale: 1 };
   var MIN_SCALE = 0.1, MAX_SCALE = 4;
 
@@ -181,7 +190,10 @@ function script(canvas) {
       n.classList.toggle('hidden-by-layer', !on);
     });
     frames.forEach(function(f){
-      var members = [].slice.call(document.querySelectorAll('.n8n-node[data-group="' + f.dataset.group + '"]'));
+      // Filter the already-cached node list by dataset equality instead of
+      // building a CSS selector string from data — a group id containing a
+      // quote would otherwise break out of the attribute selector.
+      var members = nodes.filter(function(n){ return n.dataset.group === f.dataset.group; });
       var anyVisible = members.some(function(n){ return visible[n.dataset.id]; });
       f.classList.toggle('hidden-by-layer', !anyVisible);
     });

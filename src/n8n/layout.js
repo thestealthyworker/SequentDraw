@@ -7,20 +7,12 @@ const { layoutFlat } = require('./layout-flat');
 const { layoutRows } = require('./layout-rows');
 const {
   snap,
-  NODE_SIZE,
   NODE_GAP,
   LABEL_RESERVE,
   GROUP_PADDING,
   CANVAS_MARGIN,
 } = require('./constants');
-const {
-  forwardBezierPath,
-  forwardBezierMidpoint,
-  roundedOrthogonalPath,
-  backwardDetourPoints,
-  polylineMidpoint,
-} = require('./geometry');
-const { BACKWARD_STUB, BACKWARD_DROP, BACKWARD_CORNER_RADIUS } = require('./constants');
+const { routeForward, routeBackward } = require('./routing');
 
 function computeFrameBoxes(doc, nodeBoxes) {
   const frameBoxes = {};
@@ -114,11 +106,14 @@ function computeEntrySet(doc) {
   return new Set(doc.nodes.filter(n => !hasInbound.has(n.id)).map(n => n.id));
 }
 
-// Handles are drawn only where an edge attaches, spread evenly by count
-// along the node's left (inputs) / right (outputs) edge.
+// Handles, n8n-style: ONE shared main input handle and ONE shared main
+// output handle per node, both vertically centred, used by every plain
+// edge. An edge carrying a `condition` is a branch and gets its own
+// dedicated output handle instead (spread evenly alongside the main-output
+// slot when both kinds coexist on a node), labelled with the condition
+// text — this is the only case where a node shows more than two handles.
+// Handles are omitted entirely on a side with no attached edges.
 function computeHandles(doc, nodeBoxes) {
-  const byId = {};
-  doc.nodes.forEach(n => (byId[n.id] = n));
   const outEdgesOf = new Map();
   const inEdgesOf = new Map();
   doc.nodes.forEach(n => {
@@ -130,39 +125,77 @@ function computeHandles(doc, nodeBoxes) {
     inEdgesOf.get(e.to).push(i);
   });
 
-  const handles = {}; // nodeId -> { out: { edgeIndex -> {x,y} }, in: { edgeIndex -> {x,y} } }
+  const handles = {};
   doc.nodes.forEach(n => {
     const box = nodeBoxes[n.id];
-    const out = outEdgesOf.get(n.id).slice().sort((a, b) => nodeBoxes[doc.edges[a].to].y - nodeBoxes[doc.edges[b].to].y);
-    const inn = inEdgesOf.get(n.id).slice().sort((a, b) => nodeBoxes[doc.edges[a].from].y - nodeBoxes[doc.edges[b].from].y);
-    const outPoints = {};
-    out.forEach((edgeIdx, i) => {
-      outPoints[edgeIdx] = { x: box.x + box.w, y: box.y + ((i + 1) * box.h) / (out.length + 1) };
-    });
+    const cy = box.y + box.h / 2;
+
+    const inIdx = inEdgesOf.get(n.id);
+    const mainIn = inIdx.length ? { x: box.x, y: cy } : null;
     const inPoints = {};
-    inn.forEach((edgeIdx, i) => {
-      inPoints[edgeIdx] = { x: box.x, y: box.y + ((i + 1) * box.h) / (inn.length + 1) };
+    inIdx.forEach(edgeIdx => {
+      inPoints[edgeIdx] = mainIn;
     });
-    handles[n.id] = { out: outPoints, in: inPoints };
+
+    const outIdx = outEdgesOf.get(n.id);
+    const conditionIdx = outIdx.filter(i => doc.edges[i].condition);
+    const plainIdx = outIdx.filter(i => !doc.edges[i].condition);
+    const outPoints = {};
+    const branches = []; // { edgeIdx, label, point } for condition (branch) handles only
+    let mainOut = null;
+
+    if (!conditionIdx.length) {
+      if (plainIdx.length) {
+        mainOut = { x: box.x + box.w, y: cy };
+        plainIdx.forEach(i => {
+          outPoints[i] = mainOut;
+        });
+      }
+    } else {
+      // Slots: one per condition edge, plus one shared slot for every plain
+      // edge if any exist, ordered by the average y of what each slot
+      // connects to (so the visual order roughly matches target order).
+      const slots = conditionIdx.map(i => ({
+        edgeIdxs: [i],
+        label: doc.edges[i].condition,
+        sortY: nodeBoxes[doc.edges[i].to].y,
+      }));
+      const plainSlot = plainIdx.length
+        ? { edgeIdxs: plainIdx, label: null, sortY: plainIdx.reduce((sum, i) => sum + nodeBoxes[doc.edges[i].to].y, 0) / plainIdx.length }
+        : null;
+      if (plainSlot) slots.push(plainSlot);
+      slots.sort((a, b) => a.sortY - b.sortY);
+      slots.forEach((slot, i) => {
+        const p = { x: box.x + box.w, y: box.y + ((i + 1) * box.h) / (slots.length + 1) };
+        slot.edgeIdxs.forEach(idx => {
+          outPoints[idx] = p;
+        });
+        if (slot === plainSlot) mainOut = p;
+        else branches.push({ edgeIdx: slot.edgeIdxs[0], label: slot.label, point: p });
+      });
+    }
+
+    handles[n.id] = { in: inPoints, out: outPoints, mainIn, mainOut, branches };
   });
   return handles;
 }
 
-function computeEdges(doc, handles) {
+function computeEdges(doc, handles, nodeBoxes, frameBoxes) {
+  const byId = {};
+  doc.nodes.forEach(n => (byId[n.id] = n));
+  const allNodeBoxes = Object.entries(nodeBoxes).map(([id, b]) => ({ id, ...b }));
+  const allFrameBoxes = Object.entries(frameBoxes).map(([id, f]) => ({ id, ...f }));
+
   return doc.edges.map((e, i) => {
     const s = handles[e.from].out[i];
     const t = handles[e.to].in[i];
     const forward = t.x >= s.x;
-    let d;
-    let midpoint;
-    if (forward) {
-      d = forwardBezierPath(s.x, s.y, t.x, t.y);
-      midpoint = forwardBezierMidpoint(s.x, s.y, t.x, t.y);
-    } else {
-      const pts = backwardDetourPoints(s.x, s.y, t.x, t.y, BACKWARD_STUB, BACKWARD_DROP);
-      d = roundedOrthogonalPath(pts, BACKWARD_CORNER_RADIUS);
-      midpoint = polylineMidpoint(pts);
-    }
+    const ownGroups = new Set([byId[e.from].parentId, byId[e.to].parentId].filter(Boolean));
+    const avoidNodeBoxes = allNodeBoxes.filter(b => b.id !== e.from && b.id !== e.to);
+    const avoidFrameBoxes = allFrameBoxes.filter(f => !ownGroups.has(f.id));
+    const { d, midpoint } = forward
+      ? routeForward(s.x, s.y, t.x, t.y, avoidNodeBoxes, avoidFrameBoxes)
+      : routeBackward(s.x, s.y, t.x, t.y, avoidNodeBoxes, avoidFrameBoxes);
     return {
       index: i,
       from: e.from,
@@ -214,7 +247,7 @@ async function layoutMap(doc, options = {}) {
   const frameBoxes = computeFrameBoxes(validated, nodeBoxes);
   const entrySet = computeEntrySet(validated);
   const handles = computeHandles(validated, nodeBoxes);
-  const edges = computeEdges(validated, handles);
+  const edges = computeEdges(validated, handles, nodeBoxes, frameBoxes);
   const canvas = computeCanvasBounds(nodeBoxes, frameBoxes);
 
   return {

@@ -3,7 +3,6 @@
 
 const ICONS = require('../icons');
 const {
-  NODE_SIZE,
   NODE_RADIUS,
   ENTRY_RADIUS,
   NODE_BORDER,
@@ -90,7 +89,7 @@ function nodeMarkup(n, box, isEntry) {
 
   const title = n.status === 'open' ? `<title>${esc(n.prompt || n.label)}</title>` : '';
 
-  return `<g class="n8n-node${style.isOpen ? ' is-open' : ''}${style.isSuggested ? ' is-suggested' : ''}" data-id="${esc(n.id)}" data-group="${esc(n.parentId || '')}" data-layers="${layersOf(n).join(' ')}">
+  return `<g class="n8n-node${style.isOpen ? ' is-open' : ''}${style.isSuggested ? ' is-suggested' : ''}" data-id="${esc(n.id)}" data-group="${esc(n.parentId || '')}" data-layers="${esc(layersOf(n).join(' '))}">
 ${title}<path class="node-shape" d="${path}" fill="${style.fill}" stroke="${style.color}" stroke-width="${style.width}" ${style.dashed ? 'stroke-dasharray="6 4"' : ''} vector-effect="non-scaling-stroke"/>
 ${nodeIconMarkup(n, cx, cy)}
 ${statusBadge(n, box)}
@@ -99,14 +98,26 @@ ${sublabelText ? `<text class="node-sublabel" x="${cx}" y="${sublabelY}" text-an
 </g>`;
 }
 
+function handleDot(cls, p) {
+  return `<circle class="handle ${cls}" cx="${p.x}" cy="${p.y}" r="${HANDLE_RADIUS}" fill="#ffffff" stroke="${HANDLE_BORDER}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+}
+
+// n8n branch-label style: one shared input dot, one shared output dot, and
+// (only for edges carrying a `condition`) one extra dedicated output dot
+// per branch with its condition text set beside it — replaces the old
+// per-edge handle fan-out and the floating midpoint condition chip.
 function handleMarkup(nodeId, handles) {
-  const out = Object.values(handles[nodeId].out).map(
-    p => `<circle class="handle handle-out" cx="${p.x}" cy="${p.y}" r="${HANDLE_RADIUS}" fill="#ffffff" stroke="${HANDLE_BORDER}" stroke-width="1" vector-effect="non-scaling-stroke"/>`,
-  );
-  const inn = Object.values(handles[nodeId].in).map(
-    p => `<circle class="handle handle-in" cx="${p.x}" cy="${p.y}" r="${HANDLE_RADIUS}" fill="#ffffff" stroke="${HANDLE_BORDER}" stroke-width="1" vector-effect="non-scaling-stroke"/>`,
-  );
-  return [...out, ...inn].join('');
+  const h = handles[nodeId];
+  const parts = [];
+  if (h.mainIn) parts.push(handleDot('handle-in', h.mainIn));
+  if (h.mainOut) parts.push(handleDot('handle-out', h.mainOut));
+  h.branches.forEach(b => {
+    parts.push(handleDot('handle-out handle-branch', b.point));
+    parts.push(
+      `<text class="branch-label" x="${b.point.x + HANDLE_RADIUS + 4}" y="${b.point.y - HANDLE_RADIUS - 2}">${esc(b.label)}</text>`,
+    );
+  });
+  return parts.join('');
 }
 
 function frameMarkup(group, box) {
@@ -119,9 +130,9 @@ function frameMarkup(group, box) {
 
 function edgeMarkup(edge) {
   const dashed = edge.type === 'dashed';
-  const chip = edge.condition
-    ? `<g class="edge-chip"><rect x="${edge.midpoint[0] - 30}" y="${edge.midpoint[1] - 9}" width="60" height="18" rx="9" class="edge-chip-bg"/><text x="${edge.midpoint[0]}" y="${edge.midpoint[1] + 4}" text-anchor="middle" class="edge-chip-text">${esc(edge.condition)}</text></g>`
-    : '';
+  // The condition label lives beside the edge's dedicated branch handle on
+  // the source node (see handleMarkup) rather than as a floating midpoint
+  // chip, so it is not repeated here — n8n's branch-label convention.
   // Pre-rendered, hidden-by-default stub markers at each handle: shown by
   // the layer-toggle script when that specific endpoint's node is hidden
   // but the other endpoint stays visible (SPEC.md "Edges at a visibility
@@ -131,7 +142,6 @@ function edgeMarkup(edge) {
   return `<g class="n8n-edge${dashed ? ' is-dashed' : ''}" data-from="${esc(edge.from)}" data-to="${esc(edge.to)}" data-index="${edge.index}">
 <path class="edge-hit" d="${edge.d}" fill="none" stroke="transparent" stroke-width="16"/>
 <path class="edge-line" d="${edge.d}" fill="none" stroke="${EDGE_STROKE}" stroke-width="${EDGE_WIDTH}" vector-effect="non-scaling-stroke" ${dashed ? `stroke-dasharray="${EDGE_DASH}"` : ''} marker-end="url(#n8n-arrow)"/>
-${chip}
 ${stubs}
 </g>`;
 }

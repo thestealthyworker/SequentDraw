@@ -53,11 +53,12 @@ Key values were re-checked against source after the research pass: the 16px grid
 
 | Element | Value |
 |---|---|
-| Handles | 16px dots. Inputs on the left edge, outputs on the right, spread evenly when there are several. Drawn only where an edge attaches. SequentDraw is not an editor, so there is no "+" affordance. |
-| Forward edge | 2px bezier from output handle to input handle, pale grey, small open-chevron arrowhead |
-| Backward edge (target left of source) | Two-segment rounded orthogonal detour: drop 130px below the source, run across, come back into the target; 40px stubs, 16px corner radius |
+| Handles | 16px dots. ONE shared input handle (left edge, vertically centred) and ONE shared output handle (right edge, vertically centred) per node, used by every plain edge attached on that side. Drawn only where at least one edge attaches. SequentDraw is not an editor, so there is no "+" affordance. |
+| Branch handle | An edge carrying a `condition` is a branch and gets its own dedicated output handle instead of sharing the main one, spread evenly alongside it when both kinds coexist on a node — n8n's branch-label convention. This is the only case a node shows more than two handles. |
+| Forward edge | 2px bezier from output handle to input handle, pale grey, small open-chevron arrowhead, when nothing sits between source and target. When another node (or an unrelated frame) is in the way, it falls back to the same rounded-orthogonal shape as a backward edge, routed to actually clear the obstacle. |
+| Backward edge (target left of source) | Two-segment rounded orthogonal detour: stub right off the source, drop to clear the lowest node box in the x-range it spans (130px below the source as a floor, deeper if something is still in the way), run across, come back into the target; 40px stubs, 16px corner radius. |
 | `type: dashed` | `5 6` dash pattern. n8n reserves this for non-main connections; here it keeps the spec meaning: conditional, retry or return. |
-| `condition` | 12px label chip at the edge midpoint, on a translucent canvas-coloured background |
+| `condition` | 12px label set beside the edge's dedicated branch handle on the source node (see Handles row above), not a floating midpoint chip — avoids repeating the same text twice on one edge. |
 
 ### Groups
 

@@ -26,6 +26,11 @@ function baseLayoutOptions(extra) {
       'elk.spacing.edgeNode': '24',
       'elk.spacing.edgeEdge': '16',
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+      // We already hand ELK a pre-reversed, acyclic edge set (see
+      // direction.js), so its own cycle-breaking never has to act; this
+      // just keeps rank/crossing-minimization decisions aligned with the
+      // doc's declared node/edge order wherever ELK still has a choice.
+      'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
     },
     extra || {},
   );
