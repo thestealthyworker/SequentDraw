@@ -60,9 +60,20 @@ Deferred: `tour`, until tours are built and the owner names a skill for them.
 
 ### Rules every skill keeps
 
-These come from the handover and the owner's decisions, and apply to all five skills,
+These come from the handover and the owner's decisions, and apply to all six skills,
 `grill-build` included:
 
+- **Output behaves exactly like an artifact published in Claude.** This holds for every
+  skill that produces a map, figure or review. In Claude Code, the skill publishes the
+  result as a **private Claude artifact** and gives the user the link. The page is
+  private by default; the skill says so and never shares it further. It always keeps a
+  **local copy** in a session or temp folder outside the repository (`map.json` and
+  `map.html`, or the `.svg` for `doc-map`) and prints its path. It writes into the
+  repository only when the user asks, and asks before overwriting. Hosts without
+  artifacts (Codex, other agents, the CLI) open the local copy instead. Artifact pages
+  cannot offer file downloads, so a file the user needs, such as `doc-map`'s SVG, comes
+  from the local copy while the artifact shows the figure. Corrections republish to the
+  same artifact.
 - **Suggest, the user accepts.** Tools enter as `suggested`, never as `confirmed`.
 - **Rationale is grounded in the map.** "Most teams use X" is not a rationale; "three
   long-running steps run synchronously" is.
