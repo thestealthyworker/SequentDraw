@@ -5,7 +5,7 @@
   "main": "src/render-html.js",
   "scripts": {
     "render": "node src/render-html.js",
-    "test": "node --test"
+    "test": "node --expose-gc --test"
   },
   "engines": {
     "node": ">=18"

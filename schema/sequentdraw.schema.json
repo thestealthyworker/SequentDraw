@@ -2,9 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/thestealthyworker/SequentDraw/blob/main/schema/sequentdraw.schema.json",
   "title": "SequentDraw workflow document",
-  "description": "The IR (intermediate representation) SequentDraw renders as a self-contained n8n-style HTML map. Structural rules are enforced here (types, enums, lengths, id shape, the suggested-node-requires-rationale rule, and the fact that a group has no parentId at all). The following rules are cross-references this schema CANNOT express and are enforced instead by validateDoc() in src/n8n/validate.js: (1) every node.parentId, when set, must reference a declared group id; (2) every edge.from and edge.to must reference a declared node id; (3) no node may be orphaned (zero edges) unless it is the only node in its group (nodes sharing the same parentId, including the ungrouped bucket); (4) node.sublabel, when present, must be 3 words or fewer by word count, not just <=60 characters; (5) an edge whose condition is non-null must have type \"dashed\"; (6) node, group, and note ids share one namespace, so no id may be duplicated within its own array or collide across nodes/groups/notes; (7) note.attachTo entries must reference a declared node or group id; (8) tour[].order values must be unique across the tour array; (9) tour[].nodeIds entries must reference declared node ids; (10) required strings (title, label, content, tour title/description) must be non-empty after trimming whitespace -- this schema's minLength:1 accepts a whitespace-only string that validateDoc() rejects.",
+  "description": "The IR (intermediate representation) SequentDraw renders as a self-contained n8n-style HTML map. Structural rules are enforced here (types, enums, lengths, id shape, the suggested-node-requires-rationale rule, the fact that a group has no parentId at all, and the array/field caps below). Array length caps mirror validateDoc()'s fail-fast checks exactly, so an oversized document is rejected by ajv without ever running item validation: nodes maxItems 100, edges maxItems 500, groups maxItems 50, notes maxItems 20, tour maxItems 50. Every object in the document (the document itself, and every group/node/edge/note/tour entry) also carries maxProperties: 200, matching validateDoc()'s MAX_OWN_KEYS guard against a document with an unbounded number of fields. The following rules are cross-references this schema CANNOT express and are enforced instead by validateDoc() in src/n8n/validate.js: (1) every node.parentId, when set, must reference a declared group id; (2) every edge.from and edge.to must reference a declared node id; (3) no node may be orphaned (zero edges) unless it is the only node in its group (nodes sharing the same parentId, including the ungrouped bucket); (4) node.sublabel, when present, must be 3 words or fewer by word count, not just <=60 characters; (5) an edge whose condition is non-null must have type \"dashed\"; (6) node, group, and note ids share one namespace, so no id may be duplicated within its own array or collide across nodes/groups/notes; (7) note.attachTo entries must reference a declared node or group id; (8) tour[].order values must be unique across the tour array; (9) tour[].nodeIds entries must reference declared node ids; (10) required strings (title, label, content, tour title/description) must be non-empty after trimming whitespace -- this schema's minLength:1 accepts a whitespace-only string that validateDoc() rejects.",
   "type": "object",
   "additionalProperties": false,
+  "maxProperties": 200,
   "required": ["title", "nodes", "edges"],
   "properties": {
     "$schema": {
@@ -21,8 +22,9 @@
     },
     "groups": {
       "type": "array",
+      "maxItems": 50,
       "title": "Groups",
-      "description": "One entry per sub-workflow, drawn as a pastel frame behind its member nodes. Optional; omit or leave empty for an ungrouped map.",
+      "description": "One entry per sub-workflow, drawn as a pastel frame behind its member nodes. Optional; omit or leave empty for an ungrouped map. Capped at 50 groups per map.",
       "items": { "$ref": "#/$defs/group" }
     },
     "nodes": {
@@ -34,8 +36,9 @@
     },
     "edges": {
       "type": "array",
+      "maxItems": 500,
       "title": "Edges",
-      "description": "Directed connections between nodes: solid (deterministic flow), dashed (conditional, or a return/retry path), or gutter (cross-group link routed in the margin). Required; may be empty only for a single-node document.",
+      "description": "Directed connections between nodes: solid (deterministic flow), dashed (conditional, or a return/retry path), or gutter (cross-group link routed in the margin). Required; may be empty only for a single-node document. Capped at 500 edges per map.",
       "items": { "$ref": "#/$defs/edge" }
     },
     "notes": {
@@ -47,8 +50,9 @@
     },
     "tour": {
       "type": "array",
+      "maxItems": 50,
       "title": "Tour",
-      "description": "An ordered list of steps, each spotlighting one or more nodes with a short narration, for walking a reader through the map. Optional; generated on request, not by default.",
+      "description": "An ordered list of steps, each spotlighting one or more nodes with a short narration, for walking a reader through the map. Optional; generated on request, not by default. Capped at 50 tour entries per map.",
       "items": { "$ref": "#/$defs/tourEntry" }
     }
   },
@@ -64,6 +68,7 @@
     "group": {
       "type": "object",
       "additionalProperties": false,
+      "maxProperties": 200,
       "required": ["id", "label"],
       "title": "Group",
       "description": "A sub-workflow container drawn as a pastel frame. Groups may not nest: this object intentionally has no parentId property, so a group with one present is rejected by additionalProperties:false. See root description item (6) for the shared id namespace this schema cannot check.",
@@ -91,6 +96,7 @@
     "node": {
       "type": "object",
       "additionalProperties": false,
+      "maxProperties": 200,
       "required": ["id", "label", "kind"],
       "title": "Node",
       "description": "A tool, actor, or artifact in the workflow. See root description items (1), (3), (4), (6) for cross-reference rules this schema cannot express on its own.",
@@ -181,6 +187,7 @@
     "edge": {
       "type": "object",
       "additionalProperties": false,
+      "maxProperties": 200,
       "required": ["from", "to", "type"],
       "title": "Edge",
       "description": "A directed connection between two nodes. See root description items (2), (5) for cross-reference rules this schema cannot express on its own.",
@@ -221,6 +228,7 @@
     "note": {
       "type": "object",
       "additionalProperties": false,
+      "maxProperties": 200,
       "required": ["id", "content"],
       "title": "Sticky note",
       "description": "A Markdown text box, optionally attached to a node or group. See root description item (7) for a cross-reference rule this schema cannot express on its own.",
@@ -263,6 +271,7 @@
     "tourEntry": {
       "type": "object",
       "additionalProperties": false,
+      "maxProperties": 200,
       "required": ["order", "title", "description", "nodeIds"],
       "title": "Tour step",
       "description": "One step of a tour: a spotlight over one or more nodes with a short narration. See root description items (8), (9) for cross-reference rules this schema cannot express on its own.",

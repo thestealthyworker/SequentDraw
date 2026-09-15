@@ -158,6 +158,43 @@ write('structural-condition-on-solid-edge.json', (() => {
   return d;
 })());
 
+// Fix-round additions: the new array-length and field-count caps are
+// expressible in the schema (maxItems / maxProperties), so these are
+// structural (both ajv and validateDoc reject), not cross-reference.
+
+write('structural-too-many-edges.json', {
+  title: 'Too many edges',
+  nodes: [
+    { id: 'a', label: 'A', kind: 'service' },
+    { id: 'b', label: 'B', kind: 'service' },
+  ],
+  edges: Array.from({ length: 501 }, () => ({ from: 'a', to: 'b', type: 'solid', condition: null })),
+});
+
+write('structural-too-many-groups.json', {
+  title: 'Too many groups',
+  groups: Array.from({ length: 51 }, (_, i) => ({ id: `g${i}`, label: `Group ${i}` })),
+  nodes: [{ id: 'a', label: 'A', kind: 'service' }],
+  edges: [],
+});
+
+write('structural-too-many-tour-entries.json', {
+  title: 'Too many tour entries',
+  nodes: [{ id: 'a', label: 'A', kind: 'service' }],
+  edges: [],
+  tour: Array.from({ length: 51 }, (_, i) => ({ order: i + 1, title: `Step ${i}`, description: 'D', nodeIds: ['a'] })),
+});
+
+write('structural-too-many-fields-on-node.json', (() => {
+  const node = { id: 'a', label: 'A', kind: 'service' };
+  for (let i = 0; i < 205; i++) node[`extra_field_${i}`] = true;
+  return {
+    title: 'Too many fields',
+    nodes: [node, { id: 'b', label: 'B', kind: 'service' }],
+    edges: [{ from: 'a', to: 'b', type: 'solid', condition: null }],
+  };
+})());
+
 // -----------------------------------------------------------------------
 // Invalid: cross-reference only (ajv accepts, validateDoc must reject)
 // -----------------------------------------------------------------------

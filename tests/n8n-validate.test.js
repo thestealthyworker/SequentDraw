@@ -744,3 +744,241 @@ describe('CLI output for an invalid document', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------
+// Adversarial input / denial-of-service resistance
+//
+// Fix round: a lead-developer review measured validateDoc taking 289s on
+// 2,000 unknown top-level keys of 50,000 characters each (the "did you
+// mean" hint ran a Levenshtein DP on the full key), producing a 500,248
+// character thrown message, and found the 100-node cap did not stop
+// per-item work or bound the error list (50,000 nodes with an invalid
+// kind produced 100,001 errors in 68ms; the cap error was reported
+// alongside, not instead of, the per-item ones). Every case below both
+// asserts correctness (the expected code, and that the result stayed
+// small) and a hard time bound.
+// ---------------------------------------------------------------------
+
+describe('adversarial input: bounded time and bounded output', () => {
+  const TIME_BOUND_MS = 200;
+
+  // Runs fn() once, untimed, before measuring a second call, and forces a
+  // GC pass in between when the runtime exposes one (npm test runs with
+  // --expose-gc for exactly this). validateDoc never mutates its input, so
+  // calling it twice is safe. Without this, building a pathological input
+  // (e.g. 2,000 own properties each holding a 50,000-character string —
+  // ~200MB of string data, enough to push V8 into dictionary-mode
+  // property storage) can leave enough allocation pressure that a GC pause
+  // lands inside the *next* timed call, measuring V8's garbage collector
+  // instead of validateDoc. That pause is real but it is a property of the
+  // test's own fixture-building, not of validateDoc, whose steady-state
+  // cost on every case below is sub-millisecond.
+  function timed(fn) {
+    try {
+      fn();
+    } catch (_e) {
+      // warm-up run; the assertions below check the real, timed run.
+    }
+    if (global.gc) global.gc();
+    const start = process.hrtime.bigint();
+    let error = null;
+    try {
+      fn();
+    } catch (e) {
+      error = e;
+    }
+    const ms = Number(process.hrtime.bigint() - start) / 1e6;
+    return { ms, error };
+  }
+
+  test('2,000 unknown top-level keys of 50,000 characters each: fast, one too-many-fields error, bounded message', () => {
+    const doc = { title: 't', nodes: [], edges: [] };
+    for (let i = 0; i < 2000; i++) {
+      doc[`x${i}${'y'.repeat(50000)}`] = true;
+    }
+    const { ms, error } = timed(() => validateDoc(doc));
+    assert.ok(ms < TIME_BOUND_MS, `took ${ms.toFixed(1)}ms, expected under ${TIME_BOUND_MS}ms`);
+    assert.ok(error instanceof ValidationError);
+    assert.deepStrictEqual(error.errors.map(e => e.code), ['too-many-fields']);
+    assert.strictEqual(error.errors[0].path, '');
+    assert.ok(error.message.length < 2000, `summary message was ${error.message.length} chars`);
+  });
+
+  test('2,000 unknown keys of 50,000 characters each on a single node: fast, one too-many-fields error at that node', () => {
+    const node = { id: 'n1', label: 'N', kind: 'service' };
+    for (let i = 0; i < 2000; i++) {
+      node[`x${i}${'y'.repeat(50000)}`] = true;
+    }
+    const doc = { title: 't', nodes: [node], edges: [] };
+    const { ms, error } = timed(() => validateDoc(doc));
+    assert.ok(ms < TIME_BOUND_MS, `took ${ms.toFixed(1)}ms, expected under ${TIME_BOUND_MS}ms`);
+    assert.ok(error instanceof ValidationError);
+    assert.deepStrictEqual(error.errors.map(e => e.code), ['too-many-fields']);
+    assert.strictEqual(error.errors[0].path, '/nodes/0');
+    assert.ok(error.message.length < 2000);
+  });
+
+  test('50,000 nodes: fast, exactly one too-many-nodes error, no per-item validation runs', () => {
+    const nodes = Array.from({ length: 50000 }, (_, i) => ({ id: `n${i}`, label: 'N', kind: 'service' }));
+    const doc = { title: 't', nodes, edges: [] };
+    const { ms, error } = timed(() => validateDoc(doc));
+    assert.ok(ms < TIME_BOUND_MS, `took ${ms.toFixed(1)}ms, expected under ${TIME_BOUND_MS}ms`);
+    assert.ok(error instanceof ValidationError);
+    assert.deepStrictEqual(error.errors.map(e => e.code), ['too-many-nodes']);
+    assert.ok(error.message.length < 2000);
+  });
+
+  test('200,000 edges: fast, exactly one too-many-edges error', () => {
+    const doc = {
+      title: 't',
+      nodes: [
+        { id: 'a', label: 'A', kind: 'service' },
+        { id: 'b', label: 'B', kind: 'service' },
+      ],
+      edges: Array.from({ length: 200000 }, () => ({ from: 'a', to: 'b', type: 'solid', condition: null })),
+    };
+    const { ms, error } = timed(() => validateDoc(doc));
+    assert.ok(ms < TIME_BOUND_MS, `took ${ms.toFixed(1)}ms, expected under ${TIME_BOUND_MS}ms`);
+    assert.ok(error instanceof ValidationError);
+    assert.deepStrictEqual(error.errors.map(e => e.code), ['too-many-edges']);
+    assert.ok(error.message.length < 2000);
+  });
+
+  test('50,000 nodes each with an invalid kind: fast, still exactly one too-many-nodes error (not 100,001)', () => {
+    const nodes = Array.from({ length: 50000 }, (_, i) => ({ id: `n${i}`, label: 'N', kind: 'bogus' }));
+    const doc = { title: 't', nodes, edges: [] };
+    const { ms, error } = timed(() => validateDoc(doc));
+    assert.ok(ms < TIME_BOUND_MS, `took ${ms.toFixed(1)}ms, expected under ${TIME_BOUND_MS}ms`);
+    assert.ok(error instanceof ValidationError);
+    assert.deepStrictEqual(error.errors.map(e => e.code), ['too-many-nodes']);
+    assert.ok(error.message.length < 2000);
+  });
+
+  test('one object with 10,000 keys: fast, one too-many-fields error, no per-key hint computation', () => {
+    const doc = { title: 't', nodes: [], edges: [] };
+    for (let i = 0; i < 10000; i++) doc[`field${i}`] = true;
+    const { ms, error } = timed(() => validateDoc(doc));
+    assert.ok(ms < TIME_BOUND_MS, `took ${ms.toFixed(1)}ms, expected under ${TIME_BOUND_MS}ms`);
+    assert.ok(error instanceof ValidationError);
+    assert.deepStrictEqual(error.errors.map(e => e.code), ['too-many-fields']);
+    assert.ok(error.message.length < 2000);
+  });
+
+  test('a document producing well over 100 real errors is capped at 101 entries, with a too-many-errors sentinel last', () => {
+    const nodes = Array.from({ length: 100 }, (_, i) => ({ id: `n${i}`, label: 'N', kind: 'bogus' }));
+    const edges = Array.from({ length: 400 }, (_, i) => ({ from: `n${i % 100}`, to: `n${(i + 1) % 100}`, type: 'bogus', condition: null }));
+    const doc = { title: 't', nodes, edges };
+    const { ms, error } = timed(() => validateDoc(doc));
+    assert.ok(ms < TIME_BOUND_MS, `took ${ms.toFixed(1)}ms, expected under ${TIME_BOUND_MS}ms`);
+    assert.ok(error instanceof ValidationError);
+    assert.ok(error.errors.length <= 101, `expected at most 101 errors, got ${error.errors.length}`);
+    const last = error.errors[error.errors.length - 1];
+    assert.strictEqual(last.code, 'too-many-errors');
+    assert.match(last.message, /more errors not shown/);
+    assert.ok(error.message.length < 2000, `summary message was ${error.message.length} chars`);
+  });
+
+  test('a "did you mean" hint is never computed for a key over 40 characters (no hint offered)', () => {
+    const doc = baseDoc();
+    doc.nodes[0][`sublabel_but_way_too_long_to_be_a_typo_${'z'.repeat(20)}`] = 'x';
+    const err = invalid(doc);
+    const e = err.errors.find(x => x.code === 'unknown-field');
+    assert.ok(e);
+    assert.ok(!/did you mean/i.test(e.message), 'a key over 40 chars should not get a hint');
+  });
+
+  test('a 100,000-character unknown key is truncated to 60 chars with an ellipsis in both the message and the path', () => {
+    const doc = baseDoc();
+    const hugeKey = 'z'.repeat(100000);
+    doc.nodes[0][hugeKey] = 'x';
+    const start = process.hrtime.bigint();
+    const err = invalid(doc);
+    const ms = Number(process.hrtime.bigint() - start) / 1e6;
+    assert.ok(ms < TIME_BOUND_MS, `took ${ms.toFixed(1)}ms, expected under ${TIME_BOUND_MS}ms`);
+    const e = err.errors.find(x => x.code === 'unknown-field');
+    assert.ok(e);
+    assert.ok(e.message.length < 200, `message should be short, was ${e.message.length} chars`);
+    assert.ok(e.message.includes('…'), 'message should carry the truncation ellipsis');
+    assert.ok(e.path.length < 200, `path should be short, was ${e.path.length} chars`);
+    assert.ok(e.path.includes('…'), 'path segment should carry the truncation ellipsis');
+  });
+
+  test('a huge id/sublabel/condition/attachTo value echoed into a message is truncated to 60 chars', () => {
+    // invalid id (too long to match ID_RE) — echoed value must be capped.
+    const idDoc = baseDoc();
+    idDoc.nodes[0].id = 'n'.repeat(5000);
+    idDoc.edges[0].from = 'n'.repeat(5000);
+    const idErr = invalid(idDoc);
+    const idErrorEntry = idErr.errors.find(x => x.code === 'invalid-id');
+    assert.ok(idErrorEntry);
+    assert.ok(idErrorEntry.message.length < 200, `id message was ${idErrorEntry.message.length} chars`);
+    assert.ok(idErrorEntry.message.includes('…'));
+
+    // sublabel echoed in sublabel-too-many-words.
+    const subDoc = baseDoc();
+    subDoc.nodes[0].sublabel = `${'word '.repeat(5000).trim()}`;
+    const subErr = invalid(subDoc);
+    const subErrorEntry = subErr.errors.find(x => x.code === 'sublabel-too-many-words');
+    assert.ok(subErrorEntry);
+    assert.ok(subErrorEntry.message.length < 300, `sublabel message was ${subErrorEntry.message.length} chars`);
+    assert.ok(subErrorEntry.message.includes('…'));
+
+    // condition echoed in condition-requires-dashed via edge.type mismatch text.
+    const condDoc = baseDoc();
+    condDoc.edges[0].type = 'x'.repeat(5000); // invalid type, also exercises invalid-type path
+    condDoc.edges[0].condition = 'y'.repeat(5000);
+    const condErr = invalid(condDoc);
+    const condRequiresDashed = condErr.errors.find(x => x.code === 'condition-requires-dashed');
+    assert.ok(condRequiresDashed);
+    assert.ok(condRequiresDashed.message.length < 300);
+
+    // attachTo target echoed in unknown-attach-target.
+    const noteDoc = baseDoc({ notes: [{ id: 'note1', content: 'hi', attachTo: ['z'.repeat(5000)] }] });
+    const noteErr = invalid(noteDoc);
+    const attachErr = noteErr.errors.find(x => x.code === 'unknown-attach-target');
+    assert.ok(attachErr);
+    assert.ok(attachErr.message.length < 300, `attachTo message was ${attachErr.message.length} chars`);
+    assert.ok(attachErr.message.includes('…'));
+  });
+
+  test('exactly 100 nodes, 500 edges, 50 groups, 20 notes, and 50 tour entries are still accepted (boundary, not capped)', () => {
+    const groups = Array.from({ length: 50 }, (_, i) => ({ id: `g${i}`, label: `G${i}` }));
+    const nodes = Array.from({ length: 100 }, (_, i) => ({ id: `n${i}`, label: `N${i}`, kind: 'service', parentId: `g${i % 50}` }));
+    const edges = Array.from({ length: 500 }, (_, i) => ({ from: `n${i % 100}`, to: `n${(i + 1) % 100}`, type: 'solid', condition: null }));
+    const notes = Array.from({ length: 20 }, (_, i) => ({ id: `note${i}`, content: `note ${i}` }));
+    const tour = Array.from({ length: 50 }, (_, i) => ({ order: i + 1, title: `Step ${i}`, description: 'D', nodeIds: [`n${i}`] }));
+    const doc = { title: 't', groups, nodes, edges, notes, tour };
+    assert.doesNotThrow(() => validateDoc(doc));
+  });
+
+  test('501 edges, 51 groups, or 51 tour entries each trip exactly one cap error', () => {
+    const tooManyEdges = {
+      title: 't',
+      nodes: [
+        { id: 'a', label: 'A', kind: 'service' },
+        { id: 'b', label: 'B', kind: 'service' },
+      ],
+      edges: Array.from({ length: 501 }, () => ({ from: 'a', to: 'b', type: 'solid', condition: null })),
+    };
+    const edgesErr = invalid(tooManyEdges);
+    assert.deepStrictEqual(codesOf(edgesErr), ['too-many-edges']);
+
+    const tooManyGroups = {
+      title: 't',
+      groups: Array.from({ length: 51 }, (_, i) => ({ id: `g${i}`, label: `G${i}` })),
+      nodes: [{ id: 'a', label: 'A', kind: 'service' }],
+      edges: [],
+    };
+    const groupsErr = invalid(tooManyGroups);
+    assert.deepStrictEqual(codesOf(groupsErr), ['too-many-groups']);
+
+    const tooManyTour = {
+      title: 't',
+      nodes: [{ id: 'a', label: 'A', kind: 'service' }],
+      edges: [],
+      tour: Array.from({ length: 51 }, (_, i) => ({ order: i + 1, title: `T${i}`, description: 'D', nodeIds: ['a'] })),
+    };
+    const tourErr = invalid(tooManyTour);
+    assert.deepStrictEqual(codesOf(tourErr), ['too-many-tour-entries']);
+  });
+});
