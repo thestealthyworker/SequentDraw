@@ -90,20 +90,25 @@ same fallback logic, rather than hardcoding either form.
    to `open` or `source: "model"` -- never by inventing evidence -- then
    re-run `check` until it prints `ok`.
 
-5. **Render and publish -- see `references/artifact-output.md`.**
-   `<sequentdraw> render map.json map.html --fragment` produces the artifact
-   fragment (no `<!DOCTYPE>`, `<html>`, `<head>` or `<body>` -- see that
-   reference for the full artifact output rule). In Claude Code: publish it
-   as a private Claude artifact and give the user the link (it says the
-   page is private and is never shared further). Always also keep
-   `map.json` and `map.html` in a session or temp folder outside the
-   repository, and print both paths -- even when running as a forked
-   subagent, this return value must reach the main conversation. Write into
-   the repository only if the user asks, and ask before overwriting.
-   In Codex, other agents or a CLI-only host: skip the artifact step, write
-   the same two files to a temp folder, and print/open them locally.
+5. **Write the local copy first -- see `references/artifact-output.md`.** As
+   soon as `check` prints `ok`, create a folder outside the repository (a
+   session folder, or a new directory under the system temp directory),
+   write `map.json` there, and run
+   `<sequentdraw> render <folder>/map.json <folder>/map.html --fragment`.
+   The CLI prints `wrote <path> (<size>kb)`. Keep that output and print both
+   file paths. Do this before anything else, so a finished map always exists
+   on disk even if a later step is unavailable.
 
-6. **Corrections are conversational.** "Stripe belongs in Payment" or
+6. **Then publish.** In Claude Code, publish `map.html` as a private Claude
+   artifact and give the user the link, saying the page is private and is
+   never shared further. If publishing is unavailable (Codex, another agent,
+   a CLI-only host, or a sandbox without the artifact tool), do not stop:
+   finish by reporting the local paths from step 5. Even when running as a
+   forked subagent, the link or paths must reach the main conversation.
+   Write into the repository only if the user asks, and ask before
+   overwriting.
+
+7. **Corrections are conversational.** "Stripe belongs in Payment" or
    similar: edit the JSON, re-validate, re-check evidence, and republish to
    the *same* artifact rather than creating a new one.
 

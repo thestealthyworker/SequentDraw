@@ -18,23 +18,29 @@ already there, plus node descriptions the user explicitly confirms.
    user no map exists yet and stop -- do not build one. (If they actually
    want a map of a repository, that is `git-map`, not this skill.)
 
-2. **Ask which layers to include.** `base` is always included. List the
-   other layers present in the document (`edge`, `business`, `build` --
-   whichever the doc actually declares) and ask which to add. Do not assume;
-   a documentation figure should show exactly what it is about.
+2. **Settle which layers to include.** `base` is always included. If the user
+   already named the layers ("base layer only", "with the business layer"),
+   use exactly those and do not ask again. Otherwise list the other layers
+   the document declares (`edge`, `business`, `build`) and ask which to add.
 
-3. **Draft missing descriptions, then get confirmation.** For every node in
-   the *included* layers that has no `description`, draft one of at most 12
-   words (the SVG caption wraps to 2 lines at 12px and truncates). Show every
-   draft to the user as a numbered list before writing anything. Only write
-   the descriptions the user confirms; skip or redo the rest per their
-   feedback. Never touch any other field.
+3. **Missing descriptions: offer, never block.** For every node in the
+   included layers that has no `description`, draft one of at most 12 words
+   (the caption wraps to 2 lines at 12px and truncates). If the user is
+   available and has not said to skip questions, show the drafts as a
+   numbered list and write only the ones they confirm. If they said not to
+   ask, or no one is there to confirm, write none of them: render without
+   those captions, and list the drafts in your final reply so they can be
+   added later. Never touch any other field.
 
-4. **Validate, then render.**
+4. **Validate, then write the local copy first.** Create a folder outside the
+   repository (a session folder, or a new directory under the system temp
+   directory) and render into it, never into the repository:
    ```
    <sequentdraw> validate map.json
-   <sequentdraw> render map.json map.svg --layers <chosen-layers>
+   <sequentdraw> render map.json <folder>/map.svg --layers <chosen-layers>
    ```
+   The CLI prints `wrote <path> (<size>kb)`. Keep that output and print the
+   path, so the figure exists on disk even if publishing is unavailable.
    `<sequentdraw>` means `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...`
    when that variable is set (an installed Claude Code plugin), falling
    back to `npx sequentdraw ...` when it is not (Codex, or any other host)
