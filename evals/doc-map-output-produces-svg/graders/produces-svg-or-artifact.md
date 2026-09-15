@@ -1,18 +1,15 @@
 ---
 type: regex
-target: last_message
-pattern: (\.svg|artifact|wrote |rendered|saved)
-flags: i
+target: trace
+pattern: wrote [^\s"'\\]+\.svg
 match: contains
 weight: 2
 ---
 
-The final response should report an .svg output -- either a published
-private artifact (an artifact link/mention) or a printed local .svg path,
-or at minimum a confirmation of having rendered/saved the file (first
-local eval run showed the model does not always literally repeat the
-".svg" extension or the word "artifact" in its own summary). An eval
-sandbox may not expose the Artifact tool, so any of these count. Nothing
-being written inside the repository is enforced structurally (Write and
-Edit are not among this case's allowed/granted tools), so no separate
-grader checks that.
+The SVG was actually rendered. `sequentdraw render … .svg` prints `wrote
+<path>.svg (<size>kb)` when it writes the figure, and this grader matches
+that CLI output in the trace rather than the model's own summary wording, so
+a claimed but unperformed export cannot pass and a real export cannot fail
+on phrasing. Publishing a private artifact is not required, because an eval
+sandbox may not expose the Artifact tool. Writing inside the repository is
+prevented structurally: Write and Edit are not among this case's tools.

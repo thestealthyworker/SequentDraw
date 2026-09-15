@@ -1,16 +1,15 @@
 ---
 type: regex
-target: last_message
-pattern: (\.json|\.html|artifact|wrote |rendered|saved|published)
-flags: i
+target: trace
+pattern: wrote [^\s"'\\]+\.html
 match: contains
 weight: 2
 ---
 
-The final response should report a map output -- either a published
-private artifact (an artifact link/mention) or a printed local map.json /
-map.html path, or at minimum a confirmation of having rendered/saved the
-map (first local eval run timed out at 300s before finishing this step;
-timeout_seconds was raised to 600 in response, but that fix is unverified
-by a further paid run -- see the eval results in the PR/commit history).
-An eval sandbox may not expose the Artifact tool, so any of these count.
+The map was actually rendered. `sequentdraw render` prints `wrote <path>.html
+(<size>kb)` when it writes the map, and this grader matches that CLI output
+in the trace rather than the model's own summary wording, so a claimed but
+unperformed render cannot pass and a real render cannot fail on phrasing.
+Publishing a private artifact is not required here, because an eval sandbox
+may not expose the Artifact tool; the local HTML copy is the dependable
+signal.

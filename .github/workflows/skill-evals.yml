@@ -57,10 +57,16 @@ jobs:
         # `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...` (see
         # skills/*/scripts/sequentdraw.sh), never anything else through
         # Bash.
+        # --ablation none: the no-plugin baseline arm cannot run sequentdraw at
+        # all, so for the output cases it only burns turns and budget toward
+        # the cost cap. Triggering causality was measured locally (skills fire
+        # on every trigger prompt, never on the no-trigger prompts); run a
+        # with-without comparison manually when descriptions change.
         run: |
           claude plugin eval . \
             --trust-plugin \
             --no-publish \
+            --ablation none \
             --allow-tools "Bash(node:*)" \
             --json results.json \
             --threshold 0.8 \

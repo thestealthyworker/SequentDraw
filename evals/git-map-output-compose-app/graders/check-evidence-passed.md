@@ -1,13 +1,13 @@
 ---
 type: regex
 target: trace
-pattern: \bok\b
+pattern: check[\s\S]{0,400}?--evidence[\s\S]{0,800}?\bok\b
 match: contains
 weight: 1
 ---
 
-`sequentdraw check --evidence` prints exactly "ok" and exits 0 once every
-scan-sourced node and edge cites real, connecting evidence. This looks for
-that literal token in the run's trace (the Bash tool's captured output),
-as a signal that the check step was actually run and passed rather than
-skipped or left failing.
+`sequentdraw check <map.json> --evidence <bundle.json>` prints exactly "ok"
+and exits 0 once every scan-sourced node and edge cites real, connecting
+evidence. The pattern requires the `check … --evidence` invocation followed,
+within a short window of the trace, by that "ok" output. A stray "ok"
+elsewhere in the conversation does not count.
