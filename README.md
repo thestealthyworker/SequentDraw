@@ -40,7 +40,52 @@ In code:
 ```js
 const { renderMap } = require('./src/n8n');
 const html = await renderMap(workflowJson); // validated, laid out, one self-contained HTML string
+const fragment = await renderMap(workflowJson, { fragment: true }); // no <!DOCTYPE>/<html>/<head>/<body> — for embedding in a host page
 ```
+
+## Install as a Claude Code plugin
+
+```
+/plugin marketplace add thestealthyworker/SequentDraw
+/plugin install sequentdraw@sequentdraw
+```
+
+This installs the `git-map` and `doc-map` skills (`/sequentdraw:git-map`,
+`/sequentdraw:doc-map`) and a `SessionStart` hook that gives Claude a short
+routing note on which skill applies. `git-map` turns a repository (a local
+path or a GitHub URL) into an interactive architecture map, built only from
+a deterministic scan — see [`docs/design/git-map.md`](docs/design/git-map.md).
+`doc-map` exports an existing SequentDraw map as a static SVG figure for
+docs and slides — see [`docs/design/n8n-visual-style.md`](docs/design/n8n-visual-style.md)'s
+"Documentation export". Every skill that produces a map or figure publishes
+it as a private Claude artifact and keeps a local copy outside the repo,
+writing into the repo only when asked.
+
+The same `skills/` directory is Codex-usable too: `.agents/skills/doc-map`
+and `.agents/skills/git-map` mirror `skills/doc-map` and `skills/git-map`
+(as a symlink, or a synced copy via `npm run sync-agent-skills` on a
+platform where symlinks are unavailable).
+
+## CLI
+
+```sh
+npx sequentdraw render <in.json> <out.html|out.svg> [--layers a,b] [--fragment]
+npx sequentdraw validate <in.json>
+```
+
+- `render` writes an interactive HTML map (`.html`) or a static SVG
+  documentation figure (`.svg`). `--layers a,b` (SVG only) adds layers
+  beyond the always-included `base`. `--fragment` (HTML only) emits the
+  artifact fragment shown above instead of a full document.
+- `validate` prints `ok` and exits 0 for a valid workflow JSON document, or
+  one `path  message` line per error to stderr and exits 1.
+- `scan` and `check` are registered but not wired up yet — they print
+  "available once the scanner is merged" and exit 2 until `src/scan/` lands.
+- Every subcommand takes `--help`. Unknown flags or extra arguments print
+  usage and exit 1, and nothing is written to disk on error.
+
+`node src/n8n/cli.js <in.json> <out.html|out.svg> [--layers a,b]` keeps
+working unchanged as the underlying renderer entry point.
 
 ## Status
 
