@@ -201,6 +201,11 @@ Revised 2026-09-15 for the n8n visual style.
 
 1. n8n-style renderer (`docs/design/n8n-visual-style.md`), left-to-right, as a pure
    core with a CLI adapter.
+
+Each step from here ships its Claude Code / Codex skill and eval cases in the same
+PR (`docs/design/skills-and-plugin.md`). Step 1 also adds the plugin scaffold and
+`render-map`.
+
 2. Text notes: n8n-style sticky notes from the IR `notes` array, placed by the engine
    (design in the same doc). The owner requested this on 2026-09-15.
 3. Validate the JSON schema on input, including notes. Fail loudly on the invariants
