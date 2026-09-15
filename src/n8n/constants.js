@@ -18,7 +18,6 @@ const SUBLABEL_GAP = 14; // last label baseline -> sublabel baseline
 
 const RANK_GAP = 128; // horizontal gap between ELK ranks (flow direction RIGHT)
 const NODE_GAP = 96; // gap between nodes within a rank (perpendicular to flow)
-const ROW_GAP = 128; // vertical gap between stacked group rows (strategy "rows")
 
 const HANDLE_RADIUS = 8; // 16px circle
 const HANDLE_BORDER = '#bbbbbb';
@@ -79,7 +78,6 @@ module.exports = {
   SUBLABEL_GAP,
   RANK_GAP,
   NODE_GAP,
-  ROW_GAP,
   HANDLE_RADIUS,
   HANDLE_BORDER,
   BACKWARD_DROP,

@@ -1,5 +1,5 @@
-// Measures both layout strategies against the Medusa fixture and prints a
-// comparison table, per the brief: canvas size/aspect ratio, edge segments
+// Measures the flat layout strategy against the Medusa fixture and prints a
+// row of stats, per the brief: canvas size/aspect ratio, edge segments
 // crossing a frame they don't belong to, backward-edge count, overlapping
 // label-box pairs, and edges crossing a node box they don't belong to.
 
@@ -75,8 +75,8 @@ function overlaps(a, b) {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-async function measure(strategy) {
-  const layout = await layoutMap(doc, { strategy });
+async function measure() {
+  const layout = await layoutMap(doc);
   const byId = {};
   doc.nodes.forEach(n => (byId[n.id] = n));
 
@@ -119,7 +119,6 @@ async function measure(strategy) {
   }
 
   return {
-    strategy,
     width: Math.round(layout.canvas.width),
     height: Math.round(layout.canvas.height),
     aspect: aspect.toFixed(2),
@@ -131,12 +130,8 @@ async function measure(strategy) {
 }
 
 (async () => {
-  const rows = [];
-  for (const strategy of ['flat', 'rows']) {
-    rows.push(await measure(strategy));
-  }
+  const row = await measure();
   const columns = [
-    ['strategy', 'strategy'],
     ['width', 'width'],
     ['height', 'height'],
     ['aspect', 'aspect'],
@@ -145,7 +140,7 @@ async function measure(strategy) {
     ['label-overlaps', 'labelOverlaps'],
     ['node-crossings', 'nodeViolations'],
   ];
-  const table = [columns.map(c => c[0]), ...rows.map(r => columns.map(c => String(r[c[1]])))];
-  const widths = columns.map((c, i) => Math.max(c[0].length, ...table.slice(1).map(r => r[i].length)));
+  const table = [columns.map(c => c[0]), columns.map(c => String(row[c[1]]))];
+  const widths = columns.map((c, i) => Math.max(c[0].length, ...table.map(r => r[i].length)));
   table.forEach(r => console.log(r.map((c, i) => c.padEnd(widths[i])).join('  ')));
 })();

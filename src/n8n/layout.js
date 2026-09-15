@@ -1,10 +1,9 @@
-// layoutMap(doc, { strategy }) -> plain object describing everything the
-// renderer needs: node boxes, handle points, frame boxes, edge paths and
-// overall canvas bounds. Pure function, no IO.
+// layoutMap(doc) -> plain object describing everything the renderer needs:
+// node boxes, handle points, frame boxes, edge paths and overall canvas
+// bounds. Pure function, no IO.
 
 const { validateDoc } = require('./validate');
 const { layoutFlat } = require('./layout-flat');
-const { layoutRows } = require('./layout-rows');
 const {
   snap,
   NODE_GAP,
@@ -235,11 +234,10 @@ function computeCanvasBounds(nodeBoxes, frameBoxes) {
   return { x, y, width, height };
 }
 
-async function layoutMap(doc, options = {}) {
-  const strategy = options.strategy === 'rows' ? 'rows' : 'flat';
+async function layoutMap(doc) {
   const validated = validateDoc(doc);
 
-  const { nodeBoxes } = strategy === 'rows' ? await layoutRows(validated) : await layoutFlat(validated);
+  const { nodeBoxes } = await layoutFlat(validated);
   resolveOverlaps(nodeBoxes);
   resolveHorizontalCrowding(nodeBoxes);
   resolveOverlaps(nodeBoxes);
@@ -251,7 +249,6 @@ async function layoutMap(doc, options = {}) {
   const canvas = computeCanvasBounds(nodeBoxes, frameBoxes);
 
   return {
-    strategy,
     nodeBoxes,
     frameBoxes,
     handles,

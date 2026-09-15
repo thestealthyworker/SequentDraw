@@ -1,5 +1,5 @@
-// Strategy "flat": one ELK layered pass across the whole graph, direction
-// RIGHT, groups as real containers via hierarchyHandling INCLUDE_CHILDREN.
+// One ELK layered pass across the whole graph, direction RIGHT, groups as
+// real containers via hierarchyHandling INCLUDE_CHILDREN.
 
 const { snap, NODE_SIZE } = require('./constants');
 const { baseLayoutOptions, containerLayoutOptions, leafElkNode, runElk } = require('./elk-helpers');
