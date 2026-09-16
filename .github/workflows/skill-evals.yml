@@ -109,13 +109,15 @@ jobs:
         # is cleaned up, so a failing output grader ("pattern not found in
         # trace") leaves no way to see what the model actually did, and the
         # next step has nothing to collect.
-        # --scaffold: each run starts in an EMPTY workspace, so the two
-        # output cases' fixture/ directories are unreachable without their
-        # case.yaml scaffold_script running first. --trust-plugin does NOT
-        # imply this flag. It executes author-supplied bash outside the
-        # agent's sandbox, which is safe here only because this repository
-        # owns the suite -- both scripts do nothing but copy files that sit
-        # beside them.
+        # --scaffold: each run starts in an EMPTY workspace, so a case's
+        # fixture is unreachable unless its case.yaml scaffold_script runs
+        # first -- the two output cases' fixture/ directories, and the map
+        # the three doc-map trigger prompts say already exists.
+        # --trust-plugin does NOT imply this flag. It executes
+        # author-supplied bash outside the agent's sandbox, which is safe
+        # here only because this repository owns the suite -- every
+        # scaffold script does nothing but copy a file already committed to
+        # this repository into the run's workspace.
         run: |
           claude plugin eval . \
             --trust-plugin \
@@ -128,26 +130,61 @@ jobs:
             --threshold 0.8 \
             --max-cost-usd 10
 
-      # A run that errors before starting scores as a pass on "must not trigger"
-      # graders, because a skill that never ran also never fired. Treat any
-      # errored run as a failure, so a broken environment can never look green.
+      # A run that never really executed -- a rejected credential, a sandbox
+      # that would not start -- scores as a pass on every "must not trigger"
+      # grader, because a skill that never ran also never fired. Catching that
+      # is why this step exists, and it still fails the job for any such run.
+      #
+      # It does NOT fail the job for a run that executed and then stopped at a
+      # limit its own case declared. `max_turns` and `timeout_seconds` are set
+      # per case in prompt.md, and reaching one is a legitimate terminal
+      # outcome of a real run, not a broken environment. The trigger-only
+      # cases are expected to reach them: their single grader
+      # (`tool_used: Skill`) is satisfied on the first turn and nothing tells
+      # the agent to stop afterwards, so it keeps working until the limit.
+      # git-map additionally runs `context: fork`, so its forked subagent
+      # attempts a full map and can outlast timeout_seconds. Failing the job
+      # on that would gate the suite on how long the agent keeps going after
+      # it has already been graded.
+      #
+      # Two conditions keep the original protection intact:
+      #   * a limit-stop counts as legitimate only if the run actually took a
+      #     turn (turns > 0), so a run that died before its first turn stays
+      #     fatal whatever message it carries; and
+      #   * in a case that asserts a skill must NOT fire (a grader with
+      #     max: 0), ANY error is fatal -- that is precisely where a run that
+      #     half-executed can masquerade as a pass.
       - name: Fail on errored eval runs
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         run: |
           node -e "
           const r = require('./results.json');
-          const errors = [];
+          const LIMIT_STOP = /Reached maximum number of turns|timed out after \\d+\\s*s/i;
+          const fatal = [];
+          const tolerated = [];
           for (const c of r.cases || []) {
-            for (const run of Object.values(c.arms || {}).flat()) {
-              if (run.error) errors.push(c.name + ': ' + String(run.error).slice(0, 200));
+            const mustNotTrigger = (c.graders || []).some(g => g.config && g.config.max === 0);
+            for (const [arm, runs] of Object.entries(c.arms || {})) {
+              (runs || []).forEach((run, i) => {
+                if (!run.error) return;
+                const where = c.name + ' [' + arm + '.' + i + '] turns=' + run.turns;
+                const msg = String(run.error).slice(0, 200);
+                const ranAtLeastOneTurn = Number(run.turns) > 0;
+                if (!mustNotTrigger && ranAtLeastOneTurn && LIMIT_STOP.test(msg)) {
+                  tolerated.push(where + ': ' + msg);
+                  return;
+                }
+                fatal.push(where + ': ' + msg);
+              });
             }
           }
-          if (errors.length) {
-            console.log('::error::' + errors.length + ' eval run(s) errored instead of running; their scores are not evidence.');
-            errors.slice(0, 10).forEach(e => console.log(e));
+          tolerated.forEach(e => console.log('note: stopped at its own case limit -- ' + e));
+          if (fatal.length) {
+            console.log('::error::' + fatal.length + ' eval run(s) did not execute normally; their scores are not evidence.');
+            fatal.slice(0, 10).forEach(e => console.log(e));
             process.exit(1);
           }
-          console.log('No errored eval runs.');
+          console.log('No eval run failed for anything other than its own declared limit (' + tolerated.length + ' limit-stop(s) tolerated).');
           "
 
       # A failing output grader reports only "pattern not found in trace",

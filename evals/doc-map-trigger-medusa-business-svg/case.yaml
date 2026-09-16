@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: doc-map-trigger-medusa-business-svg
+# Every eval run starts in an EMPTY workspace, so the map this prompt names
+# does not exist unless it is scaffolded in. Without it this case burned its
+# whole budget hunting for the file: all 3 runs ended "Reached maximum number
+# of turns (8)" after a string of Glob misses
+# ("**/medusa-return-flow.json" -> No files found), and the one run that did
+# locate it only managed that by reaching outside the workspace into the CI
+# checkout. Scaffolding makes the prompt's claim true where the prompt says
+# it is true, so the case measures triggering rather than file-hunting.
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh

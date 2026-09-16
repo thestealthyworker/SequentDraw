@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: doc-map-trigger-docs-image
+# Every eval run starts in an EMPTY workspace, so the map this prompt says
+# we "already have" does not exist unless it is scaffolded in. Without it the
+# prompt's own claim is false, and the traces show what that costs: this
+# case's sibling doc-map-trigger-medusa-business-svg hit "Reached maximum
+# number of turns (8)" on 3/3 runs hunting for the file, and this case only
+# found it by reaching outside the workspace into the CI checkout
+# (/home/runner/work/SequentDraw/SequentDraw/examples/...), which made it
+# depend on the runner's directory layout instead of its own fixture.
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh
