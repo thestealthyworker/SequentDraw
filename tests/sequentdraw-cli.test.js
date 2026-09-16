@@ -15,9 +15,12 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const BIN = path.join(ROOT, 'bin', 'sequentdraw');
 const FIXTURE = path.join(ROOT, 'examples', 'medusa-return-flow.json');
+const { MAX_DOCUMENT_BYTES } = require('../src/cli/read-document');
 
-function runCli(args, cwd) {
-  return spawnSync(process.execPath, [BIN, ...args], { cwd: cwd || ROOT, encoding: 'utf8' });
+// `input`, when given, is piped to the child's stdin; otherwise stdin is an
+// empty pipe, so a "-" that is never fed still terminates instead of hanging.
+function runCli(args, cwd, { input } = {}) {
+  return spawnSync(process.execPath, [BIN, ...args], { cwd: cwd || ROOT, encoding: 'utf8', input });
 }
 
 function withTempDir(fn) {
@@ -347,4 +350,195 @@ test('check --help exits 0 and prints usage', () => {
   const result = runCli(['check', '--help']);
   assert.strictEqual(result.status, 0);
   assert.match(result.stdout, /Usage: sequentdraw check/);
+});
+
+// --- stdin: "-" as the input document ----------------------------------------
+//
+// Issue #31: a host may grant the CLI narrowly (`Bash(node:*)`, no Write
+// tool), and then the only way to get map.json onto disk for check and
+// render was a shell-string `node -e "fs.writeFileSync(...)"`. "-" reads
+// the INPUT document from stdin instead. Output paths and --evidence stay
+// real files, both sources share one size cap, and a malformed stdin
+// fails with exactly the message a malformed file does.
+
+const FIXTURE_TEXT = fs.readFileSync(FIXTURE, 'utf8');
+const MALFORMED = '{"title": ';
+
+test('validate -: reads the document from stdin and prints "ok"', () => {
+  const result = runCli(['validate', '-'], undefined, { input: FIXTURE_TEXT });
+  assert.strictEqual(result.status, 0, result.stderr);
+  assert.strictEqual(result.stdout.trim(), 'ok');
+});
+
+test('validate -: malformed stdin fails with the same message as a malformed file', () => {
+  withTempDir(dir => {
+    const bad = path.join(dir, 'bad.json');
+    fs.writeFileSync(bad, MALFORMED);
+    const fromFile = runCli(['validate', bad]);
+    const fromStdin = runCli(['validate', '-'], undefined, { input: MALFORMED });
+    assert.strictEqual(fromFile.status, 1);
+    assert.strictEqual(fromStdin.status, 1);
+    assert.ok(fromStdin.stderr.trim().length > 0);
+    assert.strictEqual(fromStdin.stderr, fromFile.stderr);
+    assert.notStrictEqual(fromStdin.stdout.trim(), 'ok');
+  });
+});
+
+test('validate -: an invalid document from stdin reports "path  message" lines, like a file would', () => {
+  const input = JSON.stringify({ title: '', groups: [], nodes: [], edges: [] });
+  const result = runCli(['validate', '-'], undefined, { input });
+  assert.strictEqual(result.status, 1);
+  assert.ok(result.stderr.trim().length > 0);
+  result.stderr
+    .trim()
+    .split('\n')
+    .forEach(line => assert.match(line, /^\S*\s\s.+/));
+});
+
+test('validate -: stdin past the document cap fails loudly and exits 1', () => {
+  const oversized = 'x'.repeat(MAX_DOCUMENT_BYTES + 1);
+  const result = runCli(['validate', '-'], undefined, { input: oversized });
+  assert.strictEqual(result.status, 1);
+  assert.match(result.stderr, /stdin exceeds the \d+MB document limit/);
+  assert.notStrictEqual(result.stdout.trim(), 'ok');
+});
+
+test('validate: a file past the document cap fails with the same limit message and is never parsed', () => {
+  withTempDir(dir => {
+    const big = path.join(dir, 'big.json');
+    fs.writeFileSync(big, 'x'.repeat(MAX_DOCUMENT_BYTES + 1));
+    const result = runCli(['validate', big]);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /big\.json exceeds the \d+MB document limit/);
+    assert.doesNotMatch(result.stderr, /JSON/);
+  });
+});
+
+test('validate -: extra positional and unknown flag still print usage and exit 1', () => {
+  const extra = runCli(['validate', '-', 'extra'], undefined, { input: FIXTURE_TEXT });
+  assert.strictEqual(extra.status, 1);
+  assert.match(extra.stderr, /Usage: sequentdraw validate/);
+  const bogus = runCli(['validate', '-', '--bogus'], undefined, { input: FIXTURE_TEXT });
+  assert.strictEqual(bogus.status, 1);
+  assert.match(bogus.stderr, /Usage: sequentdraw validate/);
+});
+
+test('render - out.html --fragment: renders the fragment from stdin', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.html');
+    const result = runCli(['render', '-', out, '--fragment'], undefined, { input: FIXTURE_TEXT });
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.match(result.stdout, /wrote .*map\.html/);
+    const html = fs.readFileSync(out, 'utf8');
+    assert.ok(html.startsWith('<title>'));
+    assert.doesNotMatch(html, /<html[\s>]/i);
+  });
+});
+
+test('render - out.svg --layers a,b: renders the SVG from stdin', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.svg');
+    const result = runCli(['render', '-', out, '--layers', 'business'], undefined, { input: FIXTURE_TEXT });
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.match(result.stdout, /wrote .*map\.svg/);
+    assert.match(fs.readFileSync(out, 'utf8'), /<svg[\s>]/);
+  });
+});
+
+test('render: "-" as the OUTPUT path is rejected with usage and writes nothing', () => {
+  withTempDir(dir => {
+    const fromFile = runCli(['render', FIXTURE, '-'], dir);
+    assert.strictEqual(fromFile.status, 1);
+    assert.match(fromFile.stderr, /Usage: sequentdraw render/);
+    assert.match(fromFile.stderr, /only valid as the input document/);
+    const bothDashes = runCli(['render', '-', '-'], dir, { input: FIXTURE_TEXT });
+    assert.strictEqual(bothDashes.status, 1);
+    assert.match(bothDashes.stderr, /only valid as the input document/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('render -: malformed stdin fails with the malformed-file message and writes nothing', () => {
+  withTempDir(dir => {
+    const bad = path.join(dir, 'bad.json');
+    fs.writeFileSync(bad, MALFORMED);
+    const out = path.join(dir, 'map.html');
+    const fromFile = runCli(['render', bad, out]);
+    const fromStdin = runCli(['render', '-', out], undefined, { input: MALFORMED });
+    assert.strictEqual(fromFile.status, 1);
+    assert.strictEqual(fromStdin.status, 1);
+    assert.strictEqual(fromStdin.stderr, fromFile.stderr);
+    assert.deepStrictEqual(fs.readdirSync(dir), ['bad.json']);
+  });
+});
+
+test('render -: a usage error is reported even when a document is waiting on stdin, and writes nothing', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'map.html');
+    const result = runCli(['render', '-', out, '--bogus'], undefined, { input: FIXTURE_TEXT });
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /Usage: sequentdraw render/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('check - --evidence bundle.json: reads the map from stdin and prints "ok"', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const ids = evidenceIds(bundlePath);
+    const map = JSON.stringify({
+      title: 'compose-app map',
+      nodes: [
+        { id: 'web', label: 'Web', kind: 'service', source: 'scan', evidence: [ids.web] },
+        { id: 'api', label: 'Api', kind: 'service', source: 'scan', evidence: [ids.api] },
+      ],
+      edges: [{ from: 'web', to: 'api', type: 'solid', source: 'scan', evidence: [ids.webDependsOnApi] }],
+    });
+    const result = runCli(['check', '-', '--evidence', bundlePath], undefined, { input: map });
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.strictEqual(result.stdout.trim(), 'ok');
+  });
+});
+
+test('check -: an evidence violation from a stdin map fails with its documented code', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const map = JSON.stringify({
+      title: 'compose-app map',
+      nodes: [{ id: 'web', label: 'Web', kind: 'service', source: 'scan', evidence: ['ev-does-not-exist'] }],
+      edges: [],
+    });
+    const result = runCli(['check', '-', '--evidence', bundlePath], undefined, { input: map });
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /which is not in the scan bundle/);
+  });
+});
+
+test('check -: malformed stdin fails with the same message as a malformed file', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const bad = path.join(dir, 'bad.json');
+    fs.writeFileSync(bad, MALFORMED);
+    const fromFile = runCli(['check', bad, '--evidence', bundlePath]);
+    const fromStdin = runCli(['check', '-', '--evidence', bundlePath], undefined, { input: MALFORMED });
+    assert.strictEqual(fromFile.status, 1);
+    assert.strictEqual(fromStdin.status, 1);
+    assert.strictEqual(fromStdin.stderr, fromFile.stderr);
+  });
+});
+
+test('check: "-" for --evidence is rejected with usage, in both flag spellings', () => {
+  const spaced = runCli(['check', FIXTURE, '--evidence', '-'], undefined, { input: '{}' });
+  assert.strictEqual(spaced.status, 1);
+  assert.match(spaced.stderr, /Usage: sequentdraw check/);
+  assert.match(spaced.stderr, /--evidence must be a real file/);
+  const joined = runCli(['check', FIXTURE, '--evidence=-'], undefined, { input: '{}' });
+  assert.strictEqual(joined.status, 1);
+  assert.match(joined.stderr, /--evidence must be a real file/);
+});
+
+test('top-level usage documents "-" as the stdin input document', () => {
+  const result = runCli(['--help']);
+  assert.strictEqual(result.status, 0);
+  assert.match(result.stdout, /"-" as the input document reads it from stdin/);
 });

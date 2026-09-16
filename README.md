@@ -69,11 +69,17 @@ platform where symlinks are unavailable).
 ## CLI
 
 ```sh
-npx sequentdraw render <in.json> <out.html|out.svg> [--layers a,b] [--fragment]
-npx sequentdraw validate <in.json>
+npx sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]
+npx sequentdraw validate <in.json|->
 npx sequentdraw scan <path|github-url> --out <bundle.json> [--timeout <ms>]
-npx sequentdraw check <map.json> --evidence <bundle.json>
+npx sequentdraw check <map.json|-> --evidence <bundle.json>
 ```
+
+- `-` as the input document reads it from stdin, so a map built in
+  conversation can be piped straight in (a quoted heredoc keeps the command
+  starting with the CLI) without being written to disk first. Only the
+  input is ever stdin: output paths and `--evidence` are always real files.
+  Both sources share one 16MB cap and fail loudly past it.
 
 - `render` writes an interactive HTML map (`.html`) or a static SVG
   documentation figure (`.svg`). `--layers a,b` (SVG only) adds layers

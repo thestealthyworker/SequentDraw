@@ -31,10 +31,23 @@ sequentdraw scan  ──► evidence bundle (JSON)     deterministic, engine
   │
   ▼
 git-map skill     ──► workflow JSON              host AI: group, name, ask
-  │  sequentdraw check --evidence bundle.json   every scan claim cited
+  │  sequentdraw check - --evidence bundle.json   every scan claim cited; map on stdin
   ▼
-render ──► map.html (+ artifact fragment) ──► publish private artifact + local copy
+sequentdraw render - map.html --fragment ──► publish private artifact + local copy
+                                             (map on stdin again)
 ```
+
+**The map document never has to be written to disk.** `validate`, `check` and `render`
+accept `-` as the input document and read it from stdin. This exists because a host may
+grant the CLI narrowly -- this plugin's own CI grants only `Bash(node:*)`, with no
+file-writing tool -- and the only other way to get `map.json` onto disk for `check` and
+`render` was `node -e "fs.writeFileSync(...)"` with the whole document inlined in a shell
+string. Whether an agent found that path was luck: the same eval case scored 1.0, 0.75 and
+0.25 across runs, and one run burned 39 tool calls and hit its turn limit without
+rendering (issue #31). The skill now pipes the document in through a quoted heredoc, so
+each command still *starts* with `node` and matches the grant. Only the input is ever
+stdin: output paths and `--evidence` are always real files, and both sources are bounded
+by the same 16MB cap and fail loudly past it.
 
 ## 1. Acquire
 
@@ -194,8 +207,8 @@ only writes are the map files, in the output location below.
 
 | Host | Behaviour |
 |---|---|
-| Claude Code | Render and **publish the map as a private Claude artifact**, then give the user the link. The page is private by default; the skill says so and never shares it further. Always also keep `map.json` and `map.html` in a session folder outside the repo, not inside it. |
-| Codex, other agents, CLI | No artifacts: write the same two files to a temp folder, open the HTML locally, and print both paths. |
+| Claude Code | Render and **publish the map as a private Claude artifact**, then give the user the link. The page is private by default; the skill says so and never shares it further. Always also keep `map.html` in a session folder outside the repo, not inside it, plus `map.json` beside it whenever the host has a file-writing tool. |
+| Codex, other agents, CLI | No artifacts: write the same files to a temp folder, open the HTML locally, and print the paths. |
 | Saving into the repo | Only when the user asks ("save it to docs/architecture"). The skill then writes the JSON and HTML there and asks before overwriting. |
 
 For artifacts, the engine adds a fragment mode, `renderMap(doc, { fragment: true })`. The
@@ -214,7 +227,8 @@ edits the JSON, re-validates, re-checks evidence and republishes to the same art
 - `skills/git-map/` and `skills/doc-map/`, each with `SKILL.md`, `references/` and
   `scripts/` that call the CLI
 - `hooks/hooks.json`: a `SessionStart` note under 1,500 characters listing the skills
-- `bin/sequentdraw`, the CLI entry for `scan`, `check` and `render`
+- `bin/sequentdraw`, the CLI entry for `scan`, `check` and `render` (`check`, `render`
+  and `validate` take `-` to read the input document from stdin)
 - `package.json` `files` whitelist: the published package excludes `.claude/`,
   `CLAUDE.md`, `docs/reviews/` and tests, per the internal-tooling rule
 - CI: `claude plugin validate . --strict` on every PR; skill evals on PRs touching

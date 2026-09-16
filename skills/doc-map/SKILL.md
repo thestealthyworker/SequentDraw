@@ -35,16 +35,31 @@ already there, plus node descriptions the user explicitly confirms.
 4. **Validate, then write the local copy first.** Render into a folder
    outside the repository (a session folder, or a path under the system
    temp directory), never into the repository. The CLI creates the output
-   directory itself, so do not make it first:
+   directory itself, so do not make it first. When the map is unchanged,
+   point both commands at the file:
    ```
    <sequentdraw> validate map.json
    <sequentdraw> render map.json <folder>/map.svg --layers <chosen-layers>
    ```
+   When you added confirmed descriptions, do not write the changed document
+   back through a shell string: pipe it in instead. `-` reads the input
+   document from stdin, and a quoted heredoc keeps the command starting
+   with the CLI (the `'EOF'` quotes stop the shell expanding anything in
+   the JSON):
+   ```
+   <sequentdraw> validate - <<'EOF'
+   { ...the updated map document... }
+   EOF
+   <sequentdraw> render - <folder>/map.svg --layers <chosen-layers> <<'EOF'
+   { ...the updated map document... }
+   EOF
+   ```
+   Only the input may be `-`; the output is always a real path.
    Run each of these as its own command, beginning with `<sequentdraw>`.
-   Never chain one behind `mkdir ... &&` or any other prefix: a host may
-   grant the CLI narrowly -- this plugin's own CI grants `Bash(node:*)` --
-   and such a grant matches only a command that *starts* with what was
-   granted, so a chained call is refused outright.
+   Never chain one behind `mkdir ... &&`, `echo ... |` or any other prefix:
+   a host may grant the CLI narrowly -- this plugin's own CI grants
+   `Bash(node:*)` -- and such a grant matches only a command that *starts*
+   with what was granted, so a chained call is refused outright.
    The CLI prints `wrote <path> (<size>kb)`. Keep that output and print the
    path, so the figure exists on disk even if publishing is unavailable.
    `<sequentdraw>` means `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...`
@@ -59,10 +74,12 @@ already there, plus node descriptions the user explicitly confirms.
    Claude Code: publish a private Claude artifact (an HTML page that shows
    the SVG inline) and give the user the link; artifact pages cannot offer
    file downloads, so the actual `.svg` file comes from the local copy.
-   Always also write the local copy (`map.svg` and the updated `map.json`,
-   if descriptions were added) to a temp or session folder outside the
-   repository, and print both paths. Write into the repository only if the
-   user asks, and ask before overwriting anything there.
+   Always also write the local copy (`map.svg`, plus the updated `map.json`
+   when descriptions were added and the host has a file-writing tool;
+   without one, list the confirmed descriptions in your reply instead) to
+   a temp or session folder outside the repository, and print the paths.
+   Write into the repository only if the user asks, and ask before
+   overwriting anything there.
    In Codex, other agents, or a CLI-only host: skip the artifact step and
    just open or print the local file paths.
 
