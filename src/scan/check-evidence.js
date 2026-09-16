@@ -88,7 +88,16 @@ function identifiersFor(node, evidenceById) {
 function factConnects(entry, fromIds, toIds) {
   if (!entry) return false;
 
-  if (entry.kind === 'depends-on') {
+  // Both of these are relational by construction: they name two
+  // endpoints. `data-access` ("this component performs this operation
+  // against this store") is the fact CTO-M1-02's direction inference
+  // rests on, so an edge may cite it -- under exactly the same
+  // requirement as depends-on, that its two named endpoints are the
+  // edge's two endpoints. Orientation is not checked here: this function
+  // answers "is these two things connected", and the map's arrow
+  // direction is the skill's decision, made from the entry's own
+  // `direction` field.
+  if (entry.kind === 'depends-on' || entry.kind === 'data-access') {
     const from = norm(entry.from);
     const to = norm(entry.to);
     if (!from || !to) return false;

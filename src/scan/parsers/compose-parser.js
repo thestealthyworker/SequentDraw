@@ -8,11 +8,28 @@
 // value) tuple:
 //   compose-service  { path, line, value: serviceName }
 //   image            { path, line, value: imageName, tech?, icon? }
-//   depends-on       { path, line, from: serviceName, to: serviceName }
+//   depends-on       { path, line, from: serviceName, to: serviceName,
+//                      role: 'deployment' }
 //     (also emitted for `links:`, same shape)
+//   build-context    { path, line, from: serviceName, to: directory }
+//
+// `role: 'deployment'` is not decoration (CTO-M1-02). `depends_on` states
+// a STARTUP order -- "start after" -- and says nothing about which way
+// work flows; the two coincide only when a service happens to write to
+// its dependency. Tagging the fact at the point it is read is what lets
+// the skill draw these as deployment dependencies rather than as work
+// arrows, and what stopped the voting app rendering back to front.
+//
+// `build-context` records which directory a service is built from. That
+// is the repository stating, in its own compose file, that a directory is
+// part of the product -- used to attribute source files to services (so a
+// data-access fact in `worker/Program.cs` belongs to the `worker`
+// service) and to keep such a directory out of the relevance policy's
+// exclusions.
 
 const { parseYamlSafe } = require('../yaml-safe');
 const { lookup } = require('../crosswalk');
+const { normalise: normalisePath } = require('../exclusions');
 
 // Finds the 1-based line number of the first occurrence of `needle` at
 // the start of a YAML mapping key (best-effort; used only for the
@@ -71,11 +88,17 @@ function parseCompose(path, content) {
       });
     }
 
+    const buildContext = readBuildContext(service);
+    if (buildContext) {
+      const buildLine = findLine(lines, /^\s*build\s*:/, serviceLine ? serviceLine - 1 : 0) || serviceLine;
+      records.push({ kind: 'build-context', path, line: buildLine, from: serviceName, to: buildContext });
+    }
+
     const dependsOn = asArray(service.depends_on);
     for (const dep of dependsOn) {
       if (typeof dep !== 'string') continue;
       const dependsLine = findLine(lines, /^\s*depends_on\s*:/, serviceLine ? serviceLine - 1 : 0) || serviceLine;
-      records.push({ kind: 'depends-on', path, line: dependsLine, from: serviceName, to: dep });
+      records.push({ kind: 'depends-on', path, line: dependsLine, from: serviceName, to: dep, role: 'deployment' });
     }
 
     const links = asArray(service.links);
@@ -85,11 +108,22 @@ function parseCompose(path, content) {
       const target = link.split(':')[0].trim();
       if (!target) continue;
       const linksLine = findLine(lines, /^\s*links\s*:/, serviceLine ? serviceLine - 1 : 0) || serviceLine;
-      records.push({ kind: 'depends-on', path, line: linksLine, from: serviceName, to: target });
+      records.push({ kind: 'depends-on', path, line: linksLine, from: serviceName, to: target, role: 'deployment' });
     }
   }
 
   return records;
+}
+
+// `build: ./vote` or `build: { context: ./vote }`. Returns the context
+// directory relative to the repo root, or null.
+function readBuildContext(service) {
+  const build = service.build;
+  if (typeof build === 'string') return normalisePath(build) || null;
+  if (build && typeof build === 'object' && typeof build.context === 'string') {
+    return normalisePath(build.context) || null;
+  }
+  return null;
 }
 
 function escapeRegExp(s) {

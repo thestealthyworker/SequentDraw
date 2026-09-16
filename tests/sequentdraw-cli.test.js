@@ -255,19 +255,37 @@ function scanComposeApp(dir) {
   return bundlePath;
 }
 
+// Evidence ids are positional, so they shift whenever the scanner learns
+// to report something new. These tests are about the check contract, not
+// about which id a fact happens to land on, so they look the ids up.
+function evidenceIds(bundlePath) {
+  const bundle = JSON.parse(fs.readFileSync(bundlePath, 'utf8'));
+  const find = predicate => {
+    const entry = bundle.evidence.find(predicate);
+    assert.ok(entry, 'expected fixture evidence is missing from the bundle');
+    return entry.id;
+  };
+  return {
+    web: find(e => e.kind === 'compose-service' && e.value === 'web'),
+    api: find(e => e.kind === 'compose-service' && e.value === 'api'),
+    webDependsOnApi: find(e => e.kind === 'depends-on' && e.from === 'web' && e.to === 'api'),
+  };
+}
+
 test('check: a document citing real evidence ids passes with "ok"', () => {
   withTempDir(dir => {
     const bundlePath = scanComposeApp(dir);
+    const ids = evidenceIds(bundlePath);
     const mapPath = path.join(dir, 'map.json');
     fs.writeFileSync(
       mapPath,
       JSON.stringify({
         title: 'compose-app map',
         nodes: [
-          { id: 'web', label: 'Web', kind: 'service', source: 'scan', evidence: ['ev1'] },
-          { id: 'api', label: 'Api', kind: 'service', source: 'scan', evidence: ['ev4'] },
+          { id: 'web', label: 'Web', kind: 'service', source: 'scan', evidence: [ids.web] },
+          { id: 'api', label: 'Api', kind: 'service', source: 'scan', evidence: [ids.api] },
         ],
-        edges: [{ from: 'web', to: 'api', type: 'solid', source: 'scan', evidence: ['ev2'] }],
+        edges: [{ from: 'web', to: 'api', type: 'solid', source: 'scan', evidence: [ids.webDependsOnApi] }],
       })
     );
     const result = runCli(['check', mapPath, '--evidence', bundlePath]);
@@ -279,6 +297,7 @@ test('check: a document citing real evidence ids passes with "ok"', () => {
 test('check: an unknown evidence id and a missing citation each fail with their documented code', () => {
   withTempDir(dir => {
     const bundlePath = scanComposeApp(dir);
+    const ids = evidenceIds(bundlePath);
     const mapPath = path.join(dir, 'map.json');
     fs.writeFileSync(
       mapPath,
@@ -288,7 +307,7 @@ test('check: an unknown evidence id and a missing citation each fail with their 
           { id: 'web', label: 'Web', kind: 'service', source: 'scan', evidence: ['ev-does-not-exist'] },
           { id: 'api', label: 'Api', kind: 'service', source: 'scan' },
         ],
-        edges: [{ from: 'web', to: 'api', type: 'solid', source: 'scan', evidence: ['ev2'] }],
+        edges: [{ from: 'web', to: 'api', type: 'solid', source: 'scan', evidence: [ids.webDependsOnApi] }],
       })
     );
     const result = runCli(['check', mapPath, '--evidence', bundlePath]);

@@ -1,0 +1,11 @@
+{
+  "name": "examples-product",
+  "version": "1.0.0",
+  "main": "examples/app/index.js",
+  "workspaces": [
+    "examples/*"
+  ],
+  "dependencies": {
+    "stripe": "^14.0.0"
+  }
+}
