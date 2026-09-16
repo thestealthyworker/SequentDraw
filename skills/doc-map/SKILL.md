@@ -32,13 +32,19 @@ already there, plus node descriptions the user explicitly confirms.
    those captions, and list the drafts in your final reply so they can be
    added later. Never touch any other field.
 
-4. **Validate, then write the local copy first.** Create a folder outside the
-   repository (a session folder, or a new directory under the system temp
-   directory) and render into it, never into the repository:
+4. **Validate, then write the local copy first.** Render into a folder
+   outside the repository (a session folder, or a path under the system
+   temp directory), never into the repository. The CLI creates the output
+   directory itself, so do not make it first:
    ```
    <sequentdraw> validate map.json
    <sequentdraw> render map.json <folder>/map.svg --layers <chosen-layers>
    ```
+   Run each of these as its own command, beginning with `<sequentdraw>`.
+   Never chain one behind `mkdir ... &&` or any other prefix: a host may
+   grant the CLI narrowly -- this plugin's own CI grants `Bash(node:*)` --
+   and such a grant matches only a command that *starts* with what was
+   granted, so a chained call is refused outright.
    The CLI prints `wrote <path> (<size>kb)`. Keep that output and print the
    path, so the figure exists on disk even if publishing is unavailable.
    `<sequentdraw>` means `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...`

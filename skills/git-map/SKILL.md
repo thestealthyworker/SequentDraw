@@ -91,10 +91,16 @@ same fallback logic, rather than hardcoding either form.
    re-run `check` until it prints `ok`.
 
 5. **Write the local copy first -- see `references/artifact-output.md`.** As
-   soon as `check` prints `ok`, create a folder outside the repository (a
-   session folder, or a new directory under the system temp directory),
-   write `map.json` there, and run
+   soon as `check` prints `ok`, write `map.json` to a folder outside the
+   repository (a session folder, or a path under the system temp
+   directory) and run
    `<sequentdraw> render <folder>/map.json <folder>/map.html --fragment`.
+   The CLI creates the output directory itself, so do not make it first,
+   and run each CLI call as its own command beginning with
+   `<sequentdraw>` -- never chained behind `mkdir ... &&` or any other
+   prefix, because a host may grant the CLI narrowly (this plugin's own
+   CI grants `Bash(node:*)`) and such a grant matches only a command that
+   *starts* with what was granted.
    The CLI prints `wrote <path> (<size>kb)`. Keep that output and print both
    file paths. Do this before anything else, so a finished map always exists
    on disk even if a later step is unavailable.
