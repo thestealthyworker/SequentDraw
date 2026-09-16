@@ -190,6 +190,7 @@ Rules:
 |---|---|---|
 | `claude plugin validate . --strict`, plus a check that each description is ≤ 1,536 chars and states what it is not for | Every PR | Free |
 | `npm test` (engine) | Every PR | Free |
+| `npm run preflight` | Locally, before every push | Free |
 | `claude plugin eval . --trust-plugin --no-publish --json --threshold 0.8 --max-cost-usd 10` | PRs touching `skills/`, `evals/`, `hooks/` or the CLI contract | Counts against the owner's Claude subscription usage |
 
 **Credential: the owner's Claude subscription.** The owner runs `claude setup-token`
@@ -203,6 +204,20 @@ With a subscription there is no per-call bill. `--max-cost-usd 10` is a usage gu
 metered at API-equivalent prices, that stops a runaway suite before it eats the
 subscription's usage limits. Runs are sequential (`--concurrency 1`), because
 parallel runs share one rate limit.
+
+**Narrow the suite while iterating.** A full run is 28 agent runs: roughly 25 minutes
+and a real slice of the subscription's usage. While fixing one skill, run only the
+cases that skill owns — `--case 'git-map-*'` is three cases and about six minutes — and
+keep the full suite for the run that gates the merge. The risk this accepts is a
+regression in an unrun case reaching that final run; the cost it avoids is re-running
+seven unaffected cases on every attempt. Agreed with the owner on 2026-09-16, after a
+day of twelve runs in which two succeeded.
+
+**Run `npm run preflight` before pushing anything that triggers evals.** It takes about
+a second and statically catches the three mistakes that each cost a full round that
+day: a duplicate YAML key in a workflow, a grader grading produced output in a case
+that grants no `Bash`, and a prompt naming a path no scaffold puts in the empty
+workspace. Five of the seven avoidable failures that day were of those three kinds.
 
 Cross-agent behaviour cannot be tested automatically yet: no common eval harness runs
 the same skill against Claude Code, Codex and Cursor. Codex triggering is checked by
