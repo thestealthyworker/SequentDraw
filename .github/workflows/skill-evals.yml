@@ -45,7 +45,13 @@ jobs:
           # terminator, so the most likely paste mistake would slip through.
           stray=$(printf '%s' "$token" | LC_ALL=C tr -d '!-~' | wc -c | tr -d ' ')
           if [ "$stray" -ne 0 ]; then
-            echo "::error::CLAUDE_CODE_OAUTH_TOKEN contains whitespace or a non-printable/non-ASCII character. Re-set it with: pbpaste | tr -cd 'A-Za-z0-9._-' | gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo>"
+            # Do NOT suggest a filter pipe here. A `tr -cd`-style filter
+            # silently reshapes whatever it is handed into something that
+            # merely looks like a token -- including a clipboard holding
+            # ordinary prose -- which costs a full CI round and produces a
+            # misleading "401 Invalid bearer token" instead of a paste error.
+            # Verify first, store second, and never transform in between.
+            echo "::error::CLAUDE_CODE_OAUTH_TOKEN contains whitespace or a non-printable/non-ASCII character. Re-set it by running 'claude setup-token', copying ONLY the token, then verifying it before storing: CLAUDE_CODE_OAUTH_TOKEN='<paste>' claude -p 'say ok' --max-turns 1 && gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo> (paste at the prompt; no pipes, no filters)."
             exit 1
           fi
           printf '%s' "$token" | wc -c | xargs -I{} echo "Token looks well-formed ({} characters, value not printed)."
@@ -98,6 +104,11 @@ jobs:
         # the cost cap. Triggering causality was measured locally (skills fire
         # on every trigger prompt, never on the no-trigger prompts); run a
         # with-without comparison manually when descriptions change.
+        # --keep-temp: each run's transcript is written to a temp directory
+        # recorded as `tracePath` in results.json. Without this the directory
+        # is cleaned up, so a failing output grader ("pattern not found in
+        # trace") leaves no way to see what the model actually did, and the
+        # next step has nothing to collect.
         run: |
           claude plugin eval . \
             --trust-plugin \
@@ -105,6 +116,7 @@ jobs:
             --ablation none \
             --allow-tools "Bash(node:*)" \
             --json results.json \
+            --keep-temp \
             --threshold 0.8 \
             --max-cost-usd 10
 
@@ -128,6 +140,36 @@ jobs:
             process.exit(1);
           }
           console.log('No errored eval runs.');
+          "
+
+      # A failing output grader reports only "pattern not found in trace",
+      # which says nothing about why. The transcripts live outside the
+      # workspace (see --keep-temp above), so copy each one in before the
+      # upload, named by case and run. Runs on failure too -- that is the
+      # case that needs them.
+      - name: Collect eval traces
+        if: ${{ always() && env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+          let r;
+          try { r = require('./results.json'); } catch { console.log('no results.json; nothing to collect'); process.exit(0); }
+          const dest = 'evals/results/traces';
+          fs.mkdirSync(dest, { recursive: true });
+          let copied = 0, missing = 0;
+          for (const c of r.cases || []) {
+            for (const [arm, runs] of Object.entries(c.arms || {})) {
+              (runs || []).forEach((run, i) => {
+                const src = run.tracePath;
+                if (!src) return;
+                if (!fs.existsSync(src)) { missing++; return; }
+                fs.copyFileSync(src, path.join(dest, \`\${c.name}.\${arm}.\${i}.jsonl\`));
+                copied++;
+              });
+            }
+          }
+          console.log(\`collected \${copied} trace(s); \${missing} no longer on disk\`);
           "
 
       - name: Upload eval results
