@@ -368,8 +368,16 @@ Steps, in the same order as `git-map`'s:
    wrote.
 4. **Check and emit**: `<sequentdraw> check map.json --emit-open gaps.json`. Read the
    gap lines back to the user in plain words ("Nobody receives the invoice in this map;
-   I have drawn that as a question"). Then `<sequentdraw> check gaps.json` must print
-   `ok`.
+   I have drawn that as a question"). Then `<sequentdraw> check gaps.json` once, to
+   confirm the copy.
+
+   **Do not loop waiting for `ok`.** It prints `ok` for every map except one: a map
+   whose author named no unhappy path still reports `unhappy-paths-missing`, because
+   rule 6a answers that with a map-level note rather than a node, so its condition stays
+   true of its own copy — measured, see §3 "The copy passes, with one exception". A
+   *lone* `unhappy-paths-missing` on the copy is the standing question it is: the note
+   is already drawn, and the user answers it in conversation. Any *other* report on the
+   copy is a real problem to surface, not to retry past.
 5. **Write the local copy first**, then render:
    `<sequentdraw> render gaps.json map.html --fragment`, into a session or temp folder
    outside any repository. Each CLI call is its own command beginning with
