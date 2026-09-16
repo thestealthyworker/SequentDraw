@@ -60,6 +60,7 @@ user  ◄──── eight questions, one unit of value ────►  busine
   │                                                      │  a copy with one open node per gap
   │                                                      ▼
   │            sequentdraw check gaps.json  ──► ok        the copy is complete by construction
+  │                                                       (except rule 6a — see §3)
   │                                                      │
   │            sequentdraw render gaps.json map.html --fragment
   │                                                      ▼
@@ -148,6 +149,8 @@ Two properties make the rules a questionnaire rather than a linter:
 - **An open node is never a subject.** Rules ask questions about confirmed content.
   Asking "who receives the thing we do not know who receives" is noise, and skipping
   open subjects is what makes `check` idempotent: after `--emit-open`, the copy passes.
+  Rule 6a is the one exception, because it emits a note rather than a node — see §3,
+  "The copy passes, with one exception".
 
 ### The six rules
 
@@ -286,8 +289,28 @@ Rules the contract keeps:
   4 replace or re-point one edge each). Written with two-space indentation and a
   trailing newline.
 - **Zero gaps still writes the copy.** The skill has one path to render either way.
-- **The copy passes.** `check gaps.json` on the written file prints `ok`. This is
-  tested, and it holds because open nodes satisfy the rules and are never subjects.
+- **The copy passes, with one exception.** `check gaps.json` on the written file prints
+  `ok`. This is tested, and it holds because open nodes satisfy the rules and are never
+  subjects.
+
+  **Rule 6a is the exception, verified on `main` after #39.** 6a answers "nothing goes
+  wrong in this map" with a gold map-level *note*, deliberately — there is no node to
+  hang the question on, and inventing an anchor would be the guess 6a exists to avoid.
+  A note is not an `edge`-layer node, so 6a's own condition is still true of the copy.
+  Measured on a business-layer map with no `edge` layer:
+
+  ```
+  check map.json                       → exit 1, unhappy-paths-missing
+  check map.json --emit-open gaps.json → exit 0, "wrote gaps.json (0 open nodes, 1 note)"
+  check gaps.json                      → exit 1, unhappy-paths-missing   ← still
+  ```
+
+  **This matters for the skill.** `business-map` must not assert that `check gaps.json`
+  prints `ok` unconditionally: for a map whose author named no unhappy path, it will
+  not, and that is the engine working as designed. The skill should treat a lone
+  `unhappy-paths-missing` on the copy as the standing question it is — the note is
+  already in the map, and the user answers it in conversation — rather than as a
+  failure to retry.
 - **`--emit-open` does not run the suggestion agent, resolve icons, or lay anything
   out.** It writes questions and nothing else.
 
@@ -297,15 +320,22 @@ Proposed location for the engine half: `src/gaps/completeness.js`, a pure functi
 per-item work), with `src/cli/check.js` doing the wiring. The implementing PR decides
 the final path; this document fixes the contract, not the file name.
 
-**Consequence for `git-map`, to confirm.** Because rules 1, 2 and 4 run whenever
-`check` runs, a scan map whose entry service has in-degree 0 will now fail
-`check --evidence` with `input-no-source-actor`. That is SPEC's intent
-(`docs/SPEC.md:236-239`; `docs/design/git-map.md:166-171` already says `git-map`
-writes an open node per gap), but `git-map`'s SKILL.md step 4 says `check` prints `ok`
-(`skills/git-map/SKILL.md:115-122`) and its output eval grades on exactly that
-(`evals/git-map-output-compose-app/graders/check-evidence-passed.md:4`). The step 6 PR
-either adds `--emit-open` to `git-map`'s pipeline or writes the source actor in step 3;
-either is a one-line skill change plus an eval run. Open question 2.
+**`git-map` is unaffected — superseded paragraph, corrected 2026-09-17.** An earlier
+draft of this section said that because rules 1, 2 and 4 run whenever `check` runs, a
+scan map whose entry service has in-degree 0 would fail `check --evidence` with
+`input-no-source-actor`, and that `git-map`'s pipeline or its eval grader would have to
+change. **That is not what was built, and it is not true.** Every rule gates on a
+`business` layer being present (§2, "Which run when"; §6 open question 2), and a
+`git-map` map carries `base` only, so no rule finds a subject in it.
+
+Measured on `main` after the engine landed (#39): a scan-sourced map built from
+`tests/fixtures/repos/compose-app` prints `ok` and exits 0 **both** with and without
+`--evidence`. `skills/git-map/SKILL.md:115-122` and
+`evals/git-map-output-compose-app/graders/check-evidence-passed.md` needed no change,
+and `src/scan/check-evidence.js` was not touched.
+
+Whether rules 1, 2 and 4 *should* eventually run on base-only maps is still live, and
+is still open question 2 — it just is not something step 6 does.
 
 ## 4. The skill
 
@@ -382,8 +412,10 @@ The `using-sequentdraw` routing note (`hooks/session-start.js:14`) currently lis
 - one fixture per rule that fires, one that does not, and one where an open node stands
   in the gap and the rule stays quiet
 - the Medusa measurement above: exactly four gaps, with those four codes and paths
-- `--emit-open` output validates, re-checks to `ok`, preserves the input's own fields
-  and order, and leaves the input byte-identical
+- `--emit-open` output validates, re-checks to `ok` (except a map that triggers rule
+  6a, which still reports `unhappy-paths-missing` — assert that deliberately, it is not
+  a bug), preserves the input's own fields and order, and leaves the input
+  byte-identical
 - rules 3 and 4 insertion: the replaced edge's `type` and `condition` survive on the
   right side of the inserted node
 - nothing written on: structural error, evidence error, unwritable path, cap breach,
