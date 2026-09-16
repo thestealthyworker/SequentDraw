@@ -81,6 +81,37 @@ same fallback logic, rather than hardcoding either form.
    map-level sticky note naming the repo, commit/ref and scan limits from
    the bundle's `repo` and `limits` fields.
 
+   **Draw arrows in the direction work flows, not startup order.** An arrow
+   means "work flows this way". `depends_on` means "starts after", which is
+   a different claim: a `depends-on` fact carries `role: "deployment"`, and
+   on its own it must be drawn as a deployment/startup dependency -- a
+   dashed edge, described as such ("starts after redis") -- never as a
+   work arrow.
+
+   Use `data-access` facts for real flow. Each carries `from` (a component),
+   `to` (a store) and `direction`:
+   - `direction: "write"` -> draw **component -> store** ("writes the tally")
+   - `direction: "read"` -> draw **store -> component** ("polls votes off
+     the queue")
+
+   So a queue with a writer on one side and a reader on the other reads
+   left to right: `vote -> redis -> worker -> db -> result`. Where both a
+   `data-access` fact and a `depends-on` fact describe the same pair, the
+   `data-access` fact decides the arrow, and the startup dependency needs no
+   second edge. Where only `depends-on` exists, keep its direction but mark
+   it as a deployment dependency, and, if the flow genuinely matters there,
+   write an `open` node asking the user which way work moves.
+
+   **Report what was skipped.** The bundle's `exclusions` array lists paths
+   the scan deliberately left out (test directories, CI-only compose files,
+   unreferenced `examples/`). Mention them in the sticky note. For any entry
+   with `"ambiguous": true`, say so explicitly and offer to re-run including
+   it -- an `examples/` directory really can be the product.
+
+   `component` facts (`role: "cli" | "library" | "plugin" | "skill"`) and
+   `runtime` facts are what the repository says it IS, as opposed to what it
+   depends on; prefer them when naming the product's own building blocks.
+
 4. **Check evidence.** `<sequentdraw> check map.json --evidence bundle.json`
    runs schema/structural validation, then enforces that every
    `source: "scan"` node cites a real evidence id and every `source: "scan"`

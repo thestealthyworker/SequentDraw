@@ -31,6 +31,29 @@ const CROSSWALK = new Map(
     'apache-kafka': { tech: 'kafka', kind: 'service', icon: 'apachekafka' },
     elasticsearch: { tech: 'elasticsearch', kind: 'service', icon: 'elasticsearch' },
 
+    // --- data-store CLIENT libraries ---
+    // These are what a component imports or declares in order to talk to
+    // a store. scan.js uses exactly these entries to decide which store a
+    // SQL or Redis operation found in that component's source belongs to
+    // (see resolveDataAccess) -- without a declared client, an operation
+    // is never attributed to a store, so a stray match can never invent
+    // one.
+    psycopg2: { tech: 'postgresql', kind: 'sdk-import', icon: 'postgresql' },
+    'psycopg2-binary': { tech: 'postgresql', kind: 'sdk-import', icon: 'postgresql' },
+    psycopg: { tech: 'postgresql', kind: 'sdk-import', icon: 'postgresql' },
+    npgsql: { tech: 'postgresql', kind: 'sdk-import', icon: 'postgresql' },
+    'node-postgres': { tech: 'postgresql', kind: 'sdk-import', icon: 'postgresql' },
+    asyncpg: { tech: 'postgresql', kind: 'sdk-import', icon: 'postgresql' },
+    mysql2: { tech: 'mysql', kind: 'sdk-import', icon: 'mysql' },
+    pymysql: { tech: 'mysql', kind: 'sdk-import', icon: 'mysql' },
+    ioredis: { tech: 'redis', kind: 'sdk-import', icon: 'redis' },
+    'stackexchange.redis': { tech: 'redis', kind: 'sdk-import', icon: 'redis' },
+    pymongo: { tech: 'mongodb', kind: 'sdk-import', icon: 'mongodb' },
+    mongoose: { tech: 'mongodb', kind: 'sdk-import', icon: 'mongodb' },
+
+    // --- runtimes ---
+    dotnet: { tech: 'dotnet', kind: 'runtime', icon: 'dotnet' },
+
     // --- infra / proxy ---
     nginx: { tech: 'nginx', kind: 'service', icon: 'nginx' },
     docker: { tech: 'docker', kind: 'service', icon: 'docker' },

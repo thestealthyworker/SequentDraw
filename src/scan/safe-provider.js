@@ -46,6 +46,9 @@ const MAX_LINE_LENGTH = 5000;
 // actually needs to read).
 const YAML_MAX_FILE_BYTES = 256 * 1024;
 
+// Upper bound on how many distinct excluded paths are reported.
+const MAX_EXCLUSION_FINDINGS = 200;
+
 const SKIP_DIR_NAMES = new Set([
   'node_modules',
   'vendor',
@@ -246,9 +249,18 @@ class SafeProvider {
     this.bytesOpened = 0;
     this._totalBytesExceeded = false;
     this._reasons = [];
-    this.findings = []; // { kind: 'real-env-file', path } | { kind: 'yaml-rejected', path, reason }
+    // The relevance policy (src/scan/exclusions.js) decides which paths
+    // describe the product and which only describe its tests or demos.
+    // Optional: with no policy every path is walked, exactly as before.
+    this.relevance = opts.relevance ?? null;
+
+    // { kind: 'real-env-file', path } | { kind: 'yaml-rejected', path, reason }
+    // | { kind: 'excluded-path', path, reason, ambiguous, type }
+    this.findings = [];
     this._realEnvSeen = new Set();
     this._yamlRejectedSeen = new Set();
+    this._excludedSeen = new Set();
+    this._excludedSuppressed = 0;
   }
 
   get truncated() {
@@ -305,6 +317,31 @@ class SafeProvider {
     this.findings.push({ kind: 'yaml-rejected', path: rel, reason });
   }
 
+  // Excluded paths are de-duplicated by path. A skipped DIRECTORY is
+  // never descended into, so one finding already stands for everything
+  // beneath it -- which is why this list stays short on a real repo. The
+  // cap bounds the pathological case (a repo with thousands of scattered
+  // `__tests__` folders) rather than the normal one.
+  _recordExcluded(rel, verdict, type) {
+    if (this._excludedSeen.has(rel)) return;
+    if (this._excludedSeen.size >= MAX_EXCLUSION_FINDINGS) {
+      this._excludedSuppressed++;
+      return;
+    }
+    this._excludedSeen.add(rel);
+    this.findings.push({
+      kind: 'excluded-path',
+      path: rel,
+      reason: verdict.reason,
+      ambiguous: verdict.ambiguous === true,
+      type,
+    });
+  }
+
+  get excludedSuppressed() {
+    return this._excludedSuppressed;
+  }
+
   async listDir(pathArg) {
     const dirPath = this._confine(pathArg);
     if (!dirPath) return [];
@@ -350,6 +387,22 @@ class SafeProvider {
       } else {
         if (!lst.isFile()) continue; // device files, sockets, fifos: ignore
         if (isMinifiedByName(entry.name)) continue;
+      }
+
+      // Relevance filtering happens HERE, at the one gateway both our own
+      // walk and stack-analyser's traversal go through, so a skipped
+      // fixture tree costs nothing for either and neither can reach it.
+      // Every skip is recorded as a finding -- the bundle reports what was
+      // left out and why, following the yaml-rejected precedent, because
+      // dropping repository content silently is a defect this engine has
+      // fixed before.
+      if (this.relevance) {
+        const rel = this.relPath(fullPath);
+        const verdict = this.relevance.classify(rel, isDir ? 'dir' : 'file');
+        if (verdict) {
+          this._recordExcluded(rel, verdict, isDir ? 'dir' : 'file');
+          continue;
+        }
       }
 
       this.filesListed++;

@@ -1,0 +1,21 @@
+# A second, non-test compose variant that restates the same services using
+# pre-built images. Everything it repeats is a duplicate; the image names
+# are genuinely new information and must survive.
+services:
+  producer:
+    image: example/queue-pipeline-producer
+    depends_on:
+      - redis
+  processor:
+    image: example/queue-pipeline-processor
+    depends_on:
+      - redis
+      - db
+  reader:
+    image: example/queue-pipeline-reader
+    depends_on:
+      - db
+  redis:
+    image: redis:7
+  db:
+    image: postgres:16

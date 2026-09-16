@@ -76,11 +76,22 @@ own implementation of the three-method provider interface (`listDir`, `stat`, `o
 {
   "repo": { "name": "example-voting-app", "source": "github", "ref": "<sha>" },
   "limits": { "files": 214, "bytes": 1840000, "truncated": false },
+  "exclusions": [
+    { "path": "result/tests", "reason": "test-directory", "ambiguous": false },
+    { "path": "examples", "reason": "example-directory", "ambiguous": true }
+  ],
   "evidence": [
     { "id": "ev12", "kind": "compose-service", "path": "docker-compose.yml", "line": 18,
       "value": "redis", "tech": "redis", "icon": "redis" },
     { "id": "ev13", "kind": "depends-on", "path": "docker-compose.yml", "line": 9,
-      "from": "vote", "to": "redis" },
+      "from": "vote", "to": "redis", "role": "deployment" },
+    { "id": "ev14", "kind": "data-access", "path": "worker/Program.cs", "line": 40,
+      "from": "worker", "to": "redis", "direction": "read", "value": "pop",
+      "tech": "redis", "icon": "redis" },
+    { "id": "ev15", "kind": "component", "path": "package.json", "line": 7,
+      "value": "sequentdraw", "role": "cli", "to": "bin/sequentdraw" },
+    { "id": "ev16", "kind": "runtime", "path": "worker/Worker.csproj", "line": 5,
+      "value": "net7.0", "tech": "dotnet" },
     { "id": "ev20", "kind": "env-name", "path": ".env.example", "line": 3,
       "value": "STRIPE_SECRET_KEY", "tech": "stripe", "icon": "stripe" }
   ]
@@ -88,12 +99,62 @@ own implementation of the three-method provider interface (`listDir`, `stat`, `o
 ```
 
 Evidence kinds, in order of trust: compose or Kubernetes service and `depends_on`;
-infrastructure-as-code resources; SDK imports actually used in source; dependency
-manifest entries; environment variable names; HTTP route and webhook declarations; CI
-workflow jobs (these go to the `build` layer).
+data-access operations; infrastructure-as-code resources; SDK imports actually used in
+source; dependency manifest entries (including .NET `PackageReference`); declared
+components; build contexts; runtimes; environment variable names; HTTP route and webhook
+declarations; CI workflow jobs (these go to the `build` layer).
 
 A manifest entry alone is weak evidence: "depends on X" does not mean "X is live". Such
 a node is marked `open` unless an import, service or environment name corroborates it.
+
+**Direction: `depends_on` is not a work arrow.** `depends_on` means "starts after". An
+arrow in this product's visual grammar means "work flows this way". The two coincide only
+when a service *writes* to its dependency, so following `depends_on` drew the voting app
+backwards: `worker -> redis` when data flows redis to worker, `result -> db` when it
+flows db to result. Both stores became sinks, and the real chain could not be traced.
+
+Two things fix it, and neither invents anything:
+
+1. Every `depends-on` fact carries `role: "deployment"`, so it can be drawn as a startup
+   dependency rather than as a flow arrow.
+2. A `data-access` fact records what a component actually *does* to a store —
+   `{ from: "worker", to: "redis", direction: "read", value: "pop" }` — derived from the
+   store operations present in that component's own source. **If a component writes to a
+   store at all, work flows into the store; a component that only reads is downstream of
+   it.** A `SELECT` counts as a read only when it names a `FROM`, so a `SELECT 1`
+   keep-alive does not make a writer look like a reader.
+
+An operation is attributed to a store **only when the owning component declares a client
+for it** (`pg`, `psycopg2`, `Npgsql`, `redis`, `StackExchange.Redis`, …), and only when
+exactly one declared client matches. SQL text in a component with no database client
+establishes nothing, and a component wired to two SQL stores yields no fact rather than a
+guess. Components are attributed from compose `build` contexts, so
+`worker/Program.cs` belongs to the `worker` service.
+
+**Relevance: map the product, not its test fixtures.** Scanning this repository used to
+return 69 facts, 54 of them from `tests/fixtures/repos/*` and `evals/*` — three synthetic
+fixture apps. Every fact was real, so `check --evidence` passed; they were simply facts
+about someone else's system. A path is skipped when its own directory name is a
+conventional test name (`tests`, `__tests__`, `fixtures`, `evals`, `spec`, …) or its file
+name carries a `.test.` / `.spec.` segment, **and** nothing the repository's own manifests
+point at lives there. The manifests get the final word: `package.json`'s `files`, `bin`,
+`main`, `exports` and `workspaces`, and every compose `build` context, name the product,
+so a repo whose `examples/` really is its deliverable keeps it. Names in the weaker class
+(`examples`, `demo`, `samples`) are skipped but marked `ambiguous`, because that is a
+judgement call the user may want to overturn. A test directory *inside* a product
+directory is still a test directory — which is what stops a CI-only
+`result/docker-compose.test.yml` contributing relationships that do not hold in the real
+app.
+
+Where a repository ships several compose files, the standard-named one nearest the root is
+canonical; a variant restating a service the canonical file already declares is dropped as
+a duplicate, while anything only the variant states (a pre-built image name, an extra
+service) is kept.
+
+**Every exclusion is reported.** The bundle's `exclusions` array names each skipped path,
+its reason, and whether the call was ambiguous, so the skill can tell the user what was
+left out and offer to include it. Silently dropping repository content is a defect this
+engine has fixed before (see the `yaml-rejected` findings).
 
 **Icon crosswalk.** No maintained dataset maps technology names to Simple Icons slugs,
 so SequentDraw keeps a small tested table (`tech → slug`). Unknown technology gets no

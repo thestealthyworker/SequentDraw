@@ -128,7 +128,10 @@ function assembleEvidence(rawRecords) {
     const entry = { id: `ev${index + 1}`, kind: record.kind };
     entry.path = normalisePath(record.path);
     if (record.line != null) entry.line = record.line;
-    for (const field of ['value', 'from', 'to', 'tech', 'icon', 'version']) {
+    // `direction` ('read'|'write') and `role` ('deployment') are what
+    // carry CTO-M1-02's distinction between a work-flow arrow and a
+    // startup dependency into the bundle, so they must survive assembly.
+    for (const field of ['value', 'from', 'to', 'tech', 'icon', 'version', 'direction', 'role']) {
       const value = record[field];
       if (value == null) continue;
       entry[field] = EVIDENCE_STRING_FIELDS.includes(field) ? truncateString(value) : value;
