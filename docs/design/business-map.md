@@ -32,8 +32,10 @@ The user is an author of the map, not a reviewer of it (`docs/SPEC.md:226-229`).
 skill never fills a gap with a plausible answer. Anything the user does not know, or
 skips, becomes an `open` node with a `prompt`, drawn in the map, and a partly answered
 map is still a usable artifact (`docs/SPEC.md:241-244`). The engine, not the skill,
-decides what counts as a gap, so the same six rules apply to a business map, to a
-`git-map` map and to a map someone wrote by hand.
+decides what counts as a gap: the same rules, in the same code, for a business map and
+for a map someone wrote by hand. What a rule applies *to* is scoped by layer, because a
+question that is real on a business map is noise on a technical one (see "Which run
+when").
 
 The renderer already knows how to draw the answer to a question it has not been asked
 yet: an `open` node gets a 2px dashed muted border, a grey fill and a "?" badge
@@ -173,8 +175,32 @@ Which run when:
 
 | Tier | Rules | Needs |
 |---|---|---|
-| Structural, always | 1, 2, 4 | Kinds, degrees and conditions only. Cheap, and meaningful on any map, including a `git-map` output: a webhook route with in-degree 0 is exactly SPEC's "a webhook implies an upstream sender" (`docs/SPEC.md:236-239`). |
-| Business, when any node carries `business` | 3, 5, 6, 6a | A lifecycle to have an end and failures. On a base-only technical map "the flow stops at Postgres" is not a gap; it is where a technical map ends. |
+| Business, when any node carries `business` | 1, 2, 3, 4, 5, 6, 6a | A lifecycle to have an end, an owner and failures. On a base-only technical map "the flow stops at Postgres" is not a gap; it is where a technical map ends. |
+| Not yet run on base-only maps | — | See the decision below. |
+
+**All six rules gate on a `business` layer being present. Decided by the lead developer,
+2026-09-16.**
+
+An earlier draft ran rules 1, 2 and 4 on every map, on the argument that a webhook route
+with in-degree 0 is exactly SPEC's "a webhook implies an upstream sender"
+(`docs/SPEC.md:236-239`). That argument is sound, and this is not a rejection of it. It
+is a sequencing decision:
+
+- A `git-map` map carries `base` only. Rule 2 fires on any node with in-degree 0 whose
+  kind is not `human` or `external` — which is the entry service of practically every
+  scanned repository. `check` would then exit non-zero on a correct scan map.
+- `evals/git-map-output-compose-app` grades that `check … --evidence` prints `ok`
+  (`graders/check-evidence-passed.md`), and `skills/git-map/SKILL.md:115-122` tells the
+  model to re-run `check` until it prints `ok`. Both would have to change, and
+  `git-map` would need `--emit-open` wired into its pipeline.
+- That case is currently green and is part of the M1 gate. Changing a passing gate to
+  add a check that step 6 does not need is the wrong order of work.
+
+So: step 6 ships all six rules gated on the business layer, and `git-map` output is
+untouched. **Applying rules 1, 2 and 4 to base-only maps is a separate decision, after
+M1 closes, in its own PR** — one that changes the skill, the grader and the pipeline
+together, and is measured against a real scan before it merges. Logged as an open
+question below.
 
 ### Measured on the fixture
 
