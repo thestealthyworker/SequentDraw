@@ -160,7 +160,8 @@ describe('CTO-M1-04: the same holds in the static documentation export', () => {
 });
 
 // ---------------------------------------------------------------------
-// CTO-M1-05: the connector CTO-M1-04 introduced must not mis-attribute
+// CTO-M1-04, second round: the connector the first fix introduced must
+// not mis-attribute
 // the note all over again. On main@aee7b42 the Medusa map drew
 // n_consider_silent_notification -> no_notif as a straight line through
 // the body of the unrelated "Event bus / Redis" node, clipping its
@@ -288,7 +289,7 @@ function expectedPathData(layout) {
   return out.sort();
 }
 
-describe('CTO-M1-05: a note connector never runs through an unrelated node, note or group title', () => {
+describe('CTO-M1-04 (round 2): a note connector never runs through an unrelated node, note or group title', () => {
   test('interactive map: every connector reaches its target without crossing anything else', async () => {
     const layout = await layoutMap(medusaDoc);
     assert.ok(countConnectors(layout) > 0, 'the Medusa fixture should exercise at least one connector');

@@ -2,7 +2,8 @@
 // not be placed beside (see notes.js connectorsFor, and
 // docs/design/n8n-visual-style.md "Note connector").
 //
-// CTO-M1-05: PR #28 drew that leader as a plain straight line. On the
+// CTO-M1-04, second round: PR #28 drew that leader as a plain straight
+// line. On the
 // Medusa map that put n_consider_silent_notification's line to `no_notif`
 // straight through the body of the unrelated "Event bus / Redis" node,
 // clipping its sublabel — so at a glance the note read as belonging to
