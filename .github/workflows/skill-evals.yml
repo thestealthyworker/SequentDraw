@@ -110,8 +110,17 @@ jobs:
         # trace") leaves no way to see what the model actually did, and the
         # next step has nothing to collect.
         run: |
+        # --scaffold: each run starts in an EMPTY workspace, so the two
+        # output cases' fixture/ directories are unreachable without their
+        # case.yaml scaffold_script running first. --trust-plugin does NOT
+        # imply this flag. It executes author-supplied bash outside the
+        # agent's sandbox, which is safe here only because this repository
+        # owns the suite -- both scripts do nothing but copy files that sit
+        # beside them.
+        run: |
           claude plugin eval . \
             --trust-plugin \
+            --scaffold \
             --no-publish \
             --ablation none \
             --allow-tools "Bash(node:*)" \
