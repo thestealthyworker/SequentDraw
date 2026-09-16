@@ -109,7 +109,6 @@ jobs:
         # is cleaned up, so a failing output grader ("pattern not found in
         # trace") leaves no way to see what the model actually did, and the
         # next step has nothing to collect.
-        run: |
         # --scaffold: each run starts in an EMPTY workspace, so the two
         # output cases' fixture/ directories are unreachable without their
         # case.yaml scaffold_script running first. --trust-plugin does NOT
