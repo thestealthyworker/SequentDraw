@@ -426,12 +426,18 @@ hand before each release, as Codex triggering already is
    badge at the midpoint and an "Open question" line on the edge card; then rule 3
    marks the edge instead of inserting. It is a schema change (validator, schema
    parity test, renderer, card) and can land in the step 6 PR or the one after.
-2. **Completeness with `--evidence`.** This document reads decision 1 as "completeness
-   always runs; `--evidence` adds the evidence pass". The alternative reading is that
-   `--evidence` keeps today's behaviour exactly and completeness runs only without it.
-   The first gives one command one verdict but makes `git-map` maps answer rules 1, 2
-   and 4 (section 3, "Consequence for `git-map`"); the second leaves `git-map`
-   untouched but means a scan map is never completeness-checked in the same call.
+2. **Completeness rules on base-only maps — deferred, not open.** Settled for step 6 by
+   the lead developer (2026-09-16): all six rules gate on a `business` layer being
+   present, so completeness runs in the same call as `--evidence` but finds no subjects
+   on a `git-map` map. Nothing about `git-map` changes. See section 2, "Which run when".
+   What remains genuinely open is the follow-up: rule 2's reading of SPEC's "a webhook
+   implies an upstream sender" (`docs/SPEC.md:236-239`) is a real check that a scan map
+   would benefit from, and it is switched off here only because turning it on means
+   changing `skills/git-map/SKILL.md:115-122`, the
+   `evals/git-map-output-compose-app` grader and `git-map`'s pipeline together, while
+   that case is green and part of the M1 gate. Worth doing after M1 closes, in its own
+   PR, measured against a real scan before it merges. Owner's call whether it is worth
+   the churn at all.
 3. **`source` for engine-emitted nodes.** Omit (proposed), or add `"engine"` to the
    enum (`schema/sequentdraw.schema.json:154-158`; `src/n8n/validate.js:33`)?
 4. **Exit code of `--emit-open` when gaps were emitted.** 0 (proposed: the job was to
