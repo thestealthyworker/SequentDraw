@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "sequentdraw",
+  "description": "Turns a semantic workflow JSON model into an n8n-style interactive HTML map or a static SVG documentation figure. Ships git-map and doc-map skills that build and export architecture maps from a repository or an existing SequentDraw document.",
+  "version": "0.1.0",
+  "author": {
+    "name": "thestealthyworker"
+  },
+  "homepage": "https://github.com/thestealthyworker/SequentDraw",
+  "repository": "https://github.com/thestealthyworker/SequentDraw",
+  "license": "MIT",
+  "keywords": [
+    "architecture-diagram",
+    "workflow",
+    "n8n",
+    "documentation",
+    "svg",
+    "map",
+    "visualization"
+  ]
+}

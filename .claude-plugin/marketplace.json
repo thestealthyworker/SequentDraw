@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "sequentdraw",
+  "description": "SequentDraw's own marketplace: install the sequentdraw plugin directly from this repository.",
+  "owner": {
+    "name": "thestealthyworker"
+  },
+  "plugins": [
+    {
+      "name": "sequentdraw",
+      "source": "./",
+      "description": "Turns a semantic workflow JSON model into an n8n-style interactive HTML map or a static SVG documentation figure."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "title": "Fixture map",
+  "nodes": [
+    { "id": "a", "label": "Service A", "kind": "service", "description": "Handles inbound requests." },
+    { "id": "b", "label": "Service B", "kind": "service", "description": "Processes background work." }
+  ],
+  "edges": [
+    { "from": "a", "to": "b", "type": "solid" }
+  ]
+}

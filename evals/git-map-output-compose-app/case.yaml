@@ -1,0 +1,11 @@
+schema_version: "1.1"
+name: git-map-output-compose-app
+# Every eval run starts in an EMPTY workspace, so the compose-app fixture
+# beside this case is not reachable from the run's working directory.
+# Without this scaffold the git-map subagent reported that "every tool
+# that would touch the target path was denied at the permission layer",
+# exhausted its 25 turns, and never ran `sequentdraw scan` -- which is
+# exactly how this case failed before the scaffold existed.
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh

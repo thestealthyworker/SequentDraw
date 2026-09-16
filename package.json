@@ -3,9 +3,24 @@
   "version": "0.1.0",
   "description": "Generates interactive architecture and business-process maps from a semantic JSON model",
   "main": "src/render-html.js",
+  "bin": {
+    "sequentdraw": "bin/sequentdraw"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "schema/",
+    "skills/",
+    "hooks/",
+    ".claude-plugin/",
+    "README.md",
+    "LICENSE",
+    "CREDITS.md"
+  ],
   "scripts": {
     "render": "node src/render-html.js",
-    "test": "node --expose-gc --test"
+    "test": "node --expose-gc --test",
+    "sync-agent-skills": "node scripts/sync-agent-skills.js"
   },
   "engines": {
     "node": ">=18"

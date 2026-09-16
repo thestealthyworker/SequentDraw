@@ -87,7 +87,16 @@ function svgDefs() {
 </defs>`;
 }
 
-function renderHtml(layout, doc) {
+// `opts.fragment`: returns the artifact fragment instead of a full document
+// (docs/design/skills-and-plugin.md, "the artifact output rule"; see also
+// docs/design/git-map.md section 4) -- a `<title>`, `<style>`, the map
+// markup and the single viewer `<script>`, with no `<!DOCTYPE>`, `<html>`,
+// `<head>` or `<body>`. A host that supplies its own page skeleton (Claude's
+// artifact publisher) wraps this directly. Called with no `opts` (the
+// default) this is unchanged from before fragment mode existed --
+// tests/n8n-render-golden.test.js pins that byte-for-byte.
+function renderHtml(layout, doc, opts = {}) {
+  const fragment = !!opts.fragment;
   const { nodeBoxes, frameBoxes, noteBoxes, handles, edges, entryIds, canvas } = layout;
   const entrySet = new Set(entryIds);
 
@@ -135,17 +144,9 @@ ${bg}
 </g>
 </svg>`;
 
-  return `<!DOCTYPE html>
-<html lang="en" data-theme="light">
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
-<title>${esc(doc.title || 'SequentDraw map')}</title>
-<style>${css()}</style>
-</head>
-<body>
-<div id="stage">${svg}</div>
-<div class="title-bar">${esc(doc.title || 'SequentDraw map')}</div>
+  const title = esc(doc.title || 'SequentDraw map');
+  const body = `<div id="stage">${svg}</div>
+<div class="title-bar">${title}</div>
 ${layerBarMarkup(doc)}
 <div class="zoom-bar">
 <button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">&#8722;</button>
@@ -153,7 +154,24 @@ ${layerBarMarkup(doc)}
 <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">&#43;</button>
 </div>
 <div id="details-card" class="details-card" hidden></div>
-<script>${script(canvas, cardData, geometry)}</script>
+<script>${script(canvas, cardData, geometry)}</script>`;
+
+  if (fragment) {
+    return `<title>${title}</title>
+<style>${css({ fragment: true })}</style>
+${body}`;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>${title}</title>
+<style>${css()}</style>
+</head>
+<body>
+${body}
 </body>
 </html>`;
 }

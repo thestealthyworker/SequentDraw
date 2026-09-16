@@ -1,0 +1,11 @@
+schema_version: "1.1"
+name: doc-map-output-produces-svg
+# Every eval run starts in an EMPTY workspace, so a fixture/ directory
+# sitting beside this case is not reachable from the run's working
+# directory. Without this scaffold the agent searches the filesystem for
+# fixture/map.json, is denied outside its sandbox, and burns its whole
+# turn budget without ever reaching `sequentdraw render` -- which is
+# exactly how this case failed (0/2) before the scaffold existed.
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh

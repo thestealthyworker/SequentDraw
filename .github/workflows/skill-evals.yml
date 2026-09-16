@@ -1,0 +1,230 @@
+name: skill-evals
+
+# `pull_request`, never `pull_request_target` -- see
+# docs/design/skills-and-plugin.md, "CI": a PR from a fork must never
+# receive CLAUDE_CODE_OAUTH_TOKEN, and pull_request (unlike
+# pull_request_target) runs with the fork's own read-only, secret-less
+# token by default. The job below additionally no-ops when the secret is
+# absent, which is exactly the fork-PR case.
+on:
+  pull_request:
+    paths:
+      - "skills/**"
+      - "evals/**"
+      - "hooks/**"
+      - ".claude-plugin/**"
+      - "bin/**"
+
+permissions:
+  contents: read
+
+jobs:
+  skill-evals:
+    runs-on: ubuntu-latest
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip gracefully when the eval credential is unavailable (fork PRs)
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN == '' }}
+        run: |
+          echo "::notice::CLAUDE_CODE_OAUTH_TOKEN is not set (expected for a fork PR)."
+          echo "::notice::Skipping skill evals -- they require the owner's Claude subscription credential."
+
+      # A token pasted with a stray space, newline or decorative character from
+      # the terminal fails deep inside the eval runs ("Invalid Authorization
+      # header value ... non-ASCII character"), which costs a full CI round to
+      # diagnose. Check the shape here instead. The value is never printed.
+      - name: Check the eval credential is well-formed
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          token="$CLAUDE_CODE_OAUTH_TOKEN"
+          # Count characters outside the printable-ASCII range rather than
+          # grepping for them: grep treats a trailing newline as a line
+          # terminator, so the most likely paste mistake would slip through.
+          stray=$(printf '%s' "$token" | LC_ALL=C tr -d '!-~' | wc -c | tr -d ' ')
+          if [ "$stray" -ne 0 ]; then
+            # Do NOT suggest a filter pipe here. A `tr -cd`-style filter
+            # silently reshapes whatever it is handed into something that
+            # merely looks like a token -- including a clipboard holding
+            # ordinary prose -- which costs a full CI round and produces a
+            # misleading "401 Invalid bearer token" instead of a paste error.
+            # Verify first, store second, and never transform in between.
+            echo "::error::CLAUDE_CODE_OAUTH_TOKEN contains whitespace or a non-printable/non-ASCII character. Re-set it by running 'claude setup-token', copying ONLY the token, then verifying it before storing: CLAUDE_CODE_OAUTH_TOKEN='<paste>' claude -p 'say ok' --max-turns 1 && gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo> (paste at the prompt; no pipes, no filters)."
+            exit 1
+          fi
+          printf '%s' "$token" | wc -c | xargs -I{} echo "Token looks well-formed ({} characters, value not printed)."
+
+      - uses: actions/setup-node@v4
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+
+      # `claude plugin eval` refuses to run a case with a shell grant unless it
+      # can confine that shell. On Linux the sandbox backend is bubblewrap plus
+      # socat. Ubuntu 24.04 runners also restrict the unprivileged user
+      # namespaces bubblewrap relies on, so lift that restriction and prove the
+      # sandbox starts before any paid eval run.
+      - name: Install the Claude Code sandbox backend
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bubblewrap socat
+          if sysctl -n kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+          bwrap --version
+          socat -V | head -1
+          bwrap --ro-bind / / --dev /dev --proc /proc --unshare-all true
+          echo "sandbox backend OK"
+
+      - name: Install Claude Code
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        # Pinned to the exact version this plugin was verified against
+        # locally (`claude --version`) -- confirmed published at
+        # https://registry.npmjs.org/@anthropic-ai/claude-code/2.1.272.
+        run: npm i -g @anthropic-ai/claude-code@2.1.272
+
+      - name: Run skill evals
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        # --allow-tools "Bash(node:*)": narrow operator grant so the two
+        # output-correctness cases (doc-map-output-produces-svg,
+        # git-map-output-compose-app) can actually invoke the sequentdraw
+        # CLI -- every skill invokes it as
+        # `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...` (see
+        # skills/*/scripts/sequentdraw.sh), never anything else through
+        # Bash.
+        # --ablation none: the no-plugin baseline arm cannot run sequentdraw at
+        # all, so for the output cases it only burns turns and budget toward
+        # the cost cap. Triggering causality was measured locally (skills fire
+        # on every trigger prompt, never on the no-trigger prompts); run a
+        # with-without comparison manually when descriptions change.
+        # --keep-temp: each run's transcript is written to a temp directory
+        # recorded as `tracePath` in results.json. Without this the directory
+        # is cleaned up, so a failing output grader ("pattern not found in
+        # trace") leaves no way to see what the model actually did, and the
+        # next step has nothing to collect.
+        # --scaffold: each run starts in an EMPTY workspace, so a case's
+        # fixture is unreachable unless its case.yaml scaffold_script runs
+        # first -- the two output cases' fixture/ directories, and the map
+        # the three doc-map trigger prompts say already exists.
+        # --trust-plugin does NOT imply this flag. It executes
+        # author-supplied bash outside the agent's sandbox, which is safe
+        # here only because this repository owns the suite -- every
+        # scaffold script does nothing but copy a file already committed to
+        # this repository into the run's workspace.
+        run: |
+          claude plugin eval . \
+            --trust-plugin \
+            --scaffold \
+            --no-publish \
+            --ablation none \
+            --allow-tools "Bash(node:*)" \
+            --json results.json \
+            --keep-temp \
+            --threshold 0.8 \
+            --max-cost-usd 10
+
+      # A run that never really executed -- a rejected credential, a sandbox
+      # that would not start -- scores as a pass on every "must not trigger"
+      # grader, because a skill that never ran also never fired. Catching that
+      # is why this step exists, and it still fails the job for any such run.
+      #
+      # It does NOT fail the job for a run that executed and then stopped at a
+      # limit its own case declared. `max_turns` and `timeout_seconds` are set
+      # per case in prompt.md, and reaching one is a legitimate terminal
+      # outcome of a real run, not a broken environment. The trigger-only
+      # cases are expected to reach them: their single grader
+      # (`tool_used: Skill`) is satisfied on the first turn and nothing tells
+      # the agent to stop afterwards, so it keeps working until the limit.
+      # git-map additionally runs `context: fork`, so its forked subagent
+      # attempts a full map and can outlast timeout_seconds. Failing the job
+      # on that would gate the suite on how long the agent keeps going after
+      # it has already been graded.
+      #
+      # Two conditions keep the original protection intact:
+      #   * a limit-stop counts as legitimate only if the run actually took a
+      #     turn (turns > 0), so a run that died before its first turn stays
+      #     fatal whatever message it carries; and
+      #   * in a case that asserts a skill must NOT fire (a grader with
+      #     max: 0), ANY error is fatal -- that is precisely where a run that
+      #     half-executed can masquerade as a pass.
+      - name: Fail on errored eval runs
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          node -e "
+          const r = require('./results.json');
+          const LIMIT_STOP = /Reached maximum number of turns|timed out after \\d+\\s*s/i;
+          const fatal = [];
+          const tolerated = [];
+          for (const c of r.cases || []) {
+            const mustNotTrigger = (c.graders || []).some(g => g.config && g.config.max === 0);
+            for (const [arm, runs] of Object.entries(c.arms || {})) {
+              (runs || []).forEach((run, i) => {
+                if (!run.error) return;
+                const where = c.name + ' [' + arm + '.' + i + '] turns=' + run.turns;
+                const msg = String(run.error).slice(0, 200);
+                const ranAtLeastOneTurn = Number(run.turns) > 0;
+                if (!mustNotTrigger && ranAtLeastOneTurn && LIMIT_STOP.test(msg)) {
+                  tolerated.push(where + ': ' + msg);
+                  return;
+                }
+                fatal.push(where + ': ' + msg);
+              });
+            }
+          }
+          tolerated.forEach(e => console.log('note: stopped at its own case limit -- ' + e));
+          if (fatal.length) {
+            console.log('::error::' + fatal.length + ' eval run(s) did not execute normally; their scores are not evidence.');
+            fatal.slice(0, 10).forEach(e => console.log(e));
+            process.exit(1);
+          }
+          console.log('No eval run failed for anything other than its own declared limit (' + tolerated.length + ' limit-stop(s) tolerated).');
+          "
+
+      # A failing output grader reports only "pattern not found in trace",
+      # which says nothing about why. The transcripts live outside the
+      # workspace (see --keep-temp above), so copy each one in before the
+      # upload, named by case and run. Runs on failure too -- that is the
+      # case that needs them.
+      - name: Collect eval traces
+        if: ${{ always() && env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+          let r;
+          try { r = require('./results.json'); } catch { console.log('no results.json; nothing to collect'); process.exit(0); }
+          const dest = 'evals/results/traces';
+          fs.mkdirSync(dest, { recursive: true });
+          let copied = 0, missing = 0;
+          for (const c of r.cases || []) {
+            for (const [arm, runs] of Object.entries(c.arms || {})) {
+              (runs || []).forEach((run, i) => {
+                const src = run.tracePath;
+                if (!src) return;
+                if (!fs.existsSync(src)) { missing++; return; }
+                fs.copyFileSync(src, path.join(dest, \`\${c.name}.\${arm}.\${i}.jsonl\`));
+                copied++;
+              });
+            }
+          }
+          console.log(\`collected \${copied} trace(s); \${missing} no longer on disk\`);
+          "
+
+      - name: Upload eval results
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-eval-results
+          # The aggregate JSON plus the per-run report, so a failing case can be
+          # diagnosed from CI without re-running evals locally.
+          path: |
+            results.json
+            evals/results/
+          if-no-files-found: warn
