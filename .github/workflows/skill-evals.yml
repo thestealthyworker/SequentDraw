@@ -32,6 +32,20 @@ jobs:
           echo "::notice::CLAUDE_CODE_OAUTH_TOKEN is not set (expected for a fork PR)."
           echo "::notice::Skipping skill evals -- they require the owner's Claude subscription credential."
 
+      # A token pasted with a stray space, newline or decorative character from
+      # the terminal fails deep inside the eval runs ("Invalid Authorization
+      # header value ... non-ASCII character"), which costs a full CI round to
+      # diagnose. Check the shape here instead. The value is never printed.
+      - name: Check the eval credential is well-formed
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          token="$CLAUDE_CODE_OAUTH_TOKEN"
+          if printf '%s' "$token" | LC_ALL=C grep -q '[^!-~]'; then
+            echo "::error::CLAUDE_CODE_OAUTH_TOKEN contains whitespace or a non-printable/non-ASCII character. Re-set it with: pbpaste | tr -cd 'A-Za-z0-9._-' | gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo>"
+            exit 1
+          fi
+          printf '%s' "$token" | wc -c | xargs -I{} echo "Token looks well-formed ({} characters, value not printed)."
+
       - uses: actions/setup-node@v4
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         with:
