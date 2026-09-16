@@ -415,17 +415,20 @@ hand before each release, as Codex triggering already is
 
 ## 6. Open questions for the owner
 
-1. **Edge-level `status` and `prompt`.** SPEC says an unresolved question is "a node
-   or edge" with `status: "open"` (`docs/SPEC.md:241-242`, `257-258`), but the schema
-   gives edges no `status` and no `prompt` (`schema/sequentdraw.schema.json:209-262`;
-   `src/n8n/validate.js:123`), and the renderer has no open-edge style
-   (`src/n8n/render-svg.js:41-48` is node-only). Rule 3 is the rule that wants it:
-   "how does work move along this edge" is a question about the edge, and today the
-   check answers by inserting a node. **Recommendation:** add `status: open | confirmed`
-   and `prompt` (500 characters) to edges, drawn as a dashed muted stroke with a "?"
-   badge at the midpoint and an "Open question" line on the edge card; then rule 3
-   marks the edge instead of inserting. It is a schema change (validator, schema
-   parity test, renderer, card) and can land in the step 6 PR or the one after.
+1. **Edge-level `status` and `prompt` — decided: deferred.** SPEC says an unresolved
+   question is "a node or edge" with `status: "open"` (`docs/SPEC.md:241-242`,
+   `257-258`), but the schema gives edges no `status` and no `prompt`
+   (`schema/sequentdraw.schema.json:209-262`; `src/n8n/validate.js:123`), and the
+   renderer has no open-edge style (`src/n8n/render-svg.js:41-48` is node-only).
+   Rule 3 is the rule that wants it: "how does work move along this edge" is a
+   question about the edge, and today the check answers by inserting a node.
+
+   **Owner's decision (2026-09-17): node-only for step 6.** Rule 3 inserts a node, as
+   section 2 describes. Edge-level `status`/`prompt` is a schema change touching the
+   validator, the schema parity test, the renderer and the card, and it does not block
+   the interview or any of the six rules from working. It gets its own PR, on its own
+   evidence, rather than riding along with step 6 — the same reasoning that kept the
+   base-only-map question (2 below) out of the M1 gate.
 2. **Completeness rules on base-only maps — deferred, not open.** Settled for step 6 by
    the lead developer (2026-09-16): all six rules gate on a `business` layer being
    present, so completeness runs in the same call as `--evidence` but finds no subjects
@@ -438,10 +441,22 @@ hand before each release, as Codex triggering already is
    that case is green and part of the M1 gate. Worth doing after M1 closes, in its own
    PR, measured against a real scan before it merges. Owner's call whether it is worth
    the churn at all.
-3. **`source` for engine-emitted nodes.** Omit (proposed), or add `"engine"` to the
-   enum (`schema/sequentdraw.schema.json:154-158`; `src/n8n/validate.js:33`)?
-4. **Exit code of `--emit-open` when gaps were emitted.** 0 (proposed: the job was to
-   emit) or 1 (a gap is a gap)?
+
+   **Update, 2026-09-17: M1 has closed** (`docs/reviews/m1/round-2.md`, merged at
+   `4bd3c85`), so the gate is no longer the reason to hold this. It is now an ordinary
+   candidate, still requiring the skill, the grader and the pipeline to change together
+   and to be measured against a real scan.
+3. **`source` for engine-emitted nodes — decided: omit the field.** Adding `"engine"`
+   to the enum (`schema/sequentdraw.schema.json:154-158`; `src/n8n/validate.js:33`)
+   would touch the schema, the validator and the parity test for no user-visible gain:
+   an emitted node is already identifiable by `status: "open"`, its `q_` id prefix and
+   its `prompt`. Owner's decision, 2026-09-17.
+4. **Exit code of `--emit-open` when gaps were emitted — decided: 0.** The job of that
+   flag is to emit, and it did. A non-zero exit would also make `git-map`'s documented
+   loop incoherent, since `skills/git-map/SKILL.md:115-122` tells the model to re-run
+   `check` until it prints `ok` — a copy that is complete by construction must not
+   report failure. Gaps are still visible: they are drawn in the map as open nodes, and
+   a plain `check` on the *original* still exits non-zero. Owner's decision, 2026-09-17.
 5. **Rule 1 and artifacts consumed by systems.** Medusa uses `artifact` for data
    models and migrations. Proposed: an artifact with any outgoing edge is received by
    something and does not fire. Alternative: those should not be `artifact` at all,
