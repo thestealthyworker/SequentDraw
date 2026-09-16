@@ -29,11 +29,13 @@ Commands:
   validate <in.json|->                 Validate a workflow JSON document.
   scan <path|url> --out <bundle.json>  Scan a repository into an evidence
                                         bundle.
-  check <map.json|-> --evidence <f>    Check scan-sourced claims in a map
-                                        against an evidence bundle.
+  check <map.json|-> [--evidence <f>] [--emit-open <out.json>]
+                                        Check a map: structure, scan-sourced
+                                        claims against an evidence bundle,
+                                        and completeness.
 
-"-" as the input document reads it from stdin. Output paths and --evidence
-are always real files.
+"-" as the input document reads it from stdin. Output paths, --evidence and
+--emit-open are always real files.
 
 Run "sequentdraw <command> --help" for command-specific options.
 `;

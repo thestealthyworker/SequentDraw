@@ -331,10 +331,27 @@ test('check: a structurally invalid document reports validateDoc errors and exit
   });
 });
 
-test('check: missing --evidence prints usage and exits 1', () => {
-  const result = runCli(['check', FIXTURE]);
-  assert.strictEqual(result.status, 1);
-  assert.match(result.stderr, /Usage: sequentdraw check/);
+// --evidence became OPTIONAL with the completeness engine
+// (docs/design/business-map.md:14-16): a business map has no scan bundle, so
+// "check map.json" runs structure plus completeness and nothing else.
+test('check: without --evidence, a base-only map still passes with "ok"', () => {
+  withTempDir(dir => {
+    const mapPath = path.join(dir, 'map.json');
+    fs.writeFileSync(
+      mapPath,
+      JSON.stringify({
+        title: 'compose-app map',
+        nodes: [
+          { id: 'web', label: 'Web', kind: 'service' },
+          { id: 'api', label: 'Api', kind: 'service' },
+        ],
+        edges: [{ from: 'web', to: 'api', type: 'solid' }],
+      })
+    );
+    const result = runCli(['check', mapPath]);
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.strictEqual(result.stdout.trim(), 'ok');
+  });
 });
 
 test('check: unknown flag prints usage and exits 1', () => {
@@ -535,6 +552,192 @@ test('check: "-" for --evidence is rejected with usage, in both flag spellings',
   const joined = runCli(['check', FIXTURE, '--evidence=-'], undefined, { input: '{}' });
   assert.strictEqual(joined.status, 1);
   assert.match(joined.stderr, /--evidence must be a real file/);
+});
+
+// --- check: completeness and --emit-open ----------------------------------
+//
+// The reference fixture carries a business layer, so the completeness rules
+// run on it and find exactly the four gaps docs/design/business-map.md:218-222
+// measures: refund_out (rule 1) and the three edge-layer dead ends (rule 6).
+
+test('check: the reference fixture reports its four completeness gaps and exits 1', () => {
+  const result = runCli(['check', FIXTURE]);
+  assert.strictEqual(result.status, 1);
+  const lines = result.stderr.trim().split('\n');
+  assert.strictEqual(lines.length, 4, result.stderr);
+  lines.forEach(line => assert.match(line, /^\S*\s\s.+/));
+  assert.match(result.stderr, /Artifact "refund_out" has no outgoing edge/);
+  ['req_action', 'partial', 'cancel'].forEach(id => {
+    assert.match(result.stderr, new RegExp(`Node "${id}" is on the edge layer with no outgoing edge`));
+  });
+  assert.notStrictEqual(result.stdout.trim(), 'ok');
+});
+
+test('check --emit-open: writes a copy, exits 0, and the copy re-checks to "ok"', () => {
+  withTempDir(dir => {
+    const out = path.join(dir, 'gaps.json');
+    const before = fs.readFileSync(FIXTURE, 'utf8');
+    const result = runCli(['check', FIXTURE, '--emit-open', out]);
+    // Exit 0 even though gaps were found: the flag's job was to emit, and
+    // git-map's documented re-run-until-"ok" loop must stay coherent.
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.match(result.stdout, /wrote .*gaps\.json \(4 open nodes\)/);
+    // The gap lines are still printed, in the same shape, so a skill can read
+    // them off stderr in both modes.
+    assert.strictEqual(result.stderr.trim().split('\n').length, 4);
+
+    const copy = JSON.parse(fs.readFileSync(out, 'utf8'));
+    const emitted = copy.nodes.filter(n => n.status === 'open');
+    assert.strictEqual(emitted.length, 4);
+    emitted.forEach(n => {
+      assert.match(n.id, /^q_/);
+      assert.ok(n.prompt.length > 0 && n.prompt.length < 500);
+      assert.strictEqual('source' in n, false);
+    });
+
+    const recheck = runCli(['check', out]);
+    assert.strictEqual(recheck.status, 0, recheck.stderr);
+    assert.strictEqual(recheck.stdout.trim(), 'ok');
+
+    // The input is never modified in place.
+    assert.strictEqual(fs.readFileSync(FIXTURE, 'utf8'), before);
+    assert.ok(fs.readFileSync(out, 'utf8').endsWith('\n'));
+  });
+});
+
+test('check --emit-open: a map with no gaps still writes the copy and exits 0', () => {
+  withTempDir(dir => {
+    const mapPath = path.join(dir, 'map.json');
+    const out = path.join(dir, 'gaps.json');
+    fs.writeFileSync(
+      mapPath,
+      JSON.stringify({
+        title: 'tiny business map',
+        nodes: [
+          { id: 'customer', label: 'Customer', kind: 'external', layers: ['business'] },
+          { id: 'job', label: 'Do the job', kind: 'manual', layers: ['base', 'business'] },
+          { id: 'invoice', label: 'Invoice', kind: 'artifact', layers: ['business'] },
+          { id: 'late', label: 'Nobody pays', kind: 'logic', layers: ['edge'] },
+          { id: 'owner', label: 'Office manager', kind: 'human', layers: ['edge', 'business'] },
+        ],
+        edges: [
+          { from: 'customer', to: 'job', type: 'solid' },
+          { from: 'job', to: 'invoice', type: 'solid' },
+          { from: 'invoice', to: 'customer', type: 'solid' },
+          { from: 'invoice', to: 'late', type: 'dashed', condition: 'unpaid' },
+          { from: 'late', to: 'owner', type: 'solid' },
+        ],
+      })
+    );
+    const plain = runCli(['check', mapPath]);
+    assert.strictEqual(plain.status, 0, plain.stderr);
+    const result = runCli(['check', mapPath, '--emit-open', out]);
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.match(result.stdout, /wrote .*gaps\.json \(0 open nodes\)/);
+    assert.ok(fs.existsSync(out));
+  });
+});
+
+test('check --evidence --emit-open together: both run, and the copy is written', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const out = path.join(dir, 'gaps.json');
+    const result = runCli(['check', FIXTURE, '--evidence', bundlePath, '--emit-open', out]);
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.match(result.stdout, /wrote .*gaps\.json \(4 open nodes\)/);
+  });
+});
+
+test('check --emit-open: an evidence violation writes nothing and exits 1', () => {
+  withTempDir(dir => {
+    const bundlePath = scanComposeApp(dir);
+    const mapPath = path.join(dir, 'map.json');
+    const out = path.join(dir, 'gaps.json');
+    fs.writeFileSync(
+      mapPath,
+      JSON.stringify({
+        title: 'compose-app map',
+        nodes: [
+          { id: 'web', label: 'Web', kind: 'service', source: 'scan', evidence: ['ev-does-not-exist'] },
+          { id: 'person', label: 'Ops', kind: 'human', layers: ['business'] },
+        ],
+        edges: [{ from: 'person', to: 'web', type: 'solid' }],
+      })
+    );
+    const result = runCli(['check', mapPath, '--evidence', bundlePath, '--emit-open', out]);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /which is not in the scan bundle/);
+    assert.strictEqual(fs.existsSync(out), false);
+  });
+});
+
+test('check --emit-open: a structurally invalid document writes nothing and exits 1', () => {
+  withTempDir(dir => {
+    const mapPath = path.join(dir, 'map.json');
+    const out = path.join(dir, 'gaps.json');
+    fs.writeFileSync(mapPath, JSON.stringify({ title: '', nodes: [], edges: [] }));
+    const result = runCli(['check', mapPath, '--emit-open', out]);
+    assert.strictEqual(result.status, 1);
+    assert.ok(result.stderr.trim().length > 0);
+    assert.strictEqual(fs.existsSync(out), false);
+  });
+});
+
+test('check --emit-open: a copy that would breach a cap writes nothing and exits 1', () => {
+  withTempDir(dir => {
+    // 100 nodes is the cap (src/n8n/validate.js:74); 99 valid nodes plus one
+    // gap would be 100... so 100 nodes with two gaps cannot be emitted.
+    const nodes = [{ id: 'ops', label: 'Ops', kind: 'human', layers: ['business'] }];
+    for (let i = 0; i < 99; i++) {
+      nodes.push({ id: `inv${i}`, label: `Invoice ${i}`, kind: 'artifact', layers: ['business'] });
+    }
+    const edges = nodes.slice(1).map(n => ({ from: 'ops', to: n.id, type: 'solid' }));
+    const mapPath = path.join(dir, 'map.json');
+    const out = path.join(dir, 'gaps.json');
+    fs.writeFileSync(mapPath, JSON.stringify({ title: 'capped', nodes, edges }));
+    const result = runCli(['check', mapPath, '--emit-open', out]);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /nothing was written/);
+    assert.strictEqual(fs.existsSync(out), false);
+  });
+});
+
+test('check --emit-open: "-" is rejected with usage, in both flag spellings', () => {
+  const spaced = runCli(['check', FIXTURE, '--emit-open', '-']);
+  assert.strictEqual(spaced.status, 1);
+  assert.match(spaced.stderr, /Usage: sequentdraw check/);
+  assert.match(spaced.stderr, /--emit-open must be a real file/);
+  const joined = runCli(['check', FIXTURE, '--emit-open=-']);
+  assert.strictEqual(joined.status, 1);
+  assert.match(joined.stderr, /--emit-open must be a real file/);
+});
+
+test('check --emit-open: naming the input document is a usage error, and it is untouched', () => {
+  withTempDir(dir => {
+    const mapPath = path.join(dir, 'map.json');
+    const text = fs.readFileSync(FIXTURE, 'utf8');
+    fs.writeFileSync(mapPath, text);
+    const result = runCli(['check', mapPath, '--emit-open', path.join(dir, '.', 'map.json')]);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /must not name the input document/);
+    assert.strictEqual(fs.readFileSync(mapPath, 'utf8'), text);
+  });
+});
+
+test('check --emit-open with a missing value prints usage and writes nothing', () => {
+  withTempDir(dir => {
+    const result = runCli(['check', FIXTURE, '--emit-open'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /Usage: sequentdraw check/);
+    assert.deepStrictEqual(fs.readdirSync(dir), []);
+  });
+});
+
+test('check --help documents --evidence as optional and --emit-open', () => {
+  const result = runCli(['check', '--help']);
+  assert.strictEqual(result.status, 0);
+  assert.match(result.stdout, /\[--evidence <bundle\.json>\] \[--emit-open <out\.json>\]/);
+  assert.match(result.stdout, /Optional: without it the evidence cross-reference is/);
 });
 
 test('top-level usage documents "-" as the stdin input document', () => {

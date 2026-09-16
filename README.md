@@ -72,14 +72,14 @@ platform where symlinks are unavailable).
 npx sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]
 npx sequentdraw validate <in.json|->
 npx sequentdraw scan <path|github-url> --out <bundle.json> [--timeout <ms>]
-npx sequentdraw check <map.json|-> --evidence <bundle.json>
+npx sequentdraw check <map.json|-> [--evidence <bundle.json>] [--emit-open <out.json>]
 ```
 
 - `-` as the input document reads it from stdin, so a map built in
   conversation can be piped straight in (a quoted heredoc keeps the command
   starting with the CLI) without being written to disk first. Only the
-  input is ever stdin: output paths and `--evidence` are always real files.
-  Both sources share one 16MB cap and fail loudly past it.
+  input is ever stdin: output paths, `--evidence` and `--emit-open` are
+  always real files. Both sources share one 16MB cap and fail loudly past it.
 
 - `render` writes an interactive HTML map (`.html`) or a static SVG
   documentation figure (`.svg`). `--layers a,b` (SVG only) adds layers
@@ -93,10 +93,17 @@ npx sequentdraw check <map.json|-> --evidence <bundle.json>
   finding. Nothing in the scanned repository is ever executed. Fails loudly
   (one clear line, nothing written) on an invalid source, an invalid ref, or
   a scan that exceeds its deadline (`--timeout`, default 60s).
-- `check` runs `validateDoc()` then `checkEvidence()`: every `"source":
-  "scan"` node or edge in `<map.json>` must cite an id that exists in the
-  bundle and actually supports the claim. Prints `ok` and exits 0, or one
-  `path  message` line per error and exits 1.
+- `check` runs `validateDoc()`, then `checkEvidence()` when `--evidence` is
+  given (every `"source": "scan"` node or edge in `<map.json>` must cite an
+  id that exists in the bundle and actually supports the claim), then the
+  completeness rules: every artifact has a named recipient, every external
+  input a named source actor, every decision a named decider, every unhappy
+  path an owner, and the flow ends in someone's hands rather than inside a
+  system. Completeness runs only on a map carrying a `business` layer, so a
+  scanned architecture map is unaffected. Prints `ok` and exits 0, or one
+  `path  message` line per problem and exits 1. `--emit-open <out.json>`
+  writes a *copy* of the map with one `open` question node per gap and exits
+  0; the input is never modified in place, and the copy passes `check`.
 - Every subcommand takes `--help`. Unknown flags or extra arguments print
   usage and exit 1, and nothing is written to disk on error.
 
