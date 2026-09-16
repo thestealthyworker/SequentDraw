@@ -10,3 +10,6 @@ out/
 # blanket .env.* ignore above.
 !tests/fixtures/repos/**/.env.example
 evals/results/
+
+# Isolated worktrees created for background agents; never part of the repo.
+.claude/worktrees/
