@@ -51,6 +51,7 @@ const {
   NOTE_BORDER_WIDTH,
   NOTE_BLANK_GAP,
   EDGE_TEXT_FONT_SIZE,
+  EDGE_TEXT_LINE_HEIGHT,
   EDGE_TEXT_PAD_X,
   EDGE_TEXT_PAD_Y,
   EDGE_TEXT_COLOR,
@@ -139,13 +140,19 @@ function docEdgeMarkup(edge) {
   return `<path d="${edge.d}" fill="none" stroke="${EDGE_STROKE}" stroke-width="${EDGE_WIDTH}" ${dashed ? `stroke-dasharray="${EDGE_DASH}"` : ''} marker-end="url(#n8n-doc-arrow)"/>`;
 }
 
+// An edge label is wrapped (edge-text.js), so it draws one tspan per line
+// rather than a single centred string. Baselines start one font-size below
+// the box's top padding, matching how measureBox sized the box.
 function docEdgeTextMarkup(label) {
-  const { box, text } = label;
+  const { box, lines } = label;
   const textX = box.x + box.w / 2;
-  const textY = box.y + box.h / 2 + EDGE_TEXT_FONT_SIZE * 0.35;
+  const firstBaseline = box.y + EDGE_TEXT_PAD_Y + EDGE_TEXT_FONT_SIZE;
+  const tspans = lines
+    .map((line, i) => `<tspan x="${textX}" y="${firstBaseline + i * EDGE_TEXT_LINE_HEIGHT}">${esc(line)}</tspan>`)
+    .join('');
   return `<g>
 <rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="4" fill="${EDGE_TEXT_BG}" stroke="${EDGE_TEXT_BORDER}" stroke-width="1"/>
-<text x="${textX}" y="${textY}" text-anchor="middle" font-size="${EDGE_TEXT_FONT_SIZE}" fill="${EDGE_TEXT_COLOR}">${esc(text)}</text>
+<text text-anchor="middle" font-size="${EDGE_TEXT_FONT_SIZE}" fill="${EDGE_TEXT_COLOR}">${tspans}</text>
 </g>`;
 }
 
@@ -181,8 +188,16 @@ function docLineMarkup(line, box, y) {
   return parts.join('');
 }
 
+// A connector to a target the note could not be placed beside — see
+// notes.js. Drawn before the note body so the note sits on top of the
+// line's own end.
+function docNoteConnectorMarkup(connector, palette) {
+  return `<line x1="${connector.x1}" y1="${connector.y1}" x2="${connector.x2}" y2="${connector.y2}" stroke="${palette.border}" stroke-width="1" stroke-dasharray="4 4" opacity="0.8"/>`;
+}
+
 function docNoteMarkup(note, box) {
   const palette = NOTE_COLORS[box.color] || NOTE_COLORS.yellow;
+  const connectors = (box.connectors || []).map(c => docNoteConnectorMarkup(c, palette)).join('');
 
   let y = box.y + NOTE_PAD_Y;
   const tspans = [];
@@ -198,6 +213,7 @@ function docNoteMarkup(note, box) {
   });
 
   return `<g>
+${connectors}
 <rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="${NOTE_RADIUS}" fill="${palette.fill}" stroke="${palette.border}" stroke-width="${NOTE_BORDER_WIDTH}"/>
 <text font-size="13" fill="#3a3a35">${tspans.join('')}</text>
 </g>`;

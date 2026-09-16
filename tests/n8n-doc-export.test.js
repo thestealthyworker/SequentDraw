@@ -188,13 +188,16 @@ describe('doc-export: captions', () => {
     assert.ok(!lines[0].endsWith('…'));
   });
 
-  test('wrapCaption: long description -> at most 2 lines, ellipsis on the last', () => {
+  // CTO-M1-03: a long description wraps onto further lines instead of
+  // being cut off. The figure exists for slides and PDFs where nobody can
+  // hover, so every word has to survive into the caption.
+  test('wrapCaption: long description -> wraps onto as many lines as it needs, losing nothing', () => {
     const long =
       'This description is long enough that it should wrap across two full lines and then get truncated with an ellipsis at the end';
     const lines = wrapCaption(long);
-    assert.ok(lines.length <= 2);
-    assert.ok(lines.length >= 1);
-    assert.ok(lines[lines.length - 1].endsWith('…'));
+    assert.ok(lines.length > 2, `expected more than 2 lines, got ${lines.length}`);
+    assert.ok(!lines.some(l => l.includes('…')), `no line may be ellipsised: ${JSON.stringify(lines)}`);
+    assert.strictEqual(lines.join(' '), long, 'the wrapped lines must reassemble into the original text');
   });
 
   test('a node with no description gets no caption text in the SVG', async () => {
@@ -210,9 +213,16 @@ describe('doc-export: captions', () => {
     assert.match(svg, /<svg/);
   });
 
-  test('a node with a long description gets a wrapped, ellipsised caption in the SVG', async () => {
-    const svg = await renderSvg(filterFixtureDoc(), { layers: ['business'] });
-    assert.match(svg, /…/); // c's caption should end in an ellipsis somewhere in the doc
+  test('a node with a long description gets its whole caption in the SVG, not an ellipsis', async () => {
+    const doc = filterFixtureDoc();
+    const svg = await renderSvg(doc, { layers: ['business'] });
+    assert.doesNotMatch(svg, /…/, 'nothing in the figure may be truncated');
+    // Every wrapped line of c's description is drawn, so the caption
+    // carries the whole sentence and not just its opening.
+    const description = doc.nodes.find(n => n.id === 'c').description;
+    const lines = wrapCaption(description);
+    assert.strictEqual(lines.join(' '), description);
+    lines.forEach(line => assert.ok(svg.includes(`>${line}</tspan>`), `missing caption line: ${line}`));
   });
 
   test('the reserved label strip grows to fit the tallest caption in play', async () => {

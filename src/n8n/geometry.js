@@ -158,6 +158,60 @@ function wrapLabel(text, maxWidth, maxLines, fontSize) {
   return lines.slice(0, maxLines);
 }
 
+// Greedy word wrap for a BLOCK of plain text — node captions and edge
+// labels in the documentation export. Unlike wrapLabel, which exists to
+// squeeze a short label into a fixed two-line slot and throws away
+// whatever is left, this wraps to as many lines as the text actually
+// needs and only ellipsises past `maxLines`.
+//
+// The difference matters because of what the documentation export is for:
+// a slide, PDF or screenshot where nobody can hover. A caption cut
+// mid-sentence ("Owns shipment state, including the…") tells the reader
+// less than the node label already did, so truncation defeats the figure's
+// only job. `maxLines` is therefore a safety ceiling against absurd input,
+// not a design target — it is set high enough that no schema-legal
+// description reaches it.
+//
+// A single word longer than the line budget is hard-broken rather than
+// left to overflow its column: a 280-character description with no spaces
+// is legal input (SPEC.md caps the field, not its word lengths) and still
+// has to fit inside the box that was reserved for it.
+function wrapParagraph(text, maxWidth, maxLines, fontSize) {
+  const avgChar = fontSize * 0.56;
+  const maxChars = Math.max(4, Math.floor(maxWidth / avgChar));
+  const words = String(text).trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  const flush = () => {
+    if (cur) {
+      lines.push(cur);
+      cur = '';
+    }
+  };
+  for (const word of words) {
+    let rest = word;
+    while (rest.length > maxChars) {
+      flush();
+      lines.push(rest.slice(0, maxChars));
+      rest = rest.slice(maxChars);
+    }
+    if (!rest) continue;
+    const next = cur ? `${cur} ${rest}` : rest;
+    if (next.length > maxChars && cur) {
+      flush();
+      cur = rest;
+    } else {
+      cur = next;
+    }
+  }
+  flush();
+  if (lines.length <= maxLines) return lines;
+  const kept = lines.slice(0, maxLines);
+  const last = kept[maxLines - 1];
+  kept[maxLines - 1] = (last.length > maxChars - 1 ? last.slice(0, maxChars - 1) : last) + '…';
+  return kept;
+}
+
 function truncateLine(text, maxWidth, fontSize) {
   const avgChar = fontSize * 0.52;
   const maxChars = Math.max(4, Math.floor(maxWidth / avgChar));
@@ -176,5 +230,6 @@ module.exports = {
   polylineMidpoint,
   roundedRectPath,
   wrapLabel,
+  wrapParagraph,
   truncateLine,
 };

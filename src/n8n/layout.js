@@ -12,10 +12,16 @@ const {
   GROUP_PADDING,
   CANVAS_MARGIN,
 } = require('./constants');
+
+// Rounds of re-placing notes against the routes they changed. Two is
+// enough for every fixture measured; the loop stops earlier the moment
+// nothing is crossed or a round fails to improve.
+const MAX_SETTLE_ROUNDS = 2;
 const { routeForward, routeBackward } = require('./routing');
 const { labelBoxesOf, frameTitleBoxesOf } = require('./obstacles');
 const { computeNoteBoxes } = require('./notes');
 const { frameBoxFromMemberBoxes } = require('./frame-box');
+const { samplePath, pointInRect } = require('./sample-path');
 
 // Shares its bounding-box math with the viewer's runtime frame resize (see
 // frame-box.js's own header) so the two can never compute a different box
@@ -258,6 +264,59 @@ function computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes, labelReserve) {
   return { x, y, width, height };
 }
 
+// How many edges are drawn through a sticky note — the thing notes and
+// routing have to be settled against each other to avoid. Measured with
+// the same sampled-path test the invariant tests use, so "settled" here
+// means the same thing it means there.
+function countNoteCrossings(edges, noteBoxes) {
+  const boxes = Object.values(noteBoxes);
+  if (!boxes.length) return 0;
+  let count = 0;
+  edges.forEach(e => {
+    const points = samplePath(e.d);
+    boxes.forEach(box => {
+      if (points.some(p => pointInRect(p, box))) count++;
+    });
+  });
+  return count;
+}
+
+// Notes and edges depend on each other: routing has to clear the notes,
+// and placement has to know where the edges run or it parks a note on top
+// of a connection. Neither can simply go first, so this settles them.
+//
+// The first round places notes against a provisional routing done as if no
+// note existed. That is right for almost every note, but placing the notes
+// itself changes where the edges go, and an edge can end up rerouted
+// through a note that was clear when it was placed. Each further round
+// re-places the notes against the routes that actually came out and
+// re-routes against those notes.
+//
+// Bounded and monotone: it stops as soon as nothing is crossed, keeps a
+// round only if it strictly improves, and otherwise returns the best
+// result so far — so it converges rather than oscillating, and can never
+// return something worse than the single-pass answer.
+function settleNotesAndEdges(validated, handles, nodeBoxes, frameBoxes, labelReserve, provisionalEdges) {
+  const place = against => computeNoteBoxes(validated, nodeBoxes, frameBoxes, labelReserve, against);
+  const route = noteBoxes => computeEdges(validated, handles, nodeBoxes, frameBoxes, noteBoxes, labelReserve);
+
+  let noteBoxes = place(provisionalEdges);
+  let edges = route(noteBoxes);
+  let crossings = countNoteCrossings(edges, noteBoxes);
+
+  for (let round = 0; round < MAX_SETTLE_ROUNDS && crossings > 0; round++) {
+    const nextNotes = place(edges);
+    const nextEdges = route(nextNotes);
+    const nextCrossings = countNoteCrossings(nextEdges, nextNotes);
+    if (nextCrossings >= crossings) break; // no improvement: keep what we have
+    noteBoxes = nextNotes;
+    edges = nextEdges;
+    crossings = nextCrossings;
+  }
+
+  return { noteBoxes, edges };
+}
+
 // Runs the layout pipeline against an already-validated (or, for the
 // doc-export path, filtered-but-not-re-validated — see doc-filter.js) doc
 // shape, without calling validateDoc itself. `opts.labelReserve` lets a
@@ -272,12 +331,32 @@ async function layoutValidated(validated, opts = {}) {
   resolveOverlaps(nodeBoxes, labelReserve);
 
   const frameBoxes = computeFrameBoxes(validated, nodeBoxes, labelReserve);
-  // Notes are placed before edges are routed — they are obstacles routing
-  // must avoid, like label strips (see computeEdges above).
-  const noteBoxes = computeNoteBoxes(validated, nodeBoxes, frameBoxes, labelReserve);
   const entrySet = computeEntrySet(validated);
   const handles = computeHandles(validated, nodeBoxes);
-  const edges = computeEdges(validated, handles, nodeBoxes, frameBoxes, noteBoxes, labelReserve);
+
+  // Notes are placed before the edges that count, because routing treats a
+  // note as an obstacle it has to clear (see computeEdges above). But
+  // placement equally needs to know where the edges are going to run, or a
+  // note lands squarely on a connection and leaves the router nowhere to
+  // go — which is exactly what happened once notes were allowed to sit
+  // inside the frames they annotate.
+  //
+  // One provisional routing pass settles both directions: routed as if
+  // there were no notes at all, its paths tell placement which lanes are
+  // already taken, and the real pass below then routes around wherever the
+  // notes actually landed. A document with no notes skips the extra pass
+  // entirely, so the common case keeps its previous cost and its output is
+  // unchanged to the byte.
+  const hasNotes = Array.isArray(validated.notes) && validated.notes.length > 0;
+  const provisionalEdges = hasNotes
+    ? computeEdges(validated, handles, nodeBoxes, frameBoxes, {}, labelReserve)
+    : [];
+  const { noteBoxes, edges } = hasNotes
+    ? settleNotesAndEdges(validated, handles, nodeBoxes, frameBoxes, labelReserve, provisionalEdges)
+    : {
+        noteBoxes: computeNoteBoxes(validated, nodeBoxes, frameBoxes, labelReserve, provisionalEdges),
+        edges: computeEdges(validated, handles, nodeBoxes, frameBoxes, {}, labelReserve),
+      };
   const canvas = computeCanvasBounds(nodeBoxes, frameBoxes, noteBoxes, labelReserve);
 
   return {

@@ -163,6 +163,7 @@ function script(canvas, cardData, geometry) {
   var frames = [].slice.call(document.querySelectorAll('.n8n-frame'));
   var edges = [].slice.call(document.querySelectorAll('.n8n-edge'));
   var notes = [].slice.call(document.querySelectorAll('.n8n-note'));
+  var noteLinkEls = [].slice.call(document.querySelectorAll('.note-link'));
   var checkboxes = [].slice.call(document.querySelectorAll('input[data-layer]'));
   var handleEls = [].slice.call(document.querySelectorAll('.handle'));
   var branchLabelEls = [].slice.call(document.querySelectorAll('.branch-label'));
@@ -352,6 +353,7 @@ function script(canvas, cardData, geometry) {
     // whichever members are currently visible (frameBoxFromMemberBoxes,
     // same computation layout.js used originally) -- and hide entirely
     // when none of their members are. The title moves with the box.
+    var frameVisible = Object.create(null); // keyed by group id -- see nodeElsById above
     frames.forEach(function(f){
       // Filter the already-cached node list by dataset equality instead of
       // building a CSS selector string from data — a group id containing a
@@ -359,9 +361,11 @@ function script(canvas, cardData, geometry) {
       var members = nodes.filter(function(n){ return n.dataset.group === f.dataset.group; });
       var visibleMembers = members.filter(function(n){ return visible[n.dataset.id]; });
       if (!visibleMembers.length) {
+        frameVisible[f.dataset.group] = false;
         f.classList.toggle('hidden-by-layer', true);
         return;
       }
+      frameVisible[f.dataset.group] = true;
       f.classList.toggle('hidden-by-layer', false);
       var memberBoxes = visibleMembers.map(function(n){ return GEOMETRY.nodeBoxes[n.dataset.id]; });
       var box = frameBoxFromMemberBoxes(memberBoxes, { labelReserve: GEOMETRY.labelReserve, padding: GEOMETRY.padding, grid: GEOMETRY.grid });
@@ -405,6 +409,19 @@ function script(canvas, cardData, geometry) {
     // whatever it is attached to.
     notes.forEach(function(n){
       n.classList.toggle('hidden-by-layer', !nodeVisible(n, active));
+    });
+
+    // A note's connector line -- drawn only to a target the note could not
+    // be placed beside (notes.js) -- follows that TARGET's visibility, not
+    // the note's. A line reaching out to a node that is no longer on
+    // screen is exactly the leftover the owner's layer rule forbids. The
+    // note itself stays put either way, since a note's visibility depends
+    // only on its own layers; and a connector belonging to a hidden note
+    // is already gone with that note's own <g>.
+    noteLinkEls.forEach(function(l){
+      var id = l.dataset.target;
+      var on = (id in visible) ? visible[id] : ((id in frameVisible) ? frameVisible[id] : true);
+      l.classList.toggle('hidden-by-layer', !on);
     });
   }
 
