@@ -40,7 +40,11 @@ jobs:
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         run: |
           token="$CLAUDE_CODE_OAUTH_TOKEN"
-          if printf '%s' "$token" | LC_ALL=C grep -q '[^!-~]'; then
+          # Count characters outside the printable-ASCII range rather than
+          # grepping for them: grep treats a trailing newline as a line
+          # terminator, so the most likely paste mistake would slip through.
+          stray=$(printf '%s' "$token" | LC_ALL=C tr -d '!-~' | wc -c | tr -d ' ')
+          if [ "$stray" -ne 0 ]; then
             echo "::error::CLAUDE_CODE_OAUTH_TOKEN contains whitespace or a non-printable/non-ASCII character. Re-set it with: pbpaste | tr -cd 'A-Za-z0-9._-' | gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo <owner>/<repo>"
             exit 1
           fi
