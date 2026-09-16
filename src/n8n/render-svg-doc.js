@@ -190,9 +190,12 @@ function docLineMarkup(line, box, y) {
 
 // A connector to a target the note could not be placed beside — see
 // notes.js. Drawn before the note body so the note sits on top of the
-// line's own end.
+// line's own end, and as a <path> because the route may bend around
+// whatever stands between the two (note-connector.js). The `note-link`
+// class is cosmetic here — the static figure has no viewer — but it keeps
+// the two outputs' connectors identifiable by the same name.
 function docNoteConnectorMarkup(connector, palette) {
-  return `<line x1="${connector.x1}" y1="${connector.y1}" x2="${connector.x2}" y2="${connector.y2}" stroke="${palette.border}" stroke-width="1" stroke-dasharray="4 4" opacity="0.8"/>`;
+  return `<path class="note-link" d="${connector.d}" fill="none" stroke="${palette.border}" stroke-width="1" stroke-dasharray="4 4" opacity="0.8"/>`;
 }
 
 function docNoteMarkup(note, box) {

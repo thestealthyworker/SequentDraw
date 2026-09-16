@@ -159,6 +159,167 @@ describe('CTO-M1-04: the same holds in the static documentation export', () => {
   });
 });
 
+// ---------------------------------------------------------------------
+// CTO-M1-05: the connector CTO-M1-04 introduced must not mis-attribute
+// the note all over again. On main@aee7b42 the Medusa map drew
+// n_consider_silent_notification -> no_notif as a straight line through
+// the body of the unrelated "Event bus / Redis" node, clipping its
+// sublabel, so at a glance the note read as belonging to Event bus — the
+// same defect CTO-M1-04 was raised about, in a new form.
+//
+// The rule asserted here: a connector may touch the note it leaves and
+// the target it names, and may cross a group frame's BORDER (a note
+// outside a frame has to, to reach a node inside it), but it may not pass
+// through any other node's footprint, any other note, or any group's
+// title text.
+//
+// As with the distances above, the geometry is judged with this file's
+// OWN segment/rect helper, deliberately NOT the renderer's, so the code
+// under test cannot define away its own failure.
+
+const GROUP_TITLE_X = 12; // render-svg.js draws the frame label at frame.x + 12 ...
+const GROUP_TITLE_BASELINE = 22; // ... on a baseline at frame.y + 22 ...
+const GROUP_TITLE_FONT = 13; // ... at 13px, unwrapped.
+
+// Where that title text actually sits, re-derived here from the render
+// offsets above rather than imported from the router's obstacle module.
+function groupTitleBox(frame, label) {
+  const text = Math.max(24, String(label || '').length * GROUP_TITLE_FONT * 0.62);
+  return {
+    x: frame.x + GROUP_TITLE_X,
+    y: frame.y + GROUP_TITLE_BASELINE - GROUP_TITLE_FONT - 1,
+    w: Math.min(text, Math.max(24, frame.w - GROUP_TITLE_X * 2)),
+    h: 20,
+  };
+}
+
+// Does the segment p->q pass through the INTERIOR of `rect`? Running
+// along or touching an edge does not count: a connector is supposed to
+// finish flush against the boxes it joins. Liang-Barsky, written out here
+// rather than imported.
+function segmentCrossesBox(p, q, rect) {
+  const dx = q.x - p.x;
+  const dy = q.y - p.y;
+  let t0 = 0;
+  let t1 = 1;
+  const clips = [
+    [-dx, p.x - rect.x],
+    [dx, rect.x + rect.w - p.x],
+    [-dy, p.y - rect.y],
+    [dy, rect.y + rect.h - p.y],
+  ];
+  for (const [num, den] of clips) {
+    if (num === 0) {
+      if (den < 0) return false;
+      continue;
+    }
+    const t = den / num;
+    if (num < 0) {
+      if (t > t1) return false;
+      if (t > t0) t0 = t;
+    } else {
+      if (t < t0) return false;
+      if (t < t1) t1 = t;
+    }
+  }
+  return t1 - t0 > 1e-6;
+}
+
+// Whatever geometry the connector declares: the routed points when it has
+// them, otherwise the bare endpoints it has always carried. A connector
+// that quietly went back to a straight line is judged as one.
+function connectorPoints(connector) {
+  if (Array.isArray(connector.points) && connector.points.length >= 2) {
+    return connector.points.map(p => (Array.isArray(p) ? { x: p[0], y: p[1] } : { x: p.x, y: p.y }));
+  }
+  return [{ x: connector.x1, y: connector.y1 }, { x: connector.x2, y: connector.y2 }];
+}
+
+// Every "connector runs through X" offence in one layout, as readable
+// strings so a failure names the node it cuts through.
+function connectorOffences(layout, labelReserve, groups) {
+  const nodes = Object.entries(layout.nodeBoxes).map(([id, b]) => ({
+    id: `node ${id}`,
+    owner: id,
+    x: b.x,
+    y: b.y,
+    w: b.w,
+    h: b.h + labelReserve,
+  }));
+  const notes = Object.entries(layout.noteBoxes).map(([id, b]) => ({ id: `note ${id}`, owner: id, x: b.x, y: b.y, w: b.w, h: b.h }));
+  const titles = groups
+    .filter(g => layout.frameBoxes[g.id])
+    .map(g => ({ id: `group title ${g.id}`, owner: g.id, ...groupTitleBox(layout.frameBoxes[g.id], g.label) }));
+  const all = [...nodes, ...notes, ...titles];
+
+  const offences = [];
+  Object.entries(layout.noteBoxes).forEach(([noteId, box]) => {
+    (box.connectors || []).forEach(connector => {
+      const points = connectorPoints(connector);
+      // The note it leaves and the target it names are the two things it
+      // is meant to touch; everything else is off limits.
+      const obstacles = all.filter(o => o.owner !== noteId && o.owner !== connector.target);
+      for (let i = 1; i < points.length; i++) {
+        obstacles.forEach(o => {
+          if (segmentCrossesBox(points[i - 1], points[i], o)) {
+            offences.push(`${noteId} -> ${connector.target} runs through ${o.id}`);
+          }
+        });
+      }
+    });
+  });
+  return [...new Set(offences)].sort();
+}
+
+function countConnectors(layout) {
+  return Object.values(layout.noteBoxes).reduce((n, b) => n + (b.connectors || []).length, 0);
+}
+
+// The `d` a renderer should emit for these points, rebuilt here so the
+// markup is checked against the routed geometry rather than against
+// itself.
+function expectedPathData(layout) {
+  const out = [];
+  Object.values(layout.noteBoxes).forEach(box => {
+    (box.connectors || []).forEach(c => {
+      out.push(connectorPoints(c).map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' '));
+    });
+  });
+  return out.sort();
+}
+
+describe('CTO-M1-05: a note connector never runs through an unrelated node, note or group title', () => {
+  test('interactive map: every connector reaches its target without crossing anything else', async () => {
+    const layout = await layoutMap(medusaDoc);
+    assert.ok(countConnectors(layout) > 0, 'the Medusa fixture should exercise at least one connector');
+    assert.deepStrictEqual(connectorOffences(layout, LABEL_RESERVE, medusaDoc.groups), []);
+  });
+
+  test('the interactive markup draws exactly the route the layout computed', async () => {
+    const layout = await layoutMap(medusaDoc);
+    const html = await renderMap(medusaDoc);
+    const drawn = [...html.matchAll(/class="note-link"[^>]*\sd="([^"]+)"/g)].map(m => m[1]).sort();
+    assert.deepStrictEqual(drawn, expectedPathData(layout));
+  });
+
+  const layerSets = [[], ['business'], ['edge'], ['business', 'edge', 'build']];
+
+  layerSets.forEach(layers => {
+    test(`SVG export layers=${JSON.stringify(layers)}: no connector crosses anything else`, async () => {
+      const { layout, labelReserve } = await buildDocSvg(medusaDoc, { layers });
+      assert.deepStrictEqual(connectorOffences(layout, labelReserve, medusaDoc.groups), []);
+    });
+  });
+
+  test('the SVG export draws exactly the route the layout computed', async () => {
+    const { svg, layout } = await buildDocSvg(medusaDoc, { layers: ['business', 'edge', 'build'] });
+    const drawn = [...svg.matchAll(/class="note-link"[^>]*\sd="([^"]+)"/g)].map(m => m[1]).sort();
+    const expected = expectedPathData(layout);
+    assert.ok(expected.length > 0, 'the full-layer export should carry at least one connector');
+    assert.deepStrictEqual(drawn, expected);
+  });
+});
+
 describe('CTO-M1-04: connectors are wired for layer toggling, not left dangling', () => {
   test('every rendered connector names a target that exists in the document', async () => {
     const html = await renderMap(medusaDoc);
