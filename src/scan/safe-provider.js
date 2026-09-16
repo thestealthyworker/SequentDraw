@@ -403,6 +403,20 @@ class SafeProvider {
           this._recordExcluded(rel, verdict, isDir ? 'dir' : 'file');
           continue;
         }
+
+        // A directory that is itself another repository -- a linked worktree,
+        // a vendored clone, a submodule -- is where THIS repository stops.
+        // Walking into one drew the project's own architecture once per copy
+        // (issue #34). One lstat per directory the walk was about to enter,
+        // and the skip is recorded like any other, so the bundle still says
+        // what was left out.
+        if (isDir && typeof this.relevance.classifyNestedRepository === 'function') {
+          const boundary = await this.relevance.classifyNestedRepository(rel, fullPath);
+          if (boundary) {
+            this._recordExcluded(rel, boundary, 'dir');
+            continue;
+          }
+        }
       }
 
       this.filesListed++;

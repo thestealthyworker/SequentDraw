@@ -1,0 +1,10 @@
+{
+  "name": "notes-tool",
+  "version": "1.0.0",
+  "bin": {
+    "notes": "bin/notes"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.1"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "vendored-tool",
+  "version": "2.3.0",
+  "bin": {
+    "vendored": "bin/vendored"
+  },
+  "dependencies": {
+    "twilio": "^5.0.4"
+  }
+}
