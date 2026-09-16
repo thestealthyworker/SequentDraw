@@ -1,14 +1,15 @@
-// `sequentdraw validate <in.json>`
+// `sequentdraw validate <in.json|->`
 //
 // Prints "ok" and exits 0 when the document is valid. Otherwise prints one
 // "path  message" line per validation error to stderr and exits 1. Same
 // strict-argument contract as the other subcommands: an unknown flag or an
-// extra positional prints usage and exits 1.
+// extra positional prints usage and exits 1. "-" reads the document from
+// stdin (src/cli/read-document.js).
 
-const fs = require('fs');
 const { validateDoc, ValidationError } = require('../n8n/validate');
+const { readDocument, STDIN_PATH } = require('./read-document');
 
-const USAGE = 'Usage: sequentdraw validate <in.json>';
+const USAGE = 'Usage: sequentdraw validate <in.json|->';
 
 const HELP = `${USAGE}
 
@@ -18,6 +19,11 @@ engine's structural invariants (id references, enum values, length limits).
 Prints "ok" and exits 0 when the document is valid. Otherwise prints one
 "path  message" line per error to stderr and exits 1.
 
+Input:
+  <in.json>   A file path, or "-" to read the document from stdin (for
+              example from a quoted heredoc), so no file has to be written
+              first.
+
 Options:
   --help   Show this help.
 `;
@@ -25,7 +31,7 @@ Options:
 function parseArgs(args) {
   const positional = [];
   for (const arg of args) {
-    if (arg.startsWith('-')) return null;
+    if (arg !== STDIN_PATH && arg.startsWith('-')) return null;
     positional.push(arg);
   }
   if (positional.length !== 1) return null;
@@ -35,6 +41,7 @@ function parseArgs(args) {
 async function run(args, io = {}) {
   const stdout = io.stdout || process.stdout;
   const stderr = io.stderr || process.stderr;
+  const stdin = io.stdin || process.stdin;
 
   if (args.includes('--help') || args.includes('-h')) {
     stdout.write(HELP);
@@ -49,7 +56,7 @@ async function run(args, io = {}) {
 
   let doc;
   try {
-    doc = JSON.parse(fs.readFileSync(parsed.inputPath, 'utf8'));
+    doc = await readDocument(parsed.inputPath, stdin);
   } catch (err) {
     stderr.write(`${err.message}\n`);
     return 1;

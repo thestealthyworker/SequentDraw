@@ -23,14 +23,17 @@ const COMMANDS = {
 const TOP_USAGE = `Usage: sequentdraw <command> [options]
 
 Commands:
-  render <in.json> <out.html|out.svg> [--layers a,b] [--fragment]
+  render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]
                                         Render a workflow JSON document to
                                         HTML or SVG.
-  validate <in.json>                   Validate a workflow JSON document.
+  validate <in.json|->                 Validate a workflow JSON document.
   scan <path|url> --out <bundle.json>  Scan a repository into an evidence
                                         bundle.
-  check <map.json> --evidence <f>      Check scan-sourced claims in a map
+  check <map.json|-> --evidence <f>    Check scan-sourced claims in a map
                                         against an evidence bundle.
+
+"-" as the input document reads it from stdin. Output paths and --evidence
+are always real files.
 
 Run "sequentdraw <command> --help" for command-specific options.
 `;
@@ -38,6 +41,7 @@ Run "sequentdraw <command> --help" for command-specific options.
 async function main(argv, io = {}) {
   const stdout = io.stdout || process.stdout;
   const stderr = io.stderr || process.stderr;
+  const stdin = io.stdin || process.stdin;
   const [command, ...rest] = argv;
 
   if (!command) {
@@ -55,7 +59,7 @@ async function main(argv, io = {}) {
     return 1;
   }
 
-  return impl.run(rest, { stdout, stderr });
+  return impl.run(rest, { stdout, stderr, stdin });
 }
 
 module.exports = { main, COMMANDS, TOP_USAGE };

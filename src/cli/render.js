@@ -1,23 +1,31 @@
-// `sequentdraw render <in.json> <out.html|out.svg> [--layers a,b] [--fragment]`
+// `sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]`
 //
 // Same strict-argument-handling contract as the original
 // `node src/n8n/cli.js` (tests/n8n-cli.test.js): unknown flags and extra
 // positionals print usage and exit 1, and nothing is written to disk on any
-// error. This adds `--fragment`, valid only for an `.html` output — see
+// error. This adds `--fragment`, valid only for an `.html` output -- see
 // src/n8n/render.js's renderHtml() and docs/design/skills-and-plugin.md's
-// artifact output rule.
+// artifact output rule -- and "-" as the input path, which reads the
+// document from stdin (src/cli/read-document.js). The output path is
+// always a real file.
 
 const fs = require('fs');
 const path = require('path');
 const { renderMap, renderSvg, ValidationError } = require('../n8n/index');
+const { readDocument, STDIN_PATH } = require('./read-document');
 
-const USAGE = 'Usage: sequentdraw render <in.json> <out.html|out.svg> [--layers a,b] [--fragment]';
+const USAGE = 'Usage: sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]';
 
 const HELP = `${USAGE}
 
 Renders a SequentDraw workflow JSON document into an interactive HTML map
 (n8n-style, pan/zoom, details cards) or a static SVG documentation figure
 with inline captions.
+
+Input:
+  <in.json>      A file path, or "-" to read the document from stdin (for
+                 example from a quoted heredoc), so no file has to be
+                 written first. The output is always a real file path.
 
 Options:
   --layers a,b   SVG output only. Extra layers to include; "base" is always
@@ -48,7 +56,7 @@ function parseArgs(args) {
       if (!layersRaw) return null;
     } else if (arg === '--fragment') {
       fragment = true;
-    } else if (arg.startsWith('-')) {
+    } else if (arg !== STDIN_PATH && arg.startsWith('-')) {
       return null;
     } else {
       positional.push(arg);
@@ -61,6 +69,7 @@ function parseArgs(args) {
 async function run(args, io = {}) {
   const stdout = io.stdout || process.stdout;
   const stderr = io.stderr || process.stderr;
+  const stdin = io.stdin || process.stdin;
 
   if (args.includes('--help') || args.includes('-h')) {
     stdout.write(HELP);
@@ -74,6 +83,10 @@ async function run(args, io = {}) {
   }
   const { inputPath, outputPath, layersRaw, fragment } = parsed;
 
+  if (outputPath === STDIN_PATH) {
+    stderr.write(`${USAGE}\nThe output must be a real .html or .svg path; "-" (stdin) is only valid as the input document.\n`);
+    return 1;
+  }
   const ext = path.extname(outputPath).toLowerCase();
   if (ext !== '.html' && ext !== '.svg') {
     stderr.write(`${USAGE}\nOutput file must end in .html or .svg (got "${outputPath}").\n`);
@@ -88,9 +101,11 @@ async function run(args, io = {}) {
     return 1;
   }
 
+  // Every argument is settled before stdin is touched, so a usage error
+  // never leaves a piped document half-consumed.
   let doc;
   try {
-    doc = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+    doc = await readDocument(inputPath, stdin);
   } catch (err) {
     stderr.write(`${err.message}\n`);
     return 1;

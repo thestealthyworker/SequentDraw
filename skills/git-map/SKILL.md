@@ -40,10 +40,14 @@ repo (local path or GitHub URL)
 build workflow JSON from the bundle ONLY                  this skill: group, name, ask
   │
   ▼
-<sequentdraw> check map.json --evidence bundle.json     every scan claim cited
+<sequentdraw> check - --evidence bundle.json <<'EOF'     every scan claim cited;
+{ ...map document... }                                    the map is piped in
+EOF
   │
   ▼
-<sequentdraw> render map.json map.html --fragment       artifact fragment
+<sequentdraw> render - map.html --fragment <<'EOF'        artifact fragment;
+{ ...map document... }                                    the map is piped in
+EOF
   │
   ▼
 publish private artifact + keep local copy
@@ -54,6 +58,15 @@ that variable is set (an installed Claude Code plugin), falling back to
 `npx sequentdraw ...` when it is not (Codex, or any other host) --
 `scripts/sequentdraw.sh` implements exactly that resolution; use it, or the
 same fallback logic, rather than hardcoding either form.
+
+**The map never has to touch disk before it is rendered.** `check` and
+`render` accept `-` as the input document and read it from stdin, so the
+JSON this skill builds goes straight into each command through a quoted
+heredoc (`<<'EOF' ... EOF`, which keeps the shell from expanding anything
+inside the JSON). Never try to create `map.json` with `node -e`, `echo`,
+`cat` or any other shell string: that is slower, easy to get wrong, and
+often not even permitted. Only the input is ever `-`; the output path and
+`--evidence` are always real files.
 
 ## Steps
 
@@ -112,29 +125,49 @@ same fallback logic, rather than hardcoding either form.
    `runtime` facts are what the repository says it IS, as opposed to what it
    depends on; prefer them when naming the product's own building blocks.
 
-4. **Check evidence.** `<sequentdraw> check map.json --evidence bundle.json`
-   runs schema/structural validation, then enforces that every
+4. **Check evidence.** Pipe the map you built straight into `check`; `-`
+   reads the map document from stdin, so nothing is written to disk first:
+
+   ```
+   <sequentdraw> check - --evidence bundle.json <<'EOF'
+   { ...the whole map document... }
+   EOF
+   ```
+
+   `check` runs schema/structural validation, then enforces that every
    `source: "scan"` node cites a real evidence id and every `source: "scan"`
    edge cites a real dependency/import/route fact connecting its two
    endpoints. It prints `ok` and exits 0 when both pass, or one
    `path  message` line per problem. Fix any violation by demoting the item
    to `open` or `source: "model"` -- never by inventing evidence -- then
-   re-run `check` until it prints `ok`.
+   re-run `check` the same way until it prints `ok`.
 
 5. **Write the local copy first -- see `references/artifact-output.md`.** As
-   soon as `check` prints `ok`, write `map.json` to a folder outside the
-   repository (a session folder, or a path under the system temp
-   directory) and run
-   `<sequentdraw> render <folder>/map.json <folder>/map.html --fragment`.
-   The CLI creates the output directory itself, so do not make it first,
-   and run each CLI call as its own command beginning with
-   `<sequentdraw>` -- never chained behind `mkdir ... &&` or any other
-   prefix, because a host may grant the CLI narrowly (this plugin's own
-   CI grants `Bash(node:*)`) and such a grant matches only a command that
-   *starts* with what was granted.
-   The CLI prints `wrote <path> (<size>kb)`. Keep that output and print both
-   file paths. Do this before anything else, so a finished map always exists
-   on disk even if a later step is unavailable.
+   soon as `check` prints `ok`, render the same document, again from stdin,
+   into a folder outside the repository (a session folder, or a path under
+   the system temp directory):
+
+   ```
+   <sequentdraw> render - <folder>/map.html --fragment <<'EOF'
+   { ...the same map document... }
+   EOF
+   ```
+
+   Only the input is `-`; the output is always a real path. The CLI creates
+   the output directory itself, so do not make it first, and run each CLI
+   call as its own command beginning with `<sequentdraw>` -- never chained
+   behind `mkdir ... &&`, `echo ... |`, `cat ... |` or any other prefix,
+   because a host may grant the CLI narrowly (this plugin's own CI grants
+   `Bash(node:*)`) and such a grant matches only a command that *starts*
+   with what was granted. A heredoc keeps the CLI first; a pipe from
+   another program does not.
+   The CLI prints `wrote <path> (<size>kb)`. Keep that output and print the
+   path. Do this before anything else, so a finished map always exists on
+   disk even if a later step is unavailable. If the host also gives you a
+   file-writing tool, save the same JSON as `<folder>/map.json` beside the
+   HTML and print both paths; if it does not, say that only `map.html` was
+   saved and move on -- never detour through a shell string to create
+   `map.json`.
 
 6. **Then publish.** In Claude Code, publish `map.html` as a private Claude
    artifact and give the user the link, saying the page is private and is
@@ -146,8 +179,9 @@ same fallback logic, rather than hardcoding either form.
    overwriting.
 
 7. **Corrections are conversational.** "Stripe belongs in Payment" or
-   similar: edit the JSON, re-validate, re-check evidence, and republish to
-   the *same* artifact rather than creating a new one.
+   similar: edit the JSON, re-check evidence and re-render (both from stdin,
+   exactly as in steps 4 and 5), and republish to the *same* artifact
+   rather than creating a new one.
 
 ## Boundaries
 
