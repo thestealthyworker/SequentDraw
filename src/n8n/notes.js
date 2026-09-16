@@ -17,7 +17,10 @@
 // fixture attaches one note to two nodes that the layout puts 1,100px
 // apart, and no single box is near both. Those get a connector line to
 // each target they could not reach (see connectorsFor), which is the other
-// half of "a note is attributed to what it names".
+// half of "a note is attributed to what it names". That line is routed
+// around whatever stands between the two (note-connector.js), because a
+// leader drawn through an unrelated node mis-attributes the note just as
+// badly as parking it next to one.
 
 const {
   snap,
@@ -32,6 +35,7 @@ const {
 } = require('./constants');
 const { layoutMarkdown } = require('./markdown');
 const { frameTitleBoxesOf } = require('./obstacles');
+const { routeNoteConnector, connectorPath } = require('./note-connector');
 const { samplePath, pointInRect } = require('./sample-path');
 
 // Width grows with content length so a short note stays compact and a long
@@ -72,19 +76,6 @@ function rectGap(a, b) {
 
 function centreOf(box) {
   return { x: box.x + box.w / 2, y: box.y + box.h / 2 };
-}
-
-function clamp(value, lo, hi) {
-  return Math.max(lo, Math.min(hi, value));
-}
-
-// The point on `box`'s boundary closest to `toward` — where a connector
-// line meets the box, so it points at the target instead of at a corner.
-function nearestPointOn(box, toward) {
-  return {
-    x: clamp(toward.x, box.x, box.x + box.w),
-    y: clamp(toward.y, box.y, box.y + box.h),
-  };
 }
 
 function nodeFootprint(box, labelReserve) {
@@ -286,23 +277,30 @@ function placeAttachedNote(bbox, targetBoxes, w, h, isClear, exemptFrames, edgeP
   );
 }
 
-// A connector for every target the placement could not get beside. Runs
-// from the note's edge to the target's edge, each end aimed at the other's
-// centre. Notes whose targets are all close get none, which is why the
-// Medusa map draws exactly one.
-function connectorsFor(box, targetBoxes) {
-  const noteCentre = centreOf(box);
+// A connector for every target the placement could not get beside. Each
+// runs from the note's edge to the target's edge, routed by
+// note-connector.js so it gets there without passing through anything
+// else — straight where a straight line is clear, an orthogonal detour
+// where it is not. Notes whose targets are all close get none.
+//
+// `x1/y1` and `x2/y2` remain the two ends of that route (the note end and
+// the target end), so "the connector touches both" is still read off the
+// same two fields it always was; `points` and `d` carry the route itself.
+function connectorsFor(box, targetBoxes, obstaclesExcept) {
   return targetBoxes
     .filter(t => rectGap(box, t) > NOTE_ATTACH_MAX_GAP)
     .map(t => {
-      const from = nearestPointOn(box, centreOf(t));
-      const to = nearestPointOn(t, noteCentre);
+      const points = routeNoteConnector(box, t, obstaclesExcept(t.id));
+      const from = points[0];
+      const to = points[points.length - 1];
       return {
         target: t.id,
-        x1: Math.round(from.x),
-        y1: Math.round(from.y),
-        x2: Math.round(to.x),
-        y2: Math.round(to.y),
+        points: points.map(p => [p.x, p.y]),
+        d: connectorPath(points),
+        x1: from.x,
+        y1: from.y,
+        x2: to.x,
+        y2: to.y,
       };
     });
 }
@@ -314,7 +312,9 @@ function computeNoteBoxes(doc, nodeBoxes, frameBoxes, labelReserve, provisionalE
   const notes = Array.isArray(doc.notes) ? doc.notes : [];
   if (!notes.length) return {};
 
-  const nodeFootprints = Object.values(nodeBoxes).map(b => nodeFootprint(b, labelReserve));
+  // Kept id-bearing: `overlaps` ignores the extra field, and connector
+  // routing has to exempt the very node a connector is aiming at.
+  const nodeFootprints = Object.entries(nodeBoxes).map(([id, b]) => ({ id, ...nodeFootprint(b, labelReserve) }));
   const frameTitleBoxes = frameTitleBoxesOf(doc.groups, frameBoxes);
   const frameEntries = Object.entries(frameBoxes).map(([id, f]) => ({ id, ...f }));
   // Object.create(null): a node id is author-controlled and ID_RE allows
@@ -349,6 +349,16 @@ function computeNoteBoxes(doc, nodeBoxes, frameBoxes, labelReserve, provisionalE
     }
     if (placed.some(p => overlaps(box, p))) return false;
     return true;
+  }
+
+  // The boxes a connector from this note may not run through: every
+  // node's footprint, every note placed so far (the note being placed is
+  // not in `placed` yet, and is exempt anyway as one of the line's own
+  // ends), and every group's title text. A frame BODY is deliberately
+  // absent — a note outside a frame has to cross its border to reach a
+  // node inside it, which is the one crossing a reader expects.
+  function connectorObstacles(targetId) {
+    return [...nodeFootprints, ...placed, ...frameTitleBoxes].filter(o => o.id !== targetId);
   }
 
   const result = {};
@@ -388,7 +398,7 @@ function computeNoteBoxes(doc, nodeBoxes, frameBoxes, labelReserve, provisionalE
       const targetBoxes = attachTargetBoxes(attachTo, nodeBoxes, frameBoxes, labelReserve);
       const targetBBox = boundingBoxOf(targetBoxes);
       box = placeAttachedNote(targetBBox, targetBoxes, width, height, isClear, exemptFrames, edgePaths);
-      connectors = connectorsFor(box, targetBoxes);
+      connectors = connectorsFor(box, targetBoxes, connectorObstacles);
     }
 
     result[note.id] = {
@@ -400,7 +410,7 @@ function computeNoteBoxes(doc, nodeBoxes, frameBoxes, labelReserve, provisionalE
       mdLayout,
       connectors,
     };
-    placed.push(box);
+    placed.push({ ...box, id: note.id });
   });
 
   return result;

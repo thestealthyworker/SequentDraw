@@ -48,8 +48,13 @@ function lineMarkup(line, box, y) {
 // this one line when its target is hidden by a layer toggle, leaving no
 // dangling leftover; the connector as a whole lives inside the note's own
 // <g>, so it also disappears with the note.
+//
+// A <path>, not a <line>: the route may bend around whatever stands
+// between the note and its target (note-connector.js). `connector.d` is
+// built from layout coordinates only — engine-computed numbers, never
+// document text — so it carries nothing to escape.
 function connectorMarkup(connector, palette) {
-  return `<line class="note-link" data-target="${esc(connector.target)}" x1="${connector.x1}" y1="${connector.y1}" x2="${connector.x2}" y2="${connector.y2}" stroke="${palette.border}" stroke-width="1" stroke-dasharray="4 4" opacity="0.8" vector-effect="non-scaling-stroke"/>`;
+  return `<path class="note-link" data-target="${esc(connector.target)}" d="${connector.d}" fill="none" stroke="${palette.border}" stroke-width="1" stroke-dasharray="4 4" opacity="0.8" vector-effect="non-scaling-stroke"/>`;
 }
 
 function noteMarkup(note, box) {
