@@ -18,8 +18,21 @@
 // offer to include it. Nothing is ever dropped silently -- every decision
 // becomes an entry in the bundle's `exclusions` array, following the
 // `yaml-rejected` precedent in safe-provider.js.
+//
+// The second rule here (issue #34) is not about names at all: a directory
+// that is ITSELF another repository is where this repository stops. Scanning
+// a checkout carrying four `.claude/worktrees/agent-*` copies gave 80
+// evidence entries against a clean export's 16, drawing every component five
+// times -- the walk descended into each worktree and excluded that copy's own
+// `tests/`, never the worktree itself. Same class as CTO-M1-01: real
+// evidence, wrong subject. The test is the `.git` entry a repository plants
+// at its own root, so it covers a vendored clone and a submodule too, which a
+// rule about the name `.claude/worktrees` would miss.
 
 'use strict';
+
+const fsp = require('node:fs/promises');
+const path = require('node:path');
 
 // Directory names that conventionally hold tests or test data. A
 // directory with one of these names is skipped unless a manifest points
@@ -71,6 +84,20 @@ const TEST_FILE_RE = /\.(?:test|spec)\./i;
 // unbounded set of strings, nor make each one unbounded in length.
 const MAX_PRODUCT_ROOTS = 500;
 const MAX_ROOT_LENGTH = 200;
+
+// The marker a repository plants at its own root. A DIRECTORY is a clone; a
+// FILE whose content begins "gitdir:" is a linked worktree or a submodule --
+// git writes exactly that pointer for both.
+const GIT_MARKER_NAME = '.git';
+
+// Anchored at the start, so a file that merely MENTIONS a gitdir pointer
+// somewhere in its prose is not mistaken for one.
+const GITDIR_POINTER_RE = /^\s*gitdir\s*:/i;
+
+// A gitdir pointer is a single short line. Nothing larger can be one, so
+// nothing larger is ever read: a hostile repo cannot make this probe pull an
+// arbitrarily large file into memory just by naming it `.git`.
+const MAX_GIT_POINTER_BYTES = 4096;
 
 function normalise(rel) {
   if (typeof rel !== 'string') return '';
@@ -173,6 +200,40 @@ function productRootsFromCompose(doc) {
   return roots;
 }
 
+// Probes ONE directory for a repository boundary and says which kind it is,
+// or null for "not a boundary".
+//
+// The probe never follows a symlink: the marker is lstat-ed, and a symlinked
+// `.git` is declined rather than resolved, so a scanned repository cannot use
+// one to have a file outside the tree read on its behalf. Nothing is
+// executed, and the only file ever opened is a `.git` small enough to be a
+// pointer.
+async function detectRepositoryBoundary(absDir) {
+  if (typeof absDir !== 'string' || absDir.length === 0) return null;
+  const marker = path.join(absDir, GIT_MARKER_NAME);
+
+  let stats;
+  try {
+    stats = await fsp.lstat(marker);
+  } catch {
+    return null; // no marker at all: the common case
+  }
+
+  if (stats.isSymbolicLink()) return null; // never followed, in either direction
+  if (stats.isDirectory()) return 'nested-repository';
+  if (!stats.isFile()) return null; // device files, sockets, fifos
+  if (stats.size > MAX_GIT_POINTER_BYTES) return null;
+
+  let text;
+  try {
+    text = await fsp.readFile(marker, 'utf8');
+  } catch {
+    return null;
+  }
+
+  return GITDIR_POINTER_RE.test(text) ? 'nested-worktree' : null;
+}
+
 class RelevancePolicy {
   constructor(productRoots = []) {
     const seen = new Set();
@@ -232,6 +293,34 @@ class RelevancePolicy {
   classify(rel, type) {
     return type === 'dir' ? this.classifyDir(rel) : this.classifyFile(rel);
   }
+
+  // Whether a directory the walk is about to enter is a DIFFERENT repository.
+  // Async, unlike classifyDir/classifyFile, because a boundary is a fact on
+  // disk rather than a fact about a path's name -- which is the point: it
+  // catches a vendored clone and a submodule, neither of which is named in
+  // any way a list of directory names could anticipate.
+  //
+  // Two directories are exempt, and both matter:
+  //
+  //   * The scan root. The root IS a repository, so an unguarded probe would
+  //     skip it and scan nothing at all. This is not hypothetical: when
+  //     SequentDraw is developed from a linked worktree, the root's own
+  //     `.git` is a `gitdir:` pointer file -- the very shape being matched.
+  //
+  //   * A nested repository the manifest points at. A submodule used as a
+  //     workspace package genuinely IS part of this product, and the
+  //     repository's own statement about itself wins here exactly as it does
+  //     for a test-named directory in classifyDir().
+  //
+  // Both checks run before the probe, so the common case costs no syscall.
+  async classifyNestedRepository(rel, absDir) {
+    const r = normalise(rel);
+    if (!r || r === '.') return null;
+    if (this.isProductPath(r)) return null;
+
+    const kind = await detectRepositoryBoundary(absDir);
+    return kind ? { reason: kind, ambiguous: false } : null;
+  }
 }
 
 // The permissive policy used when no manifest could be read: still skips
@@ -241,6 +330,7 @@ const DEFAULT_POLICY = new RelevancePolicy([]);
 module.exports = {
   RelevancePolicy,
   DEFAULT_POLICY,
+  detectRepositoryBoundary,
   productRootsFromPackageJson,
   productRootsFromCompose,
   normalise,
@@ -248,4 +338,5 @@ module.exports = {
   TEST_SEGMENTS,
   AMBIGUOUS_SEGMENTS,
   MAX_PRODUCT_ROOTS,
+  MAX_GIT_POINTER_BYTES,
 };

@@ -66,7 +66,8 @@ own implementation of the three-method provider interface (`listDir`, `stat`, `o
 |---|---|
 | Size | At most 20,000 files, 25 directory levels, 1MB per file read, 100MB read in total. Exceeding a limit stops the scan and reports it; the tool never returns a silently partial result. |
 | Skipped | `node_modules`, `vendor`, `dist`, `build`, `.git`, `.next`, `target`, `coverage`, minified and generated files, and binary files (detected by content). |
-| Symlinks | Never followed. |
+| Repository boundaries | A directory that is itself another repository is where this one stops: a nested clone (`.git` is a directory) or a linked worktree or submodule (`.git` is a file beginning `gitdir:`). Descending into one draws the project's own architecture once per copy. The scan root is exempt -- it is always a repository, and is itself a `gitdir:` pointer whenever SequentDraw is developed from a worktree -- as is any nested repository the manifest names as the product. Each skip is reported in `exclusions` as `nested-repository` or `nested-worktree`. |
+| Symlinks | Never followed, including the `.git` marker the boundary test reads. |
 | Secrets | Real `.env`, `.env.local`, `.env.production` and similar files are never opened. `.env.example` is read for variable **names** only; values are stripped before any rule sees them. A committed real `.env` file becomes an `open` note ("A .env file is committed; check for secrets"), naming no values. |
 | Text | Zero-width and bidirectional control characters are stripped from every string in the bundle. |
 
@@ -78,7 +79,9 @@ own implementation of the three-method provider interface (`listDir`, `stat`, `o
   "limits": { "files": 214, "bytes": 1840000, "truncated": false },
   "exclusions": [
     { "path": "result/tests", "reason": "test-directory", "ambiguous": false },
-    { "path": "examples", "reason": "example-directory", "ambiguous": true }
+    { "path": "examples", "reason": "example-directory", "ambiguous": true },
+    { "path": ".claude/worktrees/agent-1", "reason": "nested-worktree", "ambiguous": false },
+    { "path": "third-party/tool", "reason": "nested-repository", "ambiguous": false }
   ],
   "evidence": [
     { "id": "ev12", "kind": "compose-service", "path": "docker-compose.yml", "line": 18,

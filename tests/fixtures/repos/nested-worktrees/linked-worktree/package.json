@@ -1,0 +1,12 @@
+{
+  "name": "outer-app",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "bin": {
+    "outer": "bin/outer"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.5"
+  }
+}
