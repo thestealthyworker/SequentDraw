@@ -20,6 +20,7 @@
   "scripts": {
     "render": "node src/render-html.js",
     "test": "node --expose-gc --test",
+    "preflight": "node scripts/preflight.js",
     "sync-agent-skills": "node scripts/sync-agent-skills.js"
   },
   "engines": {

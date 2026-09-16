@@ -210,23 +210,19 @@ hand before each release, using the same eval prompts as a script.
 
 ## Build order
 
-Skills ship in the same PR as the engine feature they drive:
+**`docs/HANDOVER.md` owns the build order**, as `CLAUDE.md` states. It is deliberately
+not repeated here — it used to be, and the two copies drifted: they disagreed about the
+step numbers (Mode B was 5 here and 6 there) and this copy carried `gitrepo-suggest` as
+a step the authoritative list did not mention at all. One list, one place.
 
-1. **n8n renderer + CLI.** Done; no skill.
-2. **Text notes.** Done; engine capability, no skill.
-3. **Schema validation and layout tests.** Done; hardens every output grader.
-3a. **Details cards** (node and edge descriptions, hover, tap and keyboard) and
-    consideration notes. Done; engine capability, no skill.
-3b. **Documentation export** (SVG with inline captions). Engine capability; its skill,
-    `doc-map`, ships in step 4 once the plugin scaffold exists.
-4. **Extraction Mode A** → `git-map` and `doc-map`, plus the plugin scaffold
-   (`plugin.json`, `marketplace.json`, hooks, `using-sequentdraw`) and the eval CI job.
-5. **Mode B + gap detection** → `business-map`, without its suggestion step.
-6. **Suggestion agent** → the `business-map` suggestion step, `eval-build` and
-   `grill-build`.
-6a. **Correction mode** (after M2): semantic edits in the viewer, exported as corrected
-    JSON; no stored positions (see `docs/HANDOVER.md` step 7a). No new skill: every
-    skill from `git-map` on already accepts conversational corrections and re-validates
-    before rendering.
-7. **GitHub repository search with licence verification** → `gitrepo-suggest`.
-8. Tours, then the MCP server and HTTP API, then `skills install` for other agents.
+What this document owns is which skill ships with which step. Skills ship in the same PR
+as the engine feature they drive:
+
+| HANDOVER step | Skill shipped |
+|---|---|
+| 5 — extraction, Mode A | `git-map` and `doc-map`, plus the plugin scaffold (`plugin.json`, `marketplace.json`, hooks, `using-sequentdraw`) and the eval CI job |
+| 6 — Mode B as a question flow, with gap rendering | `business-map`, without its suggestion step |
+| 7 — suggestion agent | the `business-map` suggestion step, `eval-build` and `grill-build` |
+| 7a — correction mode (after M2) | none. Every skill from `git-map` on already accepts conversational corrections and re-validates before rendering |
+| 7b — GitHub search with licence verification | `gitrepo-suggest` |
+| 8 — tours, then the MCP server and HTTP API, then `skills install` | none |
