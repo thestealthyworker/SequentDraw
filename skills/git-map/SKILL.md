@@ -191,7 +191,7 @@ often not even permitted. Only the input is ever `-`; the output path and
 - Not for building or deploying an n8n workflow.
 - Not a general Mermaid, sequence-diagram or chart tool.
 - Not for a business or process map with no code involved -- that is
-  `business-map` (not yet shipped).
+  `business-map`, which interviews the user instead of scanning anything.
 - Not for exporting an already-built map as a static image -- that is
   `doc-map`. If a map already exists and the user just wants a picture of
   it, use `doc-map` instead of re-scanning.
