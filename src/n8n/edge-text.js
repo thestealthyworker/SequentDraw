@@ -6,23 +6,41 @@
 // already-placed edge label. Otherwise the edge simply gets no text — "It
 // is never forced in."
 
-const { EDGE_TEXT_FONT_SIZE, EDGE_TEXT_MAX_CHARS, EDGE_TEXT_PAD_X, EDGE_TEXT_PAD_Y } = require('./constants');
+const {
+  EDGE_TEXT_FONT_SIZE,
+  EDGE_TEXT_WRAP_WIDTH,
+  EDGE_TEXT_LINE_HEIGHT,
+  EDGE_TEXT_LINES_MAX,
+  EDGE_TEXT_PAD_X,
+  EDGE_TEXT_PAD_Y,
+} = require('./constants');
+const { wrapParagraph } = require('./geometry');
 
-function truncate(text) {
-  const s = String(text);
-  return s.length <= EDGE_TEXT_MAX_CHARS ? s : `${s.slice(0, EDGE_TEXT_MAX_CHARS - 1)}…`;
+// An edge label wraps onto further lines rather than being cut short at a
+// fixed character count: the same reasoning as a node caption (see
+// captions.js) — "Return id and the items approved for re…" is worse than
+// either the whole sentence or no label at all, in a figure nobody can
+// hover over. Placement below still refuses to force a label in, so a
+// label that has grown too big to sit clear of everything is omitted
+// rather than drawn over the map.
+function wrapEdgeText(text) {
+  return wrapParagraph(String(text), EDGE_TEXT_WRAP_WIDTH, EDGE_TEXT_LINES_MAX, EDGE_TEXT_FONT_SIZE);
 }
 
 // Rough conservative glyph width, the same approach as geometry.js's
 // wrapLabel/truncateLine (no real font metrics available outside a
-// browser).
-function measureBox(text) {
+// browser). Sized to the LONGEST wrapped line, so a label that wraps
+// early keeps a box only as wide as it actually needs.
+function measureBox(lines) {
   // Same conservative-average-glyph-width family as geometry.js's
   // truncateLine (0.52 for a single line of UI text) — reused verbatim
   // rather than invented fresh, per the codebase's existing wrap approach.
+  // It is narrower than wrapParagraph's own 0.56 estimate, so the measured
+  // box can never be too small for the text wrapped into it.
   const avgChar = EDGE_TEXT_FONT_SIZE * 0.52;
-  const w = Math.ceil(text.length * avgChar) + EDGE_TEXT_PAD_X * 2;
-  const h = EDGE_TEXT_FONT_SIZE + EDGE_TEXT_PAD_Y * 2 + 3;
+  const longest = lines.reduce((max, line) => Math.max(max, line.length), 0);
+  const w = Math.ceil(longest * avgChar) + EDGE_TEXT_PAD_X * 2;
+  const h = lines.length * EDGE_TEXT_LINE_HEIGHT + EDGE_TEXT_PAD_Y * 2 + 3;
   return { w, h };
 }
 
@@ -105,8 +123,8 @@ function placeEdgeTexts(filteredDoc, edges, obstacles) {
     const edge = edges[i];
     if (!edge) return;
 
-    const truncated = truncate(text);
-    const size = measureBox(truncated);
+    const lines = wrapEdgeText(text);
+    const size = measureBox(lines);
     const candidates = [edge.midpoint, longestSegmentMidpoint(edge.d)].filter(Boolean);
 
     let chosenBox = null;
@@ -120,7 +138,7 @@ function placeEdgeTexts(filteredDoc, edges, obstacles) {
 
     if (chosenBox) {
       placed.push(chosenBox);
-      labels.push({ index: i, text: truncated, box: chosenBox });
+      labels.push({ index: i, lines, box: chosenBox });
     } else {
       omittedCount++;
     }
@@ -129,4 +147,4 @@ function placeEdgeTexts(filteredDoc, edges, obstacles) {
   return { labels, placedCount: labels.length, omittedCount };
 }
 
-module.exports = { placeEdgeTexts, truncate, measureBox, longestSegmentMidpoint, straightSegments };
+module.exports = { placeEdgeTexts, wrapEdgeText, measureBox, longestSegmentMidpoint, straightSegments };

@@ -74,6 +74,14 @@ const NOTE_MAX_WIDTH = 480;
 const NOTE_PAD_X = 14;
 const NOTE_PAD_Y = 12;
 const NOTE_GAP = 16; // gap kept from an attached bounding box, and the grid step used to push a note outward when the first candidate is not clear
+// How far an attached note may sit from a thing it annotates before that
+// link stops reading as a link. One rank spacing (RANK_GAP): at more than
+// one node-spacing away the reader attributes the note to whatever it has
+// drifted next to instead. notes.js searches for a placement within this
+// distance of every target first, and draws a connector line to any target
+// it could not get close enough to (two nodes 1,100px apart cannot both
+// have a note beside them).
+const NOTE_ATTACH_MAX_GAP = 128;
 const NOTE_RADIUS = 4;
 const NOTE_BORDER_WIDTH = 1;
 
@@ -105,20 +113,42 @@ const NOTE_COLORS = {
 // the interactive layout/render path never reads these.
 const CAPTION_FONT_SIZE = 12;
 const CAPTION_LINE_HEIGHT = 14;
-const CAPTION_LINES_MAX = 2;
+// A ceiling against absurd input, NOT a design target. A caption wraps to
+// as many lines as its description needs (see geometry.js wrapParagraph);
+// this only stops a pathological document from reserving an unbounded
+// strip under every node. At CAPTION_WRAP_WIDTH/CAPTION_FONT_SIZE a line
+// holds ~26 characters, so 16 lines covers SPEC.md's 280-character
+// maximum description with room to spare and is never reached in practice
+// (the Medusa fixture's longest description uses 5).
+const CAPTION_LINES_MAX = 16;
 const CAPTION_GAP = 6; // gap between the sublabel baseline and the first caption line's top
 const CAPTION_COLOR = '#6b6b66';
-// Extra width allowance for wrapping caption text under a node, matching
-// the sublabel's own allowance (see render-svg.js truncateLine call for
-// n.sublabel) since both sit in the same centred column under the node.
-const CAPTION_WRAP_PAD = 64;
+// Extra width allowance for wrapping caption text under a node. Wider than
+// the sublabel's 64 so a real description fits in fewer lines, but bounded
+// by the closest two nodes can ever sit: layout.js's
+// resolveHorizontalCrowding guarantees NODE_GAP (96px) of clear space
+// between two nodes sharing a row, and a centred caption spreads
+// CAPTION_WRAP_PAD/2 past each side of its 96px node, so 80 leaves 16px
+// between two neighbouring captions even in that worst case.
+const CAPTION_WRAP_PAD = 80;
 
 const DOC_MARGIN = 32; // crop margin around the content, per the doc-export spec
 const DOC_TITLE_FONT_SIZE = 18;
 const DOC_TITLE_BLOCK_HEIGHT = 40; // vertical room reserved above the content for the title
 
 const EDGE_TEXT_FONT_SIZE = 11;
-const EDGE_TEXT_MAX_CHARS = 40;
+// Edge text wraps onto further lines instead of being cut short, for the
+// same reason captions do: this figure is read where nobody can hover, so
+// "Return id and the items approved for re…" is worse than either the full
+// sentence or no label at all. EDGE_TEXT_LINES_MAX is a ceiling, not a
+// target — at this wrap width a line holds ~38 characters, so 8 lines
+// covers SPEC.md's 200-character maximum edge description and is never
+// reached by real content (Medusa's longest edge text uses 2). An edge
+// label that cannot be placed clear of everything is still omitted rather
+// than forced in, per the doc-export spec.
+const EDGE_TEXT_WRAP_WIDTH = 240;
+const EDGE_TEXT_LINE_HEIGHT = 14;
+const EDGE_TEXT_LINES_MAX = 8;
 const EDGE_TEXT_PAD_X = 6;
 const EDGE_TEXT_PAD_Y = 4;
 const EDGE_TEXT_COLOR = '#4a4a46';
@@ -179,6 +209,7 @@ module.exports = {
   NOTE_PAD_X,
   NOTE_PAD_Y,
   NOTE_GAP,
+  NOTE_ATTACH_MAX_GAP,
   NOTE_RADIUS,
   NOTE_BORDER_WIDTH,
   NOTE_FONT_SIZE,
@@ -200,7 +231,9 @@ module.exports = {
   DOC_TITLE_FONT_SIZE,
   DOC_TITLE_BLOCK_HEIGHT,
   EDGE_TEXT_FONT_SIZE,
-  EDGE_TEXT_MAX_CHARS,
+  EDGE_TEXT_WRAP_WIDTH,
+  EDGE_TEXT_LINE_HEIGHT,
+  EDGE_TEXT_LINES_MAX,
   EDGE_TEXT_PAD_X,
   EDGE_TEXT_PAD_Y,
   EDGE_TEXT_COLOR,

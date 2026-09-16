@@ -43,8 +43,18 @@ function lineMarkup(line, box, y) {
   return parts.join('');
 }
 
+// A connector to a target the note could not be placed beside (see
+// notes.js). `data-target` names that node or group so the viewer can hide
+// this one line when its target is hidden by a layer toggle, leaving no
+// dangling leftover; the connector as a whole lives inside the note's own
+// <g>, so it also disappears with the note.
+function connectorMarkup(connector, palette) {
+  return `<line class="note-link" data-target="${esc(connector.target)}" x1="${connector.x1}" y1="${connector.y1}" x2="${connector.x2}" y2="${connector.y2}" stroke="${palette.border}" stroke-width="1" stroke-dasharray="4 4" opacity="0.8" vector-effect="non-scaling-stroke"/>`;
+}
+
 function noteMarkup(note, box) {
   const palette = NOTE_COLORS[box.color] || NOTE_COLORS.yellow;
+  const connectors = (box.connectors || []).map(c => connectorMarkup(c, palette)).join('');
 
   let y = box.y + NOTE_PAD_Y;
   const tspans = [];
@@ -60,6 +70,7 @@ function noteMarkup(note, box) {
   });
 
   return `<g class="n8n-note" data-id="${esc(note.id)}" data-layers="${esc(layersOf(note).join(' '))}">
+${connectors}
 <rect x="${box.x}" y="${box.y}" width="${box.w}" height="${box.h}" rx="${NOTE_RADIUS}" fill="${palette.fill}" stroke="${palette.border}" stroke-width="${NOTE_BORDER_WIDTH}" vector-effect="non-scaling-stroke"/>
 <text class="note-text">${tspans.join('')}</text>
 </g>`;

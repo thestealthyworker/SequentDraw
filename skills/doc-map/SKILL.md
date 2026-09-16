@@ -25,7 +25,7 @@ already there, plus node descriptions the user explicitly confirms.
 
 3. **Missing descriptions: offer, never block.** For every node in the
    included layers that has no `description`, draft one of at most 12 words
-   (the caption wraps to 2 lines at 12px and truncates). If the user is
+   (the caption wraps onto as many 12px lines as it needs, in full). If the user is
    available and has not said to skip questions, show the drafts as a
    numbered list and write only the ones they confirm. If they said not to
    ask, or no one is there to confirm, write none of them: render without
