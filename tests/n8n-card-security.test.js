@@ -47,6 +47,8 @@ function hostileDoc() {
         kind: 'service',
         status: 'suggested',
         rationale: `</script><img onerror=alert(3) src=x>${PS}'quoted'`,
+        cites: ['n1'],
+        integration: 'slack',
       },
     ],
     edges: [

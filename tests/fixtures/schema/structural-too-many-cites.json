@@ -1,0 +1,149 @@
+{
+  "title": "Too many cites",
+  "nodes": [
+    {
+      "id": "n0",
+      "label": "N0",
+      "kind": "service"
+    },
+    {
+      "id": "n1",
+      "label": "N1",
+      "kind": "service"
+    },
+    {
+      "id": "n2",
+      "label": "N2",
+      "kind": "service"
+    },
+    {
+      "id": "n3",
+      "label": "N3",
+      "kind": "service"
+    },
+    {
+      "id": "n4",
+      "label": "N4",
+      "kind": "service"
+    },
+    {
+      "id": "n5",
+      "label": "N5",
+      "kind": "service"
+    },
+    {
+      "id": "n6",
+      "label": "N6",
+      "kind": "service"
+    },
+    {
+      "id": "n7",
+      "label": "N7",
+      "kind": "service"
+    },
+    {
+      "id": "n8",
+      "label": "N8",
+      "kind": "service"
+    },
+    {
+      "id": "n9",
+      "label": "N9",
+      "kind": "service"
+    },
+    {
+      "id": "n10",
+      "label": "N10",
+      "kind": "service"
+    },
+    {
+      "id": "s",
+      "label": "Slack",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "r",
+      "cites": [
+        "n0",
+        "n1",
+        "n2",
+        "n3",
+        "n4",
+        "n5",
+        "n6",
+        "n7",
+        "n8",
+        "n9",
+        "n10"
+      ],
+      "integration": "slack"
+    }
+  ],
+  "edges": [
+    {
+      "from": "n0",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n1",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n2",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n3",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n4",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n5",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n6",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n7",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n8",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n9",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "n10",
+      "to": "s",
+      "type": "solid",
+      "condition": null
+    }
+  ]
+}

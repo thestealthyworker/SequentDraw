@@ -40,9 +40,31 @@ write('suggested-node-valid.json', {
   title: 'Suggestion doc',
   nodes: [
     { id: 'a', label: 'A', kind: 'service' },
-    { id: 'b', label: 'Job queue', kind: 'service', status: 'suggested', rationale: 'Three long-running steps run synchronously.' },
+    {
+      id: 'b',
+      label: 'Slack',
+      kind: 'service',
+      status: 'suggested',
+      rationale: 'Step A finishes with nobody told.',
+      cites: ['a'],
+      integration: 'slack',
+    },
   ],
   edges: [{ from: 'a', to: 'b', type: 'solid', condition: null }],
+});
+
+// An accepted suggestion: rationale and cites are dropped, integration stays.
+write('accepted-integration-valid.json', {
+  title: 'Accepted suggestion doc',
+  nodes: [
+    { id: 'a', label: 'A', kind: 'service' },
+    { id: 'b', label: 'Slack', kind: 'service', status: 'confirmed', source: 'user', integration: 'slack' },
+    { id: 'c', label: 'Stripe', kind: 'external', status: 'open', prompt: 'Which payment tool?', integration: 'stripe' },
+  ],
+  edges: [
+    { from: 'a', to: 'b', type: 'solid', condition: null },
+    { from: 'a', to: 'c', type: 'solid', condition: null },
+  ],
 });
 
 write('tour-valid.json', {
@@ -129,11 +151,70 @@ write('structural-malformed-node-id.json', (() => {
   return d;
 })());
 
-write('structural-suggested-without-rationale.json', (() => {
+// A suggestion on node b that is complete apart from what each fixture
+// removes or breaks: it cites the real node a and names a catalogue entry.
+function suggestedDoc(mutate) {
   const d = baseTwoNodeDoc();
-  d.nodes[0].status = 'suggested';
+  Object.assign(d.nodes[1], { status: 'suggested', rationale: 'A hands work to nobody.', cites: ['a'], integration: 'slack' });
+  if (mutate) mutate(d);
+  return d;
+}
+
+write('structural-suggested-without-rationale.json', suggestedDoc(d => {
+  delete d.nodes[1].rationale;
+}));
+
+write('structural-suggested-without-cites.json', suggestedDoc(d => {
+  delete d.nodes[1].cites;
+}));
+
+write('structural-suggested-empty-cites.json', suggestedDoc(d => {
+  d.nodes[1].cites = [];
+}));
+
+write('structural-suggested-without-integration.json', suggestedDoc(d => {
+  delete d.nodes[1].integration;
+}));
+
+write('structural-cites-without-suggested.json', (() => {
+  const d = baseTwoNodeDoc();
+  d.nodes[1].cites = ['a'];
   return d;
 })());
+
+write('structural-too-many-cites.json', {
+  title: 'Too many cites',
+  nodes: [
+    ...Array.from({ length: 11 }, (_, i) => ({ id: `n${i}`, label: `N${i}`, kind: 'service' })),
+    { id: 's', label: 'Slack', kind: 'service', status: 'suggested', rationale: 'r', cites: Array.from({ length: 11 }, (_, i) => `n${i}`), integration: 'slack' },
+  ],
+  edges: Array.from({ length: 11 }, (_, i) => ({ from: `n${i}`, to: 's', type: 'solid', condition: null })),
+});
+
+write('structural-duplicate-cite.json', suggestedDoc(d => {
+  d.nodes[1].cites = ['a', 'a'];
+}));
+
+write('structural-integration-not-a-string.json', suggestedDoc(d => {
+  d.nodes[1].integration = 42;
+}));
+
+write('structural-too-many-suggestions.json', {
+  title: 'Too many suggestions',
+  nodes: [
+    { id: 'a', label: 'A', kind: 'service' },
+    ...Array.from({ length: 6 }, (_, i) => ({
+      id: `s${i}`,
+      label: `Suggestion ${i}`,
+      kind: 'service',
+      status: 'suggested',
+      rationale: 'A hands work to nobody.',
+      cites: ['a'],
+      integration: 'slack',
+    })),
+  ],
+  edges: Array.from({ length: 6 }, (_, i) => ({ from: 'a', to: `s${i}`, type: 'solid', condition: null })),
+});
 
 write('structural-rationale-without-suggested.json', (() => {
   const d = baseTwoNodeDoc();
@@ -343,6 +424,24 @@ write('crossref-node-link-quote.json', (() => {
   d.nodes[0].link = 'https://example.com/"onmouseover="x';
   return d;
 })());
+
+// Suggestion cross-references: the schema checks cites/integration shape
+// only, so whether a cite exists, whether it is itself suggested, and
+// whether an integration is in src/catalogue are validateDoc()-only.
+write('crossref-cite-unknown-node.json', suggestedDoc(d => {
+  d.nodes[1].cites = ['does-not-exist'];
+}));
+
+write('crossref-cite-is-suggested.json', (() => {
+  const d = suggestedDoc();
+  d.nodes.push({ id: 'c', label: 'Gmail', kind: 'service', status: 'suggested', rationale: 'r', cites: ['b'], integration: 'gmail' });
+  d.edges.push({ from: 'b', to: 'c', type: 'solid', condition: null });
+  return d;
+})());
+
+write('crossref-unknown-integration.json', suggestedDoc(d => {
+  d.nodes[1].integration = 'not-in-catalogue';
+}));
 
 // -----------------------------------------------------------------------
 // evidence field (git-map scan engine, src/scan/): both must accept

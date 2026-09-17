@@ -1,0 +1,114 @@
+{
+  "title": "Too many suggestions",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    },
+    {
+      "id": "s0",
+      "label": "Suggestion 0",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "A hands work to nobody.",
+      "cites": [
+        "a"
+      ],
+      "integration": "slack"
+    },
+    {
+      "id": "s1",
+      "label": "Suggestion 1",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "A hands work to nobody.",
+      "cites": [
+        "a"
+      ],
+      "integration": "slack"
+    },
+    {
+      "id": "s2",
+      "label": "Suggestion 2",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "A hands work to nobody.",
+      "cites": [
+        "a"
+      ],
+      "integration": "slack"
+    },
+    {
+      "id": "s3",
+      "label": "Suggestion 3",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "A hands work to nobody.",
+      "cites": [
+        "a"
+      ],
+      "integration": "slack"
+    },
+    {
+      "id": "s4",
+      "label": "Suggestion 4",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "A hands work to nobody.",
+      "cites": [
+        "a"
+      ],
+      "integration": "slack"
+    },
+    {
+      "id": "s5",
+      "label": "Suggestion 5",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "A hands work to nobody.",
+      "cites": [
+        "a"
+      ],
+      "integration": "slack"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "s0",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "a",
+      "to": "s1",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "a",
+      "to": "s2",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "a",
+      "to": "s3",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "a",
+      "to": "s4",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "a",
+      "to": "s5",
+      "type": "solid",
+      "condition": null
+    }
+  ]
+}

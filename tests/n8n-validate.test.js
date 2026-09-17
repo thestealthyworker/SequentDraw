@@ -391,7 +391,7 @@ describe('gap and suggestion fields', () => {
     assert.doesNotThrow(() => validateDoc(doc));
   });
 
-  test('status open/confirmed/suggested(with rationale) all validate', () => {
+  test('status open/confirmed/suggested(with rationale, cites, integration) all validate', () => {
     for (const status of ['open', 'confirmed']) {
       const doc = baseDoc();
       doc.nodes[0].status = status;
@@ -400,6 +400,8 @@ describe('gap and suggestion fields', () => {
     const suggestedDoc = baseDoc();
     suggestedDoc.nodes[0].status = 'suggested';
     suggestedDoc.nodes[0].rationale = 'three long-running steps run synchronously';
+    suggestedDoc.nodes[0].cites = ['n2'];
+    suggestedDoc.nodes[0].integration = 'slack';
     assert.doesNotThrow(() => validateDoc(suggestedDoc));
   });
 

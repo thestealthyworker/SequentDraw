@@ -24,6 +24,8 @@
 // Escaping in render-svg.js is kept as defence in depth regardless — this
 // is not the only line of defence against a malformed or hostile doc.
 
+const { getIntegration } = require('../catalogue');
+
 const ID_RE = /^[A-Za-z0-9_.:-]{1,64}$/;
 const ID_RE_DESCRIPTION = '1-64 chars: letters, digits, _ . : -';
 
@@ -119,6 +121,8 @@ const NODE_KEYS = new Set([
   'description',
   'link',
   'evidence',
+  'cites',
+  'integration',
 ]);
 const EDGE_KEYS = new Set(['from', 'to', 'type', 'condition', 'description', 'evidence', 'source']);
 
@@ -126,6 +130,20 @@ const EDGE_KEYS = new Set(['from', 'to', 'type', 'condition', 'description', 'ev
 // cross-references these against a scan bundle; this only checks shape).
 const EVIDENCE_MIN_COUNT = 1;
 const EVIDENCE_MAX_COUNT = 20;
+
+// Suggestions (docs/design/suggestion-agent.md §3, owner decision Q4,
+// 2026-09-17). `cites`: the existing, non-suggested nodes a suggestion
+// answers -- 1-10 unique node ids, required on a suggested node and
+// forbidden on every other status (same pattern as `rationale`).
+// `integration`: the src/catalogue id the node is -- required on a
+// suggested node, allowed on confirmed/open nodes too, because accepting a
+// suggestion drops `rationale` and `cites` but keeps `integration`.
+// At most five suggested nodes per document (docs/HANDOVER.md "three to
+// five per map").
+const CITES_MIN_COUNT = 1;
+const CITES_MAX_COUNT = 10;
+const SUGGESTED_MAX_COUNT = 5;
+
 const NOTE_KEYS = new Set(['id', 'content', 'attachTo', 'color', 'layers']);
 const TOUR_KEYS = new Set(['order', 'title', 'description', 'nodeIds']);
 
@@ -414,6 +432,115 @@ function checkEvidenceField(value, path, errors, label) {
   });
 }
 
+// node.cites: shape only (array, at most 10 entries, valid ids, no
+// duplicates). An empty array is not reported here: on a suggested node it
+// is `cites-required`, on any other node `cites-not-allowed`. Whether each
+// id exists and is not itself suggested is checked once every node is read.
+function checkCitesField(value, path, errors, label) {
+  if (value == null) return;
+  if (!Array.isArray(value)) {
+    errors.push({ path, code: 'invalid-cites', message: `${label} cites must be an array of node ids.` });
+    return;
+  }
+  if (value.length > CITES_MAX_COUNT) {
+    errors.push({
+      path,
+      code: 'invalid-cites',
+      message: `${label} cites has ${value.length} entries, must be between ${CITES_MIN_COUNT} and ${CITES_MAX_COUNT}.`,
+    });
+    return;
+  }
+  const seen = new Set();
+  value.forEach((id, i) => {
+    if (typeof id !== 'string' || !ID_RE.test(id)) {
+      errors.push({
+        path: `${path}/${i}`,
+        code: 'invalid-cites',
+        message: `${label} cites entry ${displayValue(id)} is invalid: must be a node id (${ID_RE_DESCRIPTION}).`,
+      });
+      return;
+    }
+    if (seen.has(id)) {
+      errors.push({ path: `${path}/${i}`, code: 'duplicate-cite', message: `${label} cites "${truncate(id)}" more than once.` });
+      return;
+    }
+    seen.add(id);
+  });
+}
+
+// node.integration: optional on any status (required on suggested nodes is
+// checked by the caller), and when present must be an id in src/catalogue.
+function checkIntegrationField(n, path, errors) {
+  const label = `Node "${truncate(n.id)}"`;
+  if (n.integration == null) {
+    if (n.status === 'suggested') {
+      errors.push({
+        path,
+        code: 'integration-required',
+        message: `${label} has status "suggested" and must name the catalogue integration it is.`,
+      });
+    }
+    return;
+  }
+  if (typeof n.integration !== 'string') {
+    errors.push({ path, code: 'invalid-integration', message: `${label} integration must be a catalogue id string.` });
+    return;
+  }
+  if (!getIntegration(n.integration)) {
+    errors.push({
+      path,
+      code: 'unknown-integration',
+      message: `${label} integration "${truncate(n.integration)}" is not in the SequentDraw catalogue.`,
+    });
+  }
+}
+
+// The suggestion rules that need every node read first: each cite on a
+// suggested node must be a declared node that is not itself suggested (a
+// suggestion answers the real system, never another suggestion), and the
+// document may carry at most SUGGESTED_MAX_COUNT suggested nodes. Cites on
+// any other node are already `cites-not-allowed` and are not
+// cross-referenced.
+function checkSuggestionReferences(rawNodes, nodeIds, errors) {
+  const suggestedIds = new Set();
+  let suggestedCount = 0;
+  rawNodes.forEach(n => {
+    if (!isPlainObjectish(n) || n.status !== 'suggested') return;
+    suggestedCount += 1;
+    if (typeof n.id === 'string') suggestedIds.add(n.id);
+  });
+
+  if (suggestedCount > SUGGESTED_MAX_COUNT) {
+    errors.push({
+      path: '/nodes',
+      code: 'too-many-suggestions',
+      message: `Document has ${suggestedCount} suggested nodes, maximum is ${SUGGESTED_MAX_COUNT}. Keep the strongest and remove the rest.`,
+    });
+  }
+
+  rawNodes.forEach((n, i) => {
+    if (!isPlainObjectish(n) || n.status !== 'suggested' || !Array.isArray(n.cites)) return;
+    if (n.cites.length > CITES_MAX_COUNT) return; // already invalid-cites; never iterate an oversized list
+    n.cites.forEach((id, j) => {
+      if (typeof id !== 'string' || !ID_RE.test(id)) return; // already invalid-cites
+      const path = `/nodes/${i}/cites/${j}`;
+      if (!nodeIds.has(id)) {
+        errors.push({
+          path,
+          code: 'unknown-cite',
+          message: `Suggested node "${truncate(n.id)}" cites "${truncate(id)}" which is not a declared node.`,
+        });
+      } else if (suggestedIds.has(id)) {
+        errors.push({
+          path,
+          code: 'cite-is-suggested',
+          message: `Suggested node "${truncate(n.id)}" cites "${truncate(id)}" which is itself suggested; cite nodes in the real system, never another suggestion.`,
+        });
+      }
+    });
+  });
+}
+
 // --- main entry point --------------------------------------------------
 
 function validateDoc(doc) {
@@ -586,6 +713,24 @@ function validateDoc(doc) {
         });
       }
 
+      const hasCites = Array.isArray(n.cites) && n.cites.length > 0;
+      if (n.status === 'suggested' && !hasCites) {
+        errors.push({
+          path: `${path}/cites`,
+          code: 'cites-required',
+          message: `Node "${truncate(n.id)}" has status "suggested" and must cite at least one existing node it answers.`,
+        });
+      }
+      if (n.status !== 'suggested' && n.cites != null) {
+        errors.push({
+          path: `${path}/cites`,
+          code: 'cites-not-allowed',
+          message: `Node "${truncate(n.id)}" has cites but is not status "suggested"; cites is only allowed on suggested nodes.`,
+        });
+      }
+      checkCitesField(n.cites, `${path}/cites`, errors, `Node "${truncate(n.id)}"`);
+      checkIntegrationField(n, `${path}/integration`, errors);
+
       checkTrimmedString(n.description, {
         path: `${path}/description`,
         errors,
@@ -602,6 +747,7 @@ function validateDoc(doc) {
       errors,
       'node',
     );
+    checkSuggestionReferences(rawNodes, nodeIds, errors);
   }
 
   // --- edges ---

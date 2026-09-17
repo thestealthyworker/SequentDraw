@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/thestealthyworker/SequentDraw/blob/main/schema/sequentdraw.schema.json",
   "title": "SequentDraw workflow document",
-  "description": "The IR (intermediate representation) SequentDraw renders as a self-contained n8n-style HTML map. Structural rules are enforced here (types, enums, lengths, id shape, the suggested-node-requires-rationale rule, the fact that a group has no parentId at all, and the array/field caps below). Array length caps mirror validateDoc()'s fail-fast checks exactly, so an oversized document is rejected by ajv without ever running item validation: nodes maxItems 100, edges maxItems 500, groups maxItems 50, notes maxItems 20, tour maxItems 50. Every object in the document (the document itself, and every group/node/edge/note/tour entry) also carries maxProperties: 200, matching validateDoc()'s MAX_OWN_KEYS guard against a document with an unbounded number of fields. The following rules are cross-references this schema CANNOT express and are enforced instead by validateDoc() in src/n8n/validate.js: (1) every node.parentId, when set, must reference a declared group id; (2) every edge.from and edge.to must reference a declared node id; (3) no node may be orphaned (zero edges) unless it is the only node in its group (nodes sharing the same parentId, including the ungrouped bucket); (4) node.sublabel, when present, must be 3 words or fewer by word count, not just <=60 characters; (5) an edge whose condition is non-null must have type \"dashed\"; (6) node, group, and note ids share one namespace, so no id may be duplicated within its own array or collide across nodes/groups/notes; (7) note.attachTo entries must reference a declared node or group id; (8) tour[].order values must be unique across the tour array; (9) tour[].nodeIds entries must reference declared node ids; (10) required strings (title, label, content, tour title/description) must be non-empty after trimming whitespace -- this schema's minLength:1 accepts a whitespace-only string that validateDoc() rejects; (11) node.description and edge.description, when present, must likewise be non-empty after trimming whitespace, not just non-empty by minLength:1; (12) node.link, when present, must use only the http or https scheme and must not contain whitespace, a quote, or an angle bracket anywhere in the string -- this schema's maxLength:300 alone cannot express that narrowing (the same idea as markdown.js's safeHref() for note links).",
+  "description": "The IR (intermediate representation) SequentDraw renders as a self-contained n8n-style HTML map. Structural rules are enforced here (types, enums, lengths, id shape, the suggested-node rules -- rationale, cites and integration required on a suggested node, rationale and cites forbidden on any other, at most 5 suggested nodes per document -- the fact that a group has no parentId at all, and the array/field caps below). Array length caps mirror validateDoc()'s fail-fast checks exactly, so an oversized document is rejected by ajv without ever running item validation: nodes maxItems 100, edges maxItems 500, groups maxItems 50, notes maxItems 20, tour maxItems 50. Every object in the document (the document itself, and every group/node/edge/note/tour entry) also carries maxProperties: 200, matching validateDoc()'s MAX_OWN_KEYS guard against a document with an unbounded number of fields. The following rules are cross-references this schema CANNOT express and are enforced instead by validateDoc() in src/n8n/validate.js: (1) every node.parentId, when set, must reference a declared group id; (2) every edge.from and edge.to must reference a declared node id; (3) no node may be orphaned (zero edges) unless it is the only node in its group (nodes sharing the same parentId, including the ungrouped bucket); (4) node.sublabel, when present, must be 3 words or fewer by word count, not just <=60 characters; (5) an edge whose condition is non-null must have type \"dashed\"; (6) node, group, and note ids share one namespace, so no id may be duplicated within its own array or collide across nodes/groups/notes; (7) note.attachTo entries must reference a declared node or group id; (8) tour[].order values must be unique across the tour array; (9) tour[].nodeIds entries must reference declared node ids; (10) required strings (title, label, content, tour title/description) must be non-empty after trimming whitespace -- this schema's minLength:1 accepts a whitespace-only string that validateDoc() rejects; (11) node.description and edge.description, when present, must likewise be non-empty after trimming whitespace, not just non-empty by minLength:1; (12) node.link, when present, must use only the http or https scheme and must not contain whitespace, a quote, or an angle bracket anywhere in the string -- this schema's maxLength:300 alone cannot express that narrowing (the same idea as markdown.js's safeHref() for note links); (13) node.cites entries must reference declared node ids; (14) node.cites entries must not reference a node whose own status is \"suggested\" -- a suggestion cites the real system, never another suggestion (the schema itself does enforce that cites is required on suggested nodes and forbidden on every other status, with 1-10 unique id-shaped entries); (15) node.integration must be an id actually present in SequentDraw's integration catalogue (src/catalogue, getIntegration) -- this schema only checks that it is a kebab-case string of at most 64 characters, required on suggested nodes. The at-most-5-suggested-nodes cap IS expressed here, by nodes contains/maxContains.",
   "type": "object",
   "additionalProperties": false,
   "maxProperties": 200,
@@ -31,8 +31,15 @@
       "type": "array",
       "maxItems": 100,
       "title": "Nodes",
-      "description": "Every tool, actor, or artifact in the workflow, drawn as its own 96px icon node. Required. Capped at 100 nodes per map to keep layout readable.",
-      "items": { "$ref": "#/$defs/node" }
+      "description": "Every tool, actor, or artifact in the workflow, drawn as its own 96px icon node. Required. Capped at 100 nodes per map to keep layout readable, and at most 5 of them may have status \"suggested\" (the contains/maxContains below).",
+      "items": { "$ref": "#/$defs/node" },
+      "contains": {
+        "type": "object",
+        "properties": { "status": { "const": "suggested" } },
+        "required": ["status"]
+      },
+      "minContains": 0,
+      "maxContains": 5
     },
     "edges": {
       "type": "array",
@@ -99,7 +106,7 @@
       "maxProperties": 200,
       "required": ["id", "label", "kind"],
       "title": "Node",
-      "description": "A tool, actor, or artifact in the workflow. See root description items (1), (3), (4), (6) for cross-reference rules this schema cannot express on its own.",
+      "description": "A tool, actor, or artifact in the workflow. See root description items (1), (3), (4), (6), (13), (14), (15) for cross-reference rules this schema cannot express on its own.",
       "properties": {
         "id": {
           "$ref": "#/$defs/id",
@@ -149,7 +156,7 @@
           "enum": ["open", "confirmed", "suggested"],
           "default": "confirmed",
           "title": "Node status",
-          "description": "confirmed: established from the input. open: a gap the tool could not establish, rendered with a dotted ring. suggested: proposed by a suggestion agent, rendered distinctly and requiring a rationale. Optional; defaults to confirmed."
+          "description": "confirmed: established from the input. open: a gap the tool could not establish, rendered with a dotted ring. suggested: proposed by a suggestion agent, rendered distinctly and requiring a rationale, cites and an integration. Optional; defaults to confirmed."
         },
         "source": {
           "type": "string",
@@ -190,6 +197,23 @@
           "title": "Scan evidence",
           "description": "Ids of evidence entries (from a git-map scan bundle, src/scan/evidence.js) that support this node's claim to exist. Required in practice whenever source is \"scan\" (src/scan/check-evidence.js enforces this, and that every id actually exists in the bundle and supports the claim -- both cross-reference rules this schema cannot express). Optional here; 1 to 20 entries, each matching the id pattern.",
           "items": { "$ref": "#/$defs/id" }
+        },
+        "cites": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "uniqueItems": true,
+          "title": "Cited nodes",
+          "description": "The ids of the existing nodes this suggestion answers. Required when status is \"suggested\"; not allowed on any other node -- see the if/then/else below. 1 to 10 entries, no duplicates, each matching the id pattern. Every entry must reference a declared node that is not itself suggested -- see root description items (13) and (14), which this schema cannot check. Dropped, with rationale, when a suggestion is accepted.",
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "integration": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "title": "Catalogue integration",
+          "description": "Which entry of SequentDraw's integration catalogue (src/catalogue) this node is, as its kebab-case id. Required when status is \"suggested\"; also allowed on confirmed and open nodes, because it stays on a node after its suggestion is accepted. Must be an id actually in the catalogue -- see root description item (15), which this schema cannot check."
         }
       },
       "if": {
@@ -197,13 +221,17 @@
         "required": ["status"]
       },
       "then": {
-        "required": ["rationale"],
+        "required": ["rationale", "cites", "integration"],
         "properties": {
-          "rationale": { "type": "string", "minLength": 1 }
+          "rationale": { "type": "string", "minLength": 1 },
+          "cites": { "type": "array", "minItems": 1 },
+          "integration": { "type": "string", "minLength": 1 }
         }
       },
       "else": {
-        "not": { "required": ["rationale"] }
+        "not": {
+          "anyOf": [{ "required": ["rationale"] }, { "required": ["cites"] }]
+        }
       }
     },
     "edge": {

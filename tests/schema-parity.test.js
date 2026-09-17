@@ -61,6 +61,23 @@ const CROSSREF_EXPECTED_CODE = {
   'crossref-edge-description-whitespace.json': 'invalid-description',
   'crossref-node-link-whitespace.json': 'invalid-link',
   'crossref-node-link-quote.json': 'invalid-link',
+  'crossref-cite-unknown-node.json': 'unknown-cite',
+  'crossref-cite-is-suggested.json': 'cite-is-suggested',
+  'crossref-unknown-integration.json': 'unknown-integration',
+};
+
+// The suggestion-field structural fixtures: both reject, and validateDoc
+// rejects for the same reason the schema does, not some unrelated one.
+const SUGGESTION_STRUCTURAL_EXPECTED_CODE = {
+  'structural-suggested-without-rationale.json': 'rationale-required',
+  'structural-suggested-without-cites.json': 'cites-required',
+  'structural-suggested-empty-cites.json': 'cites-required',
+  'structural-suggested-without-integration.json': 'integration-required',
+  'structural-cites-without-suggested.json': 'cites-not-allowed',
+  'structural-too-many-cites.json': 'invalid-cites',
+  'structural-duplicate-cite.json': 'duplicate-cite',
+  'structural-integration-not-a-string.json': 'invalid-integration',
+  'structural-too-many-suggestions.json': 'too-many-suggestions',
 };
 
 // ---------------------------------------------------------------------
@@ -100,7 +117,7 @@ describe('schema/sequentdraw.schema.json', () => {
   });
 
   test('the root description lists the cross-reference rules it cannot express', () => {
-    for (const term of ['parentId', 'edge.from', 'orphan', 'sublabel', 'dashed', 'namespace', 'attachTo', 'order', 'nodeIds']) {
+    for (const term of ['parentId', 'edge.from', 'orphan', 'sublabel', 'dashed', 'namespace', 'attachTo', 'order', 'nodeIds', 'node.cites', 'node.integration', 'src/catalogue']) {
       assert.ok(schema.description.includes(term), `root description should mention "${term}"`);
     }
   });
@@ -145,6 +162,21 @@ describe('structural fixtures: schema and validateDoc agree (both reject)', () =
       const ajvOk = ajvValidate(doc);
       assert.strictEqual(ajvOk, false, `ajv should reject ${file}`);
       assert.throws(() => validateDoc(doc), ValidationError, `validateDoc should reject ${file}`);
+    });
+  }
+
+  for (const [file, code] of Object.entries(SUGGESTION_STRUCTURAL_EXPECTED_CODE)) {
+    test(`${file}: validateDoc rejects with "${code}"`, () => {
+      assert.ok(files.includes(file), `${file} should exist`);
+      let caught = null;
+      try {
+        validateDoc(loadFixture(file));
+      } catch (e) {
+        caught = e;
+      }
+      assert.ok(caught instanceof ValidationError);
+      const codes = caught.errors.map(e => e.code);
+      assert.ok(codes.includes(code), `expected "${code}" in ${file}, got [${codes.join(', ')}]`);
     });
   }
 });

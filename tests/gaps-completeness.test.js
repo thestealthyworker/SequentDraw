@@ -556,7 +556,8 @@ describe('suggested nodes are ignored', () => {
   });
 
   test('--emit-open emits no open node about a suggested node, and keeps the suggestion untouched', () => {
-    const email = suggested('email', 'Email tool', 'service', ['business']);
+    // cites and integration make the suggestion valid under validateDoc().
+    const email = { ...suggested('email', 'Email tool', 'service', ['business']), cites: ['inv'], integration: 'gmail' };
     const map = doc(
       [{ id: 'inv', label: 'Job sheet', kind: 'artifact', layers: ['business'] }, email],
       [

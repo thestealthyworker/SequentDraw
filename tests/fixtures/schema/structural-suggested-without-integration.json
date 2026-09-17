@@ -1,21 +1,27 @@
 {
-  "title": "Suggestion doc",
+  "title": "Base doc",
+  "groups": [
+    {
+      "id": "g1",
+      "label": "Group one"
+    }
+  ],
   "nodes": [
     {
       "id": "a",
       "label": "A",
-      "kind": "service"
+      "kind": "service",
+      "parentId": "g1"
     },
     {
       "id": "b",
-      "label": "Slack",
+      "label": "B",
       "kind": "service",
       "status": "suggested",
-      "rationale": "Step A finishes with nobody told.",
+      "rationale": "A hands work to nobody.",
       "cites": [
         "a"
-      ],
-      "integration": "slack"
+      ]
     }
   ],
   "edges": [
