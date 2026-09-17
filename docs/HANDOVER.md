@@ -177,9 +177,10 @@ Design constraints, learned from the gap-detection work:
   where half the nodes are the tool's opinion is no longer documentation. Three to
   five per map.
 - Watch for popularity bias. The model will reach for whatever stack appears most in
-  training data, which is systematically wrong for a Singapore SME or a solo
-  founder's budget. Suggestions should be constrained by what is already in the
-  graph, not by what is common.
+  training data. Suggestions should be constrained by what is already in the graph,
+  not by what is common. They are workflow improvements only: SequentDraw does not
+  reason about budget, price, cost or region, and the user decides what fits (owner,
+  2026-09-17).
 
 Order matters: build gap detection first. A tool that guesses at what you should add
 before it can reliably describe what you have will not be trusted.

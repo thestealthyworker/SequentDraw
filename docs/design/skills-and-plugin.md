@@ -43,7 +43,7 @@ Six user-facing skills, as named by the owner. Skill names use lowercase and hyp
 | `git-map` | A map of a git repository | Scans the repo: services, data stores, integrations and the flow between them. Writes the technical layer, marks unknowns `open`, renders. |
 | `business-map` | A map of a business idea or process | Interviews the user (about 8 questions tracing one unit of value from "work is needed" to "paid"). Writes business and edge layers with `open` gaps, then runs the suggestion agent: 3–5 n8n integrations as `suggested` nodes. Renders. |
 | `eval-build` | A balanced review of the current architecture | Reads the existing map, building one with `git-map` first if none exists. Runs gap checks and the suggestion agent in review mode. Findings become `open` nodes and sticky notes; improvements become `suggested` nodes; plus a short written summary. |
-| `grill-build` | A harsh critique with stronger alternatives | Same inputs as `eval-build`, but adversarial. Challenges each tool choice on cost, lock-in, single points of failure, scaling and operational burden. Proposes stronger alternative tools as `suggested` replacements, each with trade-offs. |
+| `grill-build` | A harsh critique with stronger alternatives | Same inputs as `eval-build`, but adversarial. Challenges each tool choice on lock-in, single points of failure, scaling and operational burden — never on price, cost or budget, which are the user's call. Proposes stronger alternative tools as `suggested` replacements, each with trade-offs. |
 | `gitrepo-suggest` | Open-source code that could improve the design | For the map's weakest or most custom-built nodes, searches GitHub for relevant **MIT-licensed** repositories. Verifies each licence through the GitHub licence API (SPDX `MIT` exactly), checks activity and fit, and attaches candidates as sticky notes linked to the node. |
 | `doc-map` | A static figure of a map for documentation, with no hover | Reads an existing map, asks which layers to include, and writes a minimal description (about 12 words, never more than 2 lines) for each included node that has none, marking them for the user to confirm. Exports an SVG with inline captions (`docs/design/n8n-visual-style.md`, "Documentation export"). Adds nothing else to the map. |
 
@@ -79,8 +79,10 @@ These come from the handover and the owner's decisions, and apply to all six ski
   long-running steps run synchronously" is.
 - **Tools come from n8n's integration catalogue.** Open-source repositories from
   `gitrepo-suggest` are notes, not nodes, until the user adopts one.
-- **Budget and region fit beat popularity.** This guards against recommending
-  whatever is most common in training data.
+- **Suggestions are workflow improvements, not financial advice.** No budget, price,
+  cost or region reasoning: the user decides what fits their business (owner,
+  2026-09-17). Popularity bias is guarded against by the graph instead: a suggestion
+  must answer something the map actually shows, not whatever is common in training data.
 - **Any repository that informs the output is credited.** When a
   `gitrepo-suggest` candidate is adopted, it goes into the project's credits.
 
