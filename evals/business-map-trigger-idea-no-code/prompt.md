@@ -1,6 +1,7 @@
 ---
 max_turns: 8
 allowed_tools: [Read, Glob, Grep, Skill]
+tags: [business-map]
 ---
 
 I'm starting a tuition agency. Help me map how a student gets matched with a

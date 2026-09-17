@@ -3,6 +3,7 @@ max_turns: 20
 timeout_seconds: 480
 allowed_tools: [Read, Glob, Grep, Skill, Bash]
 runs: 2
+tags: [doc-map]
 ---
 
 A SequentDraw workflow map already exists in this eval case's own

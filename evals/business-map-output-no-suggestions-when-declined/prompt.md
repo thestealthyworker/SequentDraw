@@ -1,8 +1,9 @@
 ---
-max_turns: 40
+max_turns: 60
 timeout_seconds: 900
 allowed_tools: [Read, Glob, Grep, Skill, Bash]
 runs: 2
+tags: [business-map]
 ---
 
 Map my cleaning business: one booking, from enquiry to paid. No tool or

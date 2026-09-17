@@ -3,6 +3,7 @@ max_turns: 40
 timeout_seconds: 900
 allowed_tools: [Read, Glob, Grep, Skill, Bash]
 runs: 2
+tags: [grill-build]
 ---
 
 Grill the build in examples/medusa-return-flow.json. Be brutal, and don't
