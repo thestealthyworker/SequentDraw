@@ -75,6 +75,15 @@ all (11). Still open: `eval-build` getting no engine gap findings on base-only m
   the folder), and render from that file. `--emit-open` no longer adds a second
   rule-6a note when the copy already carries one, so a document can be saved more than
   once.
+- **Existing maps are changed by patch, never re-typed (PR #50, round 2).** Eval run
+  35176295107 showed the balanced review re-typing the 23KB Medusa map into one
+  `printf` string. The map's own apostrophes broke the quoting, the command was refused,
+  and the run timed out. `check <map.json> --merge <patch|->` now applies a small patch
+  (add nodes, edges, notes; remove nodes with their edges, edges by from/to, notes), and
+  `eval-build` and `grill-build` use only that form against an existing map.
+  `business-map` pipes the whole document once, for the freshly interviewed map, then
+  patches `gaps.json` for suggestions, accepts and declines. Patches are written with no
+  apostrophes or backticks.
 - **Suggestions happen before rendering, and only when wanted.** `business-map` offers
   once; a user who declines, or who asked not to be asked anything and did not ask for
   suggestions, gets the map with no catalogue read.

@@ -203,10 +203,22 @@ environment variable. It is never printed,
 committed or pasted into a conversation. The job uses `pull_request`, never
 `pull_request_target`, so pull requests from forks never receive the secret.
 
-With a subscription there is no per-call bill. `--max-cost-usd 10` is a usage guard,
-metered at API-equivalent prices, that stops a runaway suite before it eats the
-subscription's usage limits. Runs are sequential (`--concurrency 1`), because
-parallel runs share one rate limit.
+With a subscription there is no per-call bill. `--max-cost-usd` (50 since PR #50,
+owner-approved) is a usage guard, metered at API-equivalent prices, that stops a runaway
+suite before it eats the subscription's usage limits. It does not protect the plan's
+session limit: PR #50's first full run hit that limit mid-suite, and every later run
+failed with "You've hit your session limit". Runs use `--concurrency 4` since PR #50
+(they share one rate limit, so this shortens wall time, not usage).
+
+**A PR runs only the cases for the skills it touches** (PR #50).
+`scripts/select-eval-tags.js` maps changed paths to skills, and the workflow passes
+`--tag <skill...>`. Every case's `prompt.md` is tagged with each skill it exercises,
+and a test enforces it. `--case` takes a single glob (`claude plugin eval --help`:
+`--case <glob>`), while `--tag <tag...>` takes several. A change to `src/`, `bin/`,
+`schema/`, `hooks/`, `.claude-plugin/`, `package*.json`, the selection or guard
+script, or the workflow runs the full suite. `scripts/eval-results-guard.js` fails the
+job on a results file with zero cases and on any run error, except a run that stopped
+at its own limit; in a must-not-fire case only a turn limit with turns >= N is tolerated.
 
 **Narrow the suite while iterating.** A full run is 28 agent runs: roughly 25 minutes
 and a real slice of the subscription's usage. While fixing one skill, run only the

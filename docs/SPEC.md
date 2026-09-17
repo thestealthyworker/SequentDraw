@@ -318,6 +318,42 @@ The JSON Schema enforces the shapes, the required and forbidden fields by status
 the five-suggestion cap. Whether a cite exists, whether it is suggested, and whether an
 integration is in the catalogue are checked by `validateDoc` only.
 
+### Changing a map with a patch
+
+`sequentdraw check <map.json> --merge <patch.json|->` applies a small patch to a map
+before checking it, so a tool adds findings, suggestions and corrections without
+re-sending the whole document. The merged result is what is checked, and what
+`--emit-open <out.json>` writes; the map file itself is never modified.
+
+```jsonc
+{
+  "nodes": [ /* nodes to add */ ],
+  "edges": [ /* edges to add */ ],
+  "notes": [ /* notes to add */ ],
+  "remove": {
+    "nodes": ["node id"],              // also removes every edge touching the node
+    "edges": [{ "from": "id", "to": "id" }], // every edge from -> to
+    "notes": ["note id"]
+  }
+}
+```
+
+Removals run first, then additions, so a node can be replaced under the same id (how a
+suggestion is accepted). Every key is optional; an unknown key is an error. Errors carry
+a JSON Pointer into the patch, and nothing is written when any occurs:
+
+| Code | When |
+|---|---|
+| `merge-invalid-base` / `merge-invalid-patch` | the map is not an object with `nodes` and `edges` arrays, or the patch is not an object |
+| `merge-unknown-key` | a top-level or `remove` key the patch does not take |
+| `merge-invalid-list` / `merge-invalid-item` | a list is not an array, or an entry has the wrong shape |
+| `merge-too-many` | a list is longer than the document cap for it (100 nodes, 500 edges, 20 notes), checked before any entry is read |
+| `merge-remove-unknown-node` / `-edge` / `-note` | a removal names something the map does not have |
+| `merge-duplicate-id` | an added id is already used by a node, group or note after removals, or earlier in the patch |
+
+Both inputs are read under the same 16MB limit as any document, and the map and the
+patch cannot both be `-`.
+
 ## Layers
 
 One graph, one layout, toggleable overlays. A base view shows the happy path; each
