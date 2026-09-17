@@ -29,6 +29,12 @@
         ],
         "createdAt": "2026-09-15T10:59:57.651Z",
         "reason": "Claude: transition targets SVG rect geometry (x/y/width/height) on group containers, which does not reflow the HTML document; intentional motion when containers resize after layer toggles"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-09-17T00:48:03.380Z",
+        "reason": "owner approved: docs/design/n8n-visual-style.md specifies Inter falling back to system-ui, no web font loaded; product must read as n8n"
       }
     ]
   }
