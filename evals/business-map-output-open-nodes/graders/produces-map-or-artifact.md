@@ -1,15 +1,23 @@
 ---
 type: regex
 target: trace
-pattern: wrote [^\s"'\\]+\.html
+pattern: '(?:\\n|"(?:content|text|stdout)":")wrote [^\s"\\]+\.html \(\d+kb\)'
 match: contains
 weight: 2
 ---
 
-The map was actually rendered. `sequentdraw render` prints
-`wrote <path>.html (<size>kb)` when it writes the map, and this grader
-matches that CLI output in the trace rather than the model's own summary
-wording, so a claimed but unperformed render cannot pass and a real render
-cannot fail on phrasing. Publishing a private artifact is not required here,
-because an eval sandbox may not expose the Artifact tool; the local HTML
-copy is the dependable signal.
+The map was actually rendered. `sequentdraw render` prints one line when it
+writes the map, and this grader matches that line as it appears at the start
+of a line of tool output. Captured in the CI trace of this case's last
+passing run:
+
+    wrote /tmp/claude-eval-GEkoKS/home/cleaning-map/map.html (73kb)
+
+and locally:
+
+    wrote bm-run/out/map.html (77kb)
+
+The skill describes the line as `wrote <path> (<size>kb)`, behind a backtick
+and with no digits, so the skill text alone cannot satisfy this grader.
+Publishing a private artifact is not required, because an eval sandbox may
+not expose the Artifact tool; the local HTML copy is the dependable signal.

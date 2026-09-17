@@ -43,7 +43,7 @@ Six user-facing skills, as named by the owner. Skill names use lowercase and hyp
 | `git-map` | A map of a git repository | Scans the repo: services, data stores, integrations and the flow between them. Writes the technical layer, marks unknowns `open`, renders. |
 | `business-map` | A map of a business idea or process | Interviews the user (about 8 questions tracing one unit of value from "work is needed" to "paid"). Writes business and edge layers with `open` gaps, then runs the suggestion agent: 3–5 n8n integrations as `suggested` nodes. Renders. |
 | `eval-build` | A balanced review of the current architecture | Reads the existing map, building one with `git-map` first if none exists. Runs gap checks and the suggestion agent in review mode. Findings become `open` nodes and sticky notes; improvements become `suggested` nodes; plus a short written summary. |
-| `grill-build` | A harsh critique with stronger alternatives | Same inputs as `eval-build`, but adversarial. Challenges each tool choice on lock-in, single points of failure, scaling and operational burden — never on price, cost or budget, which are the user's call. Proposes stronger alternative tools as `suggested` replacements, each with trade-offs. |
+| `grill-build` | A harsh critique with stronger alternatives | Same inputs as `eval-build`, but adversarial. Challenges each tool choice on lock-in, single points of failure, scaling and operational burden — never on price, cost or budget, which are the user's call. Proposes stronger alternative tools as `suggested` nodes beside what they would replace, each with a trade-off note. Also asks whether the business needs an automation platform at all. |
 | `gitrepo-suggest` | Open-source code that could improve the design | For the map's weakest or most custom-built nodes, searches GitHub for relevant **MIT-licensed** repositories. Verifies each licence through the GitHub licence API (SPDX `MIT` exactly), checks activity and fit, and attaches candidates as sticky notes linked to the node. |
 | `doc-map` | A static figure of a map for documentation, with no hover | Reads an existing map, asks which layers to include, and writes a minimal description (about 12 words, never more than 2 lines) for each included node that has none, marking them for the user to confirm. Exports an SVG with inline captions (`docs/design/n8n-visual-style.md`, "Documentation export"). Adds nothing else to the map. |
 
@@ -93,6 +93,7 @@ Each description states what the skill is not for, and skill evals assert it.
 | Request | Goes to | Not |
 |---|---|---|
 | "Review my architecture" | `eval-build` | `grill-build`, which is only for explicit asks: grill, harsh, brutal, stress-test, tear apart |
+| "Suggest integrations for this map" (a map exists, no review asked) | `eval-build` | `business-map`, `grill-build` |
 | "Grill me on this plan" (no build or map involved) | Not SequentDraw; general grilling skills handle it | `grill-build` |
 | "Build me an n8n workflow that emails leads" | n8n's own skills; SequentDraw designs flows, it does not deploy them | any SequentDraw skill |
 | "Find a library for PDF parsing" (no map) | Not SequentDraw | `gitrepo-suggest` |
@@ -239,7 +240,7 @@ as the engine feature they drive:
 |---|---|
 | 5 — extraction, Mode A | `git-map` and `doc-map`, plus the plugin scaffold (`plugin.json`, `marketplace.json`, hooks, `using-sequentdraw`) and the eval CI job |
 | 6 — Mode B as a question flow, with gap rendering | `business-map`, without its suggestion step |
-| 7 — suggestion agent | the `business-map` suggestion step, `eval-build` and `grill-build` |
+| 7 — suggestion agent | the `business-map` suggestion step, `eval-build` and `grill-build` (shipped) |
 | 7a — correction mode (after M2) | none. Every skill from `git-map` on already accepts conversational corrections and re-validates before rendering |
 | 7b — GitHub search with licence verification | `gitrepo-suggest` |
 | 8 — tours, then the MCP server and HTTP API, then `skills install` | none |

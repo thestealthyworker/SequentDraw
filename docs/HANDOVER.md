@@ -237,7 +237,8 @@ plugin scaffold arrives with the first of them, `git-map`.
    artifact.
 6. Build Mode B as a question flow, with gap rendering.
 7. Suggestion agent (tool recommendations from n8n integrations), after gap detection
-   is trustworthy.
+   is trustworthy. **Shipped in the step 7 PR:** the `business-map` suggestion step,
+   `eval-build` and `grill-build` (`docs/design/suggestion-agent.md`).
 7a. Correction mode, added by the owner (2026-09-15) after M2. In the viewer, users
     correct wrongly mapped nodes by meaning, not position: reattach or delete a
     connection, move a node to another group or layer, change its kind, edit sticky

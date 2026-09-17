@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: grill-build-output-medusa
+# Every eval run starts in an EMPTY workspace, so the Medusa map this prompt
+# names is scaffolded in. It is the repository's own example, copied rather
+# than duplicated, so the fixture cannot drift from it.
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh
