@@ -8,19 +8,32 @@ which is `business-map` with suggestions, plus `eval-build` and `grill-build`
 (`docs/HANDOVER.md:265-267`; `docs/design/skills-and-plugin.md:240`). This document
 designs all three skills and the engine-side check that keeps suggestions honest.
 
-**Two questions have to be answered by the owner before any of this is built.** They
-are set out in full in §6 and summarised here so they cannot be missed:
+**The owner answered the blocking questions on 2026-09-17.** These override anything
+below that says otherwise; the original analysis is kept in §2 and §6 for the record.
 
-- **A. Where the n8n integration catalogue comes from is a licensing question.** Every
-  suggestion must come from the catalogue, n8n is under the Sustainable Use License, and
-  this project copies nothing from n8n's source, styles or assets (`CLAUDE.md`, "How
-  work lands", rule 4; `CREDITS.md:41-46`). This document lays out the options and
-  their risks. It does not choose one.
-- **B. Nothing in SequentDraw knows the user's budget or region.** The rule "budget
-  and region fit beat popularity" (`docs/design/skills-and-plugin.md:82-83`) cannot
-  be applied today. The interview never asks, the IR has nowhere to put the answer,
-  and the one n8n catalogue source measured here carries a `popularity` field but no
-  price and no region (§2).
+- **A. The catalogue: SequentDraw writes its own list.** Integration names, a one-line
+  description written by SequentDraw, SequentDraw's own categories, and icons only from
+  Simple Icons (already a dependency). Nothing is taken from n8n's source, node
+  definitions, descriptions, node type ids or icons. Each name is checked to exist as an
+  n8n integration, since a product's name is a public fact. The reason this matters
+  even though the owner does not plan to commercialise SequentDraw: the repository is
+  public and declared MIT, and MIT lets anyone who installs it use it commercially, so
+  nothing under n8n's Sustainable Use License can be republished in it.
+- **B. Budget and region: dropped.** Suggestions are workflow improvements only.
+  SequentDraw does not reason about budget, price, cost, financial fit or region; the
+  user decides what fits their business. The "budget and region fit beat popularity"
+  rule is withdrawn. Popularity bias is still guarded against by the graph constraint:
+  a suggestion must answer something the map shows.
+- **Completeness ignores suggested nodes** (§1, question 3). A suggestion never changes
+  what the map says about the real system. Being fixed in its own PR.
+
+Lead developer defaults the owner did not object to: at most five suggestions and zero
+is acceptable, target three (question 5); declined suggestions are not remembered across
+conversations (6); `grill-build` replacements cite the node they replace (7); "suggest
+integrations for this map" routes to `eval-build` (8); an accepted suggestion becomes
+`source: "user"` (10); `grill-build` may question whether the business needs n8n at
+all (11). Still open: `cites` and `integration` as schema changes (4), and
+`eval-build` getting no engine gap findings on base-only maps (9).
 
 Decisions already made by the owner, written up here and not reopened:
 
@@ -44,9 +57,9 @@ Decisions already made by the owner, written up here and not reopened:
 6. **Suggestions never enter the graph silently.** Accepting one flips it to
    `confirmed`, and only the user can do that. Declining removes it. Until then it is
    drawn distinctly (`docs/HANDOVER.md:174-175`).
-7. **Budget and region fit beat popularity** (`docs/HANDOVER.md:179-182`;
-   `docs/design/skills-and-plugin.md:82-83`). Decided as a rule. Whether it can be
-   applied is question B.
+7. **~~Budget and region fit beat popularity.~~ Withdrawn by the owner, 2026-09-17.**
+   Suggestions are workflow improvements only; no budget, price, cost or region
+   reasoning, and the user decides what fits.
 8. **Gap detection comes first** (`docs/HANDOVER.md:184-185`, `198`). It shipped in
    #39 and #41.
 9. **`grill-build` fires only on an explicit ask**: grill, harsh, brutal, stress-test,
@@ -286,6 +299,10 @@ belong to step 7a, correction mode (`docs/HANDOVER.md:240-247`), which comes aft
   again. Across conversations it may. Listed in §6.
 
 ### Budget and region: where the information comes from
+
+> **Superseded, 2026-09-17.** The owner withdrew the budget-and-region rule: suggestions
+> are workflow improvements only, and the user decides what fits. This section is kept as
+> the record of why the rule could not have been enforced.
 
 **Plainly: it does not currently exist anywhere in SequentDraw.**
 
@@ -577,7 +594,7 @@ deliberately **not** named. What it would grade depends on question B.
 
 ## 6. Open questions for the owner
 
-1. **A. Where does the n8n integration catalogue come from? (licensing)**
+1. **A. Where does the n8n integration catalogue come from? (licensing) — decided 2026-09-17: SequentDraw writes its own list (top of document).**
 
    The pool every suggestion must come from is n8n's integration catalogue
    (decision 2). n8n is published under the Sustainable Use License. Read from
@@ -612,7 +629,7 @@ deliberately **not** named. What it would grade depends on question B.
    `suggestion-not-in-catalogue` rule has no catalogue to check against, and step 7
    cannot be built.
 
-2. **B. Budget and region: where does the information come from?** Today, nowhere (§2,
+2. **B. Budget and region: where does the information come from? — decided 2026-09-17: rule withdrawn, suggestions are workflow improvements only.** Today, nowhere (§2,
    "Budget and region"). The options:
    (a) one question inside the suggestion step, with the answer kept in a map-level
    note, which needs no schema change but which the engine cannot read;
@@ -625,7 +642,7 @@ deliberately **not** named. What it would grade depends on question B.
    **(a) and (d) together are the smallest change that stays honest**, but choosing is
    the owner's call. Whatever is chosen, the skills must not claim a fit they have no data
    for, and `grill-build` must not quote prices from memory.
-3. **Completeness and suggestions.** Ignore suggestions entirely (proposed, §1), or
+3. **Completeness and suggestions — decided 2026-09-17: ignore suggestions entirely.** Ignore suggestions entirely (proposed, §1), or
    treat them like `open` nodes, which satisfy rules but are never subjects (simpler,
    but a proposal then counts towards completeness, as measured in A2 and D2)?
 4. **`cites` and `integration` as schema changes.** Accept both (proposed, §3). The
