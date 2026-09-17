@@ -95,8 +95,9 @@ already there, plus node descriptions the user explicitly confirms.
   `eval-build` / `grill-build` (not yet shipped). If the user wants a review
   rather than a picture, say so and stop.
 - If no map exists yet, this skill does not create one. Point the user to
-  `git-map` first (for a repository) and come back to `doc-map` once that
-  map exists.
+  `git-map` first (for a repository) or `business-map` (for a business or
+  process, which it builds by interviewing the user), and come back to
+  `doc-map` once that map exists.
 
 ## Details
 

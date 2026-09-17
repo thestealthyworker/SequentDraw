@@ -1,0 +1,12 @@
+schema_version: "1.1"
+name: business-map-no-trigger-export-image
+# Every eval run starts in an EMPTY workspace, so the map this prompt says we
+# "already have" does not exist unless it is scaffolded in -- and the whole
+# point of this case is that an EXISTING map routes to doc-map rather than to
+# business-map's interview. Without the scaffold the premise is false: the
+# agent finds no map, and whatever it decides then is not evidence about
+# routing. The sibling doc-map cases record what that costs (turn budgets
+# burned hunting for a file that was never there).
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh
