@@ -733,6 +733,99 @@ test('check --emit-open with a missing value prints usage and writes nothing', (
   });
 });
 
+// --- the skills' suggestion pipeline --------------------------------------
+//
+// business-map, eval-build and grill-build pass documents as
+// `printf '%s' '<json>' | node <bin> check - --emit-open <folder>/x.json`,
+// with every apostrophe in the JSON written as ', then check and render
+// the written file. A quoted heredoc is not used: a narrow `Bash(node:*)`
+// grant refuses a heredoc whose body is a JSON object. This runs that exact
+// shell form, so a change to how stdin, --emit-open or rule 6a behave cannot
+// silently break the documented pipeline.
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
+function runPrintfPipe(doc, args, cwd) {
+  const json = JSON.stringify(doc, null, 2).replace(/'/g, '\\u0027');
+  const command = `printf '%s' '${json}' | ${shellQuote(process.execPath)} ${shellQuote(BIN)} ${args.map(shellQuote).join(' ')}`;
+  return spawnSync('bash', ['-c', command], { cwd, encoding: 'utf8' });
+}
+
+const SUGGESTION_BASE = {
+  title: "Owner's booking flow",
+  nodes: [
+    { id: 'customer', label: 'Customer', kind: 'external', layers: ['business'], source: 'user' },
+    { id: 'schedule', label: 'Schedule cleaner', kind: 'manual', layers: ['base', 'business'], source: 'user' },
+    { id: 'invoice', label: 'Invoice', kind: 'artifact', layers: ['business'], source: 'user' },
+  ],
+  edges: [
+    { from: 'customer', to: 'schedule', type: 'solid', source: 'user' },
+    { from: 'schedule', to: 'invoice', type: 'solid', source: 'user' },
+    { from: 'invoice', to: 'customer', type: 'solid', source: 'user' },
+  ],
+};
+
+test('skill pipeline: printf-piped emit into a new folder, suggestions, re-emit, render', () => {
+  withTempDir(dir => {
+    const gaps = runPrintfPipe(SUGGESTION_BASE, ['check', '-', '--emit-open', 'out/deep/gaps.json'], dir);
+    assert.strictEqual(gaps.status, 0, gaps.stderr);
+    assert.match(gaps.stdout, /^wrote out\/deep\/gaps\.json \(0 open nodes, 1 note\)$/m);
+    assert.match(gaps.stderr, /unhappy-paths-missing|nothing goes wrong in it/);
+
+    const emitted = JSON.parse(fs.readFileSync(path.join(dir, 'out', 'deep', 'gaps.json'), 'utf8'));
+    assert.strictEqual(emitted.title, "Owner's booking flow");
+
+    const suggested = {
+      ...emitted,
+      nodes: [
+        ...emitted.nodes,
+        {
+          id: 's_calendly',
+          label: 'Calendly',
+          kind: 'service',
+          layers: ['base'],
+          status: 'suggested',
+          source: 'model',
+          rationale: "You schedule the cleaner by hand; a booking link lets the customer pick the slot.",
+          cites: ['schedule'],
+          integration: 'calendly',
+        },
+      ],
+      edges: [...emitted.edges, { from: 'schedule', to: 's_calendly', type: 'dashed', source: 'model' }],
+    };
+    const saved = runPrintfPipe(suggested, ['check', '-', '--emit-open', 'out/deep/suggested.json'], dir);
+    assert.strictEqual(saved.status, 0, saved.stderr);
+    // Re-emitting a copy that already carries rule 6a's note adds nothing.
+    assert.match(saved.stdout, /^wrote out\/deep\/suggested\.json \(0 open nodes\)$/m);
+    const written = JSON.parse(fs.readFileSync(path.join(dir, 'out', 'deep', 'suggested.json'), 'utf8'));
+    assert.deepStrictEqual(written.notes.map(n => n.id), ['n_consider_unhappy_paths']);
+    assert.strictEqual(written.nodes.find(n => n.id === 's_calendly').rationale, suggested.nodes[3].rationale);
+
+    const render = runCli(['render', 'out/deep/suggested.json', 'out/site/map.html', '--fragment'], dir);
+    assert.strictEqual(render.status, 0, render.stderr);
+    assert.match(render.stdout, /^wrote out\/site\/map\.html \(\d+kb\)$/m);
+  });
+});
+
+test('skill pipeline: a suggestion error is reported and nothing is written', () => {
+  withTempDir(dir => {
+    const bad = {
+      ...SUGGESTION_BASE,
+      nodes: [
+        ...SUGGESTION_BASE.nodes,
+        { id: 's_x', label: 'X', kind: 'service', layers: ['base'], status: 'suggested', source: 'model', rationale: 'r', cites: ['schedule'], integration: 'not-in-catalogue' },
+      ],
+      edges: [...SUGGESTION_BASE.edges, { from: 'schedule', to: 's_x', type: 'dashed' }],
+    };
+    const result = runPrintfPipe(bad, ['check', '-', '--emit-open', 'out/x.json'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /^\/nodes\/3\/integration {2}Node "s_x" integration "not-in-catalogue" is not in the SequentDraw catalogue\.$/m);
+    assert.strictEqual(fs.existsSync(path.join(dir, 'out')), false);
+  });
+});
+
 test('check --help documents --evidence as optional and --emit-open', () => {
   const result = runCli(['check', '--help']);
   assert.strictEqual(result.status, 0);

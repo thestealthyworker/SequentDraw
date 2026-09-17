@@ -64,6 +64,9 @@ const ID_MAX_LENGTH = 64;
 const PROMPT_MAX_LENGTH = 500;
 const ID_UNSAFE_RE = /[^A-Za-z0-9_.:-]+/g;
 
+// The id rule 6a gives its map-level note when nothing else holds it.
+const UNHAPPY_PATHS_NOTE_ID = 'n_consider_unhappy_paths';
+
 // A node with no explicit `layers` is on `base` (docs/SPEC.md:293). Rules 2,
 // 5 and 6 read layers, so the default has to be applied here or a business
 // map that leaves `layers` off its happy path would be judged as if its
@@ -446,7 +449,11 @@ function checkCompleteness(doc) {
   if (!full()) {
     const hasEdgeLayer = nodes.some(n => isPlainObjectish(n) && !isSuggested(n) && hasLayer(n, 'edge'));
     if (!hasEdgeLayer) {
-      const id = uniqueId('n_consider_unhappy_paths', takenIds);
+      // A copy that already carries the note (an earlier --emit-open, which
+      // skills re-run to save a reviewed or suggested document) still reports
+      // the question but does not get the same note a second time.
+      const alreadyAsked = arrayOf(doc.notes).some(n => isPlainObjectish(n) && n.id === UNHAPPY_PATHS_NOTE_ID);
+      const id = alreadyAsked ? UNHAPPY_PATHS_NOTE_ID : uniqueId(UNHAPPY_PATHS_NOTE_ID, takenIds);
       if (id != null) {
         errors.push({
           path: '/',
@@ -454,13 +461,15 @@ function checkCompleteness(doc) {
           message:
             'This map has a business layer but no node on the "edge" layer; nothing goes wrong in it. Name what happens when nobody responds, the work is rejected, or the customer disputes it.',
         });
-        emittedNotes.push({
-          id,
-          content:
-            'Consider: nothing goes wrong in this map. What happens when nobody responds, the work is rejected, or the customer disputes it?',
-          color: 'gold',
-          layers: ['base'],
-        });
+        if (!alreadyAsked) {
+          emittedNotes.push({
+            id,
+            content:
+              'Consider: nothing goes wrong in this map. What happens when nobody responds, the work is rejected, or the customer disputes it?',
+            color: 'gold',
+            layers: ['base'],
+          });
+        }
       }
     }
   }
