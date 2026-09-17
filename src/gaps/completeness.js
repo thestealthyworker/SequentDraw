@@ -17,6 +17,16 @@
 //     do not know who receives" is noise, and skipping open subjects is what
 //     makes `check` idempotent: after `--emit-open`, the copy passes.
 //
+// A `suggested` node is different again: it is IGNORED, together with every
+// edge touching it (owner's decision, docs/design/suggestion-agent.md section
+// 1). A suggestion is a proposal the user has not accepted, so it never
+// changes what the map says about the real system: it is never a subject,
+// never satisfies a rule, its edges count toward no degree, handoff or
+// decision, it does not open the business-layer gate, and on the `edge`
+// layer it is not an unhappy path for rule 6a. Its id still counts as taken,
+// so an emitted id never collides with it, and `--emit-open` copies it
+// untouched.
+//
 // ALL SIX RULES GATE ON A `business` LAYER BEING PRESENT (owner's decision,
 // 2026-09-16, docs/design/business-map.md:181-203). A `git-map` map carries
 // `base` only, so it produces zero findings here: rule 2 would otherwise fire
@@ -94,6 +104,10 @@ function hasLayer(node, layer) {
 
 function isOpen(node) {
   return isPlainObjectish(node) && node.status === 'open';
+}
+
+function isSuggested(node) {
+  return isPlainObjectish(node) && node.status === 'suggested';
 }
 
 // The label a question quotes back at the user. Falls back to the id, because
@@ -190,14 +204,25 @@ function checkCompleteness(doc) {
   const notes = arrayOf(doc.notes);
   const groups = arrayOf(doc.groups);
 
+  // Suggested nodes, and the edges touching them, are skipped by index rather
+  // than filtered out, so every path a finding reports is still the input's
+  // own index.
+  const suggestedIds = new Set();
+  nodes.forEach(node => {
+    if (isSuggested(node) && typeof node.id === 'string') suggestedIds.add(node.id);
+  });
+  const touchesSuggestion = edge => suggestedIds.has(edge.from) || suggestedIds.has(edge.to);
+
   // The gate. Explicit `business` only: a node defaulting to `base` is not a
   // business map's node.
-  const hasBusinessLayer = nodes.some(n => isPlainObjectish(n) && Array.isArray(n.layers) && n.layers.includes('business'));
+  const hasBusinessLayer = nodes.some(
+    n => isPlainObjectish(n) && !isSuggested(n) && Array.isArray(n.layers) && n.layers.includes('business')
+  );
   if (!hasBusinessLayer) return empty;
 
   const nodesById = new Map();
   nodes.forEach(node => {
-    if (isPlainObjectish(node) && typeof node.id === 'string') nodesById.set(node.id, node);
+    if (isPlainObjectish(node) && !isSuggested(node) && typeof node.id === 'string') nodesById.set(node.id, node);
   });
 
   const inDegree = new Map();
@@ -206,6 +231,7 @@ function checkCompleteness(doc) {
   const bump = (map, key) => map.set(key, (map.get(key) || 0) + 1);
   edges.forEach((edge, index) => {
     if (!isPlainObjectish(edge)) return;
+    if (touchesSuggestion(edge)) return;
     if (typeof edge.from === 'string') {
       bump(outDegree, edge.from);
       if (edge.condition != null) {
@@ -252,6 +278,7 @@ function checkCompleteness(doc) {
     if (full()) return;
     if (!isPlainObjectish(node)) return;
     if (isOpen(node)) return; // an open node is never a subject
+    if (isSuggested(node)) return; // nor is a suggestion: it is ignored entirely
     const path = `/nodes/${i}`;
     const out = outDegree.get(node.id) || 0;
     const into = inDegree.get(node.id) || 0;
@@ -378,6 +405,7 @@ function checkCompleteness(doc) {
     if (full()) return;
     if (!isPlainObjectish(edge)) return;
     if (edge.source !== 'user') return;
+    if (touchesSuggestion(edge)) return;
     const described = typeof edge.description === 'string' && edge.description.trim().length > 0;
     if (described) return;
     const from = nodesById.get(edge.from);
@@ -416,7 +444,7 @@ function checkCompleteness(doc) {
   // there is nothing to hang a question on, and inventing an anchor would be
   // a guess.
   if (!full()) {
-    const hasEdgeLayer = nodes.some(n => isPlainObjectish(n) && hasLayer(n, 'edge'));
+    const hasEdgeLayer = nodes.some(n => isPlainObjectish(n) && !isSuggested(n) && hasLayer(n, 'edge'));
     if (!hasEdgeLayer) {
       const id = uniqueId('n_consider_unhappy_paths', takenIds);
       if (id != null) {
