@@ -18,6 +18,7 @@ const COMMANDS = {
   validate: validateCmd,
   scan: scanCmd,
   check: checkCmd,
+  catalogue: require('./catalogue'),
 };
 
 const TOP_USAGE = `Usage: sequentdraw <command> [options]
