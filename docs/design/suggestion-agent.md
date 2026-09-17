@@ -289,10 +289,13 @@ interview ─► map.json ─► check --emit-open gaps.json ─► [suggestion 
 
 The step is **proposed** throughout.
 
-1. **Tell the user first and let them skip it.** One sentence: "I can suggest up to
-   five n8n integrations that fit this map. Want them?" A user who says no gets the map
-   without suggestions, and that map is still complete. Suggestions are never the price
-   of getting a map.
+1. **Never pause for it.** *Decided 2026-09-17 (lead developer), after a CI eval run
+   where the skill stopped before rendering to ask and never produced the map.* The
+   step runs before rendering only when the user already asked for suggestions.
+   Otherwise the map is rendered and published first, and the closing message offers
+   once: "I can also suggest up to five n8n integrations that fit this map -- want
+   them?" A later yes runs the step against the saved map. Suggestions are never the
+   price of getting a map.
 2. **Read the pool.** The host gets the catalogue from the engine (see "Engine
    surface" below). It does not draw on its own memory of which tools exist. That rule
    is what makes "drawn from the catalogue" checkable, and it is the only defence

@@ -130,14 +130,17 @@ example `$TMPDIR/sequentdraw-<short-name>/`.
    is a real problem -- say what it was and stop rather than papering over
    it.
 
-4. **Offer suggestions, once.** Ask one question: "I can suggest up to five
-   n8n integrations that fit this map. Want them?" If the user already
-   said -- "and suggest some tools", or "no recommendations, just the map"
-   -- do not ask again; do what they said. A user who asked not to be
-   asked anything, and did not ask for suggestions, has said no. On
-   **no**, skip this step
-   entirely: do not read the catalogue, write no suggested node, and render
-   `gaps.json` in step 5. The map without suggestions is complete.
+4. **Suggestions only when asked; never pause for them.** Do not stop
+   before rendering to ask whether the user wants suggestions. If the user
+   already asked for them ("and suggest some tools"), do this step now.
+   Otherwise -- including "no recommendations, just the map", and a user who
+   asked not to be asked anything -- skip this step entirely: do not read
+   the catalogue, write no suggested node, render `gaps.json` in step 5,
+   and publish. Only after the map is rendered and its paths or link are
+   given may the closing message offer, once: "I can also suggest up to
+   five n8n integrations that fit this map -- want them?" (not to a user
+   who declined them). A later yes runs this step against the saved map.
+   The map without suggestions is complete.
 
    On **yes** -- the rules are in `references/suggestions.md`; read it
    first:
