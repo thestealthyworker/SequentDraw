@@ -7,14 +7,21 @@ no file-writing tool -- and a command outside these forms is refused there.
 
 ## Resolving `<sequentdraw>`
 
-- `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw"` when `CLAUDE_PLUGIN_ROOT`
-  is set (an installed Claude Code plugin).
-- When it is not set but this skill was loaded from a plugin checkout,
-  `bin/sequentdraw` sits two directories above this skill's own directory:
-  use `node "<that directory>/bin/sequentdraw"`. Do not go looking for it.
-- Otherwise `npx sequentdraw` (Codex, or any other host).
+`<sequentdraw>` is `node <plugin root>/bin/sequentdraw` with the plugin root
+**written out as a literal absolute path**. The plugin root is two directories
+above this skill's own directory: when the skill loads, the host says "Base
+directory for this skill: /some/path/skills/<skill>", so the command is
+`node /some/path/bin/sequentdraw`. Do not go looking for it.
 
-`scripts/sequentdraw.sh` implements the first and last of these.
+- **Never put a variable in the command's program path**: not
+  `${CLAUDE_PLUGIN_ROOT}`, not `$CLAUDE_PLUGIN_ROOT`. A narrow grant cannot
+  see through the expansion and refuses the command, even `--version`.
+- **Never** go through `bash scripts/sequentdraw.sh`, and never start with
+  `cd ... &&`. Both are refused under a narrow grant.
+- **If a CLI call is refused, retry it once with the literal absolute path**
+  before concluding anything. Do not probe with `echo`, `env` or `find`.
+- Only when no base directory is known (Codex, or any other host without a
+  plugin checkout) use `npx sequentdraw`.
 
 ## The command shapes
 
