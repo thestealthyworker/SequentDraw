@@ -477,6 +477,7 @@ describe('suggested nodes are ignored', () => {
       ],
       [
         { from: 'anchor', to: 'crm', type: 'solid' },
+        { from: 'anchor', to: 'billing', type: 'solid' },
         { from: 'billing', to: 'anchor', type: 'solid' },
         { from: 'crm', to: 'zap', type: 'solid', source: 'user' },
         { from: 'zap', to: 'billing', type: 'solid', source: 'user' },
