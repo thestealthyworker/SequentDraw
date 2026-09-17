@@ -432,6 +432,149 @@ describe('rule 6a: unhappy-paths-missing', () => {
   });
 });
 
+// A suggestion never changes what the map says about the real system
+// (docs/design/suggestion-agent.md section 1): a `suggested` node, and every
+// edge touching one, is invisible to completeness -- never a subject, never
+// satisfying a rule. Unlike an `open` node, which satisfies rules on purpose.
+describe('suggested nodes are ignored', () => {
+  const suggested = (id, label, kind, layers) => ({ id, label, kind, layers, status: 'suggested', rationale: 'Commonly used here.', source: 'model' });
+
+  test('a suggested node receiving an artifact does not hide artifact-no-recipient', () => {
+    const map = doc(
+      [{ id: 'inv', label: 'Job sheet', kind: 'artifact', layers: ['business'] }, suggested('email', 'Email tool', 'service', ['business'])],
+      [
+        { from: 'anchor', to: 'inv', type: 'solid' },
+        { from: 'inv', to: 'email', type: 'solid' },
+      ]
+    );
+    const result = checkCompleteness(map);
+    assert.deepStrictEqual(result.errors.map(e => [e.path, e.code]), [['/nodes/3', 'artifact-no-recipient']]);
+  });
+
+  test('a suggested business node with no outgoing edge does not trigger flow-dead-end', () => {
+    const map = doc(
+      [{ id: 'step', label: 'Book job', kind: 'manual', layers: ['business'] }, suggested('sheets', 'Google Sheets', 'service', ['business'])],
+      [
+        { from: 'anchor', to: 'step', type: 'solid' },
+        { from: 'step', to: 'anchor', type: 'solid' },
+        { from: 'step', to: 'sheets', type: 'solid' },
+      ]
+    );
+    assert.deepStrictEqual(codesOf(checkCompleteness(map)), []);
+  });
+
+  test('a suggested node with no incoming edge does not trigger input-no-source-actor', () => {
+    const map = doc([suggested('form', 'Web form', 'service', ['base'])], [{ from: 'form', to: 'anchor', type: 'solid' }]);
+    assert.deepStrictEqual(codesOf(checkCompleteness(map)), []);
+  });
+
+  test('user-sourced edges through a suggested service do not trigger handoff-undrawn', () => {
+    const map = doc(
+      [
+        { id: 'crm', label: 'CRM', kind: 'service', layers: ['base'] },
+        { id: 'billing', label: 'Billing', kind: 'service', layers: ['base'] },
+        suggested('zap', 'Zapier', 'service', ['base']),
+      ],
+      [
+        { from: 'anchor', to: 'crm', type: 'solid' },
+        { from: 'billing', to: 'anchor', type: 'solid' },
+        { from: 'crm', to: 'zap', type: 'solid', source: 'user' },
+        { from: 'zap', to: 'billing', type: 'solid', source: 'user' },
+      ]
+    );
+    assert.deepStrictEqual(codesOf(checkCompleteness(map)), []);
+  });
+
+  test('an edge from a suggested node does not satisfy input-no-source-actor', () => {
+    const map = doc(
+      [suggested('portal', 'Customer portal', 'external', ['base']), { id: 'intake', label: 'Intake form', kind: 'service', layers: ['base'] }],
+      [
+        { from: 'portal', to: 'intake', type: 'solid' },
+        { from: 'intake', to: 'anchor', type: 'solid' },
+      ]
+    );
+    assert.deepStrictEqual(checkCompleteness(map).errors.map(e => [e.path, e.code]), [['/nodes/4', 'input-no-source-actor']]);
+  });
+
+  test('conditional edges to suggested nodes do not make a decision', () => {
+    const map = doc(
+      [
+        { id: 'svc', label: 'Router', kind: 'service', layers: ['base'] },
+        suggested('a', 'Tool A', 'service', ['base']),
+        suggested('b', 'Tool B', 'service', ['base']),
+      ],
+      [
+        { from: 'anchor', to: 'svc', type: 'solid' },
+        { from: 'svc', to: 'anchor', type: 'solid' },
+        { from: 'svc', to: 'a', type: 'dashed', condition: 'small' },
+        { from: 'svc', to: 'b', type: 'dashed', condition: 'large' },
+      ]
+    );
+    assert.deepStrictEqual(codesOf(checkCompleteness(map)), []);
+  });
+
+  describe('rule 6a', () => {
+    const happyOnly = extra => ({
+      title: 'map',
+      nodes: [
+        { id: 'anchor', label: 'Customer', kind: 'human', layers: ['business'] },
+        { id: 'step', label: 'Book job', kind: 'manual', layers: ['business'] },
+        suggested('retry', 'Auto-retry', 'service', ['edge']),
+      ],
+      edges: [
+        { from: 'anchor', to: 'step', type: 'solid' },
+        { from: 'step', to: 'anchor', type: 'solid' },
+        { from: 'step', to: 'retry', type: 'dashed' },
+        ...extra,
+      ],
+    });
+
+    test('a suggested node on the edge layer does not silence unhappy-paths-missing', () => {
+      assert.deepStrictEqual(codesOf(checkCompleteness(happyOnly([{ from: 'retry', to: 'anchor', type: 'solid' }]))), ['unhappy-paths-missing']);
+    });
+
+    test('a suggested edge-layer node with no outgoing edge is not an unowned unhappy path', () => {
+      assert.deepStrictEqual(codesOf(checkCompleteness(happyOnly([]))), ['unhappy-paths-missing']);
+    });
+  });
+
+  test('a suggested business node does not open the business-layer gate on a base-only map', () => {
+    const map = {
+      title: 'compose-app map',
+      nodes: [
+        { id: 'web', label: 'Web', kind: 'service', layers: ['base'] },
+        { id: 'api', label: 'Api', kind: 'service', layers: ['base'] },
+        suggested('stripe', 'Stripe', 'external', ['business']),
+      ],
+      edges: [
+        { from: 'web', to: 'api', type: 'solid' },
+        { from: 'api', to: 'stripe', type: 'solid' },
+      ],
+    };
+    assert.deepStrictEqual(checkCompleteness(map).errors, []);
+  });
+
+  test('--emit-open emits no open node about a suggested node, and keeps the suggestion untouched', () => {
+    const email = suggested('email', 'Email tool', 'service', ['business']);
+    const map = doc(
+      [{ id: 'inv', label: 'Job sheet', kind: 'artifact', layers: ['business'] }, email],
+      [
+        { from: 'anchor', to: 'inv', type: 'solid' },
+        { from: 'inv', to: 'email', type: 'solid' },
+      ]
+    );
+    const result = checkCompleteness(map);
+    assert.deepStrictEqual(result.additions.nodes.map(n => n.id), ['q_recipient_inv']);
+    const mentionsEmail = JSON.stringify(result.additions).includes('email') || JSON.stringify(result.additions).includes('Email tool');
+    assert.strictEqual(mentionsEmail, false);
+
+    const copy = buildOpenDocument(map, result.additions);
+    assert.doesNotThrow(() => validateDoc(copy));
+    assert.deepStrictEqual(copy.nodes.find(n => n.id === 'email'), email);
+    assert.deepStrictEqual(checkCompleteness(copy).errors, []);
+  });
+});
+
 describe('emitted nodes', () => {
   test('carry no "source": the enum has no value for an engine-emitted question', () => {
     const map = doc([{ id: 'inv', label: 'Invoice', kind: 'artifact', layers: ['business'], source: 'user' }], [{ from: 'anchor', to: 'inv', type: 'solid' }]);
