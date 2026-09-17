@@ -27,8 +27,9 @@ no file-writing tool -- and a command outside these forms is refused there.
    `-` means "read the document from stdin". The document is one
    single-quoted shell string. Inside it, write every apostrophe as the
    JSON escape `\u0027` (so "owner's" is written `owner\u0027s`); the CLI
-   reads it back as an apostrophe. Nothing else inside a single-quoted
-   string needs escaping.
+   reads it back as an apostrophe. If a command carrying that escape is
+   refused, reword the text so it has no apostrophe instead. Nothing else
+   inside a single-quoted string needs escaping.
 
 2. **A file the CLI already wrote goes in by path:**
 
