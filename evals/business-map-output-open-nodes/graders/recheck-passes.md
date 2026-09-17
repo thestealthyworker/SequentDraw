@@ -1,7 +1,7 @@
 ---
 type: regex
 target: trace
-pattern: 'bin/sequentdraw(?:\\")?\s+check\s+(?:\\")?[^\s"\\]*gaps[^\s"\\]*\.json(?:\\")?(?:\s+2>&1)?"[\s\S]{0,4000}?(?:\\n|"(?:content|text|stdout)":")ok"'
+pattern: 'bin/sequentdraw(?:\\")?\s+check\s+(?:\\")?[^\s"\\]*gaps[^\s"\\]*\.json(?:\\")?(?:\s+2>&1)?"(?:(?!"type":"tool_use")[\s\S]){0,4000}?(?:\\n|"(?:content|text|stdout)":")ok"'
 match: contains
 weight: 1
 ---
@@ -29,3 +29,7 @@ This prompt names an unhappy path ("about a third of customers never reply
 to the quote"), so the map carries an `edge`-layer node and the one rule
 that would still report on the copy, `unhappy-paths-missing`, does not
 apply.
+
+A result is only accepted from the same tool call: the window from the
+command to its output may not cross a `"type":"tool_use"` marker, so a
+failed check followed by some later successful command cannot match.

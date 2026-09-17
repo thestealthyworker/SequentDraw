@@ -53,7 +53,7 @@ nothing in the catalogue fits.
 
 ## Writing one
 
-Each suggestion is a node with:
+Each suggestion goes into the map through a patch (`references/cli-pipeline.md`): a node in the patch's `nodes`, its edge in `edges`. The node has:
 
 - `id` prefixed `s_` (`s_calendly`)
 - `label` the product name from the catalogue, a `sublabel` of at most
@@ -62,7 +62,7 @@ Each suggestion is a node with:
 - `integration`: the catalogue `id`
 - `rationale`: at most 500 characters, naming the anchor **in the user's
   own words** ("You said you schedule every cleaner by hand after the
-  customer confirms")
+  customer confirms"), with no apostrophes or backticks in it
 - `cites`: the ids of the confirmed or open nodes it answers (1 to 10,
   never another suggested node)
 - the anchor's `layers` and `parentId`, and `icon` only when the catalogue
@@ -83,13 +83,16 @@ true and the cite is the right one -- is yours to get right.
 
 Both happen in conversation.
 
-- **Accept** ("yes, use Calendly"): remove `status`, `rationale` and
-  `cites` from the node, keep `integration`, set `source: "user"`, keep the
-  `s_` id. Its edges stay. Re-check: the node is now part of the real
+- **Accept** ("yes, use Calendly"): one patch that removes the node
+  (`remove.nodes`) and adds it back under the same `s_` id without
+  `status`, `rationale` and `cites`, keeping `integration`, with
+  `source: "user"`, together with the edges it had (removing a node
+  removes its edges). Re-check: the node is now part of the real
   system, so the engine may report gaps on it. If an open node sat beside
   it, it stays open -- ask its question again.
-- **Decline** ("no, not Xero"): remove the node and every edge touching it,
-  and do not suggest it again in this conversation.
+- **Decline** ("no, not Xero"): one patch that removes the node
+  (`remove.nodes`; its edges go with it) and any note that names it
+  (`remove.notes`). Do not suggest it again in this conversation.
 
-Then save, render and republish to the **same** artifact, as the skill's
+Apply the patch to the last saved file with `--merge -` and `--emit-open` to a new file name, then render and republish to the **same** artifact, as the skill's
 own steps describe.

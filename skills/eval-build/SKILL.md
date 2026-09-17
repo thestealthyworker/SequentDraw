@@ -33,9 +33,9 @@ map file (or a map in the conversation)
   |  read the map with the host's file-reading tool
   |  <sequentdraw> catalogue --json                 the only source of integrations
   v
-map + findings (open nodes, gold notes) + suggested nodes
+a small patch: findings (open nodes, gold notes) + suggested nodes
   |
-  |  printf '%s' '<the reviewed document>' | <sequentdraw> check - --emit-open <folder>/review.json
+  |  printf '%s' '<patch>' | <sequentdraw> check <map.json> --merge - --emit-open <folder>/review.json
   |  <sequentdraw> check <folder>/review.json
   |  <sequentdraw> render <folder>/review.json <folder>/map.html --fragment
   v
@@ -43,11 +43,14 @@ private artifact + local copy + short written summary
 ```
 
 **Read `references/cli-pipeline.md` before the first CLI call.** It says how
-`<sequentdraw>` resolves and holds the three command shapes. In short: a
-document reaches the CLI only as
-`printf '%s' '<the whole JSON document>' | <sequentdraw> check - ...`, with
-every apostrophe inside the JSON written as `\u0027`; a file is passed by
-path. **Never** a heredoc with the JSON as its body, **never** `mkdir`,
+`<sequentdraw>` resolves and holds the command shapes. In short: **never
+re-type the map.** Everything this skill adds or removes goes in as a small
+patch against the map file,
+`printf '%s' '<patch>' | <sequentdraw> check <map.json> --merge - --emit-open <folder>/review.json`,
+and the patch holds only the new nodes, edges and notes and what to
+remove. Write **no apostrophes and no backticks** inside the patch; reword
+instead (`\u0027` only if one is unavoidable). A file is passed by path.
+**Never** a heredoc with JSON as its body, **never** `mkdir`,
 `touch`, `echo`/`cat` redirects, `tee` or `node -e` to create a file, and
 **never** anything chained before or after the command. The CLI creates
 the output folder and writes every file itself. Use one session or temp
@@ -82,7 +85,7 @@ folder outside any repository, for example `$TMPDIR/sequentdraw-review/`.
    - **What is fragile**: one node everything depends on, a system-to-system
      handover nobody watches, a manual step carrying a lot of volume.
 
-   Draw each finding as one of:
+   Draw each finding, as part of the patch, as one of:
 
    - an **open node** with a `prompt`, when it is a question about the
      user's own system ("Nothing retries the refund call when the payment
@@ -115,12 +118,16 @@ folder outside any repository, for example `$TMPDIR/sequentdraw-review/`.
 5. **Save and check the reviewed document:**
 
    ```
-   printf '%s' '<the map plus your findings and suggestions>' | <sequentdraw> check - --emit-open <folder>/review.json
+   printf '%s' '<patch: your findings and suggestions>' | <sequentdraw> check <map.json> --merge - --emit-open <folder>/review.json
    ```
 
-   This validates everything you added -- a suggestion or note error names
-   its path and writes nothing, so fix it and run the same command again --
-   and draws an open question for every gap the engine still finds. Then
+   The patch has `nodes`, `edges` and `notes` for what you add -- nothing
+   from the map itself. `<map.json>` is the file the user named (or the one
+   saved in step 1); it is never modified.
+
+   This validates everything you added -- a patch that cannot be applied,
+   or a suggestion or note error, names its path and writes nothing, so fix
+   that part of the patch and run the same command again -- and draws an open question for every gap the engine still finds. Then
    `<sequentdraw> check <folder>/review.json`. It prints `ok`, or, on a
    business map with no `edge`-layer node, only `unhappy-paths-missing`,
    which is expected: carry on. Never loop on `check` waiting for `ok`.
@@ -149,8 +156,9 @@ folder outside any repository, for example `$TMPDIR/sequentdraw-review/`.
 8. **Accepts, declines and answers are corrections.** Apply them as
    `references/suggestions.md` describes (accept: drop `status`,
    `rationale` and `cites`, keep `integration`, `source: "user"`; decline:
-   remove the node and its edges), save with `check - --emit-open` into the
-   same folder, re-check, re-render and republish to the **same** artifact.
+   remove the node and its edges), each as a patch against the last saved
+   file (`--merge - --emit-open` to a new file name in the same folder),
+   re-check, re-render and republish to the **same** artifact.
 
 ## What this skill refuses to do
 

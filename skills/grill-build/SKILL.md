@@ -53,9 +53,9 @@ map file (or a map in the conversation)
   |  read the map with the host's file-reading tool
   |  <sequentdraw> catalogue --json                 the only source of alternatives
   v
-map + challenges (gold notes, open nodes) + alternatives (suggested nodes)
+a small patch: challenges (gold notes, open nodes) + alternatives (suggested nodes)
   |
-  |  printf '%s' '<the grilled document>' | <sequentdraw> check - --emit-open <folder>/grill.json
+  |  printf '%s' '<patch>' | <sequentdraw> check <map.json> --merge - --emit-open <folder>/grill.json
   |  <sequentdraw> check <folder>/grill.json
   |  <sequentdraw> render <folder>/grill.json <folder>/map.html --fragment
   v
@@ -63,11 +63,14 @@ private artifact + local copy + short written verdict
 ```
 
 **Read `references/cli-pipeline.md` before the first CLI call.** It says how
-`<sequentdraw>` resolves and holds the three command shapes. In short: a
-document reaches the CLI only as
-`printf '%s' '<the whole JSON document>' | <sequentdraw> check - ...`, with
-every apostrophe inside the JSON written as `\u0027`; a file is passed by
-path. **Never** a heredoc with the JSON as its body, **never** `mkdir`,
+`<sequentdraw>` resolves and holds the command shapes. In short: **never
+re-type the map.** Everything this skill adds or removes goes in as a small
+patch against the map file,
+`printf '%s' '<patch>' | <sequentdraw> check <map.json> --merge - --emit-open <folder>/grill.json`,
+and the patch holds only the new nodes, edges and notes and what to
+remove. Write **no apostrophes and no backticks** inside the patch; reword
+instead (`\u0027` only if one is unavoidable). A file is passed by path.
+**Never** a heredoc with JSON as its body, **never** `mkdir`,
 `touch`, `echo`/`cat` redirects, `tee` or `node -e` to create a file, and
 **never** anything chained before or after the command. The CLI creates
 the output folder and writes every file itself. Use one session or temp
@@ -89,7 +92,7 @@ folder outside any repository, for example `$TMPDIR/sequentdraw-grill/`.
    like: never cite that as evidence the build holds up. Every challenge on
    such a map is your own judgement, and the verdict says so.
 
-3. **Read the map** and grill it on the five axes. Draw each challenge as:
+3. **Read the map** and grill it on the five axes. Draw each challenge, as part of the patch, as:
 
    - a **gold note** whose `content` starts with `Consider:`, `color:
      "gold"`, `attachTo` the node or nodes it is about, and an `id`
@@ -126,11 +129,16 @@ folder outside any repository, for example `$TMPDIR/sequentdraw-grill/`.
 5. **Save and check the grilled document:**
 
    ```
-   printf '%s' '<the map plus your challenges and alternatives>' | <sequentdraw> check - --emit-open <folder>/grill.json
+   printf '%s' '<patch: your challenges and alternatives>' | <sequentdraw> check <map.json> --merge - --emit-open <folder>/grill.json
    ```
 
-   A suggestion or note error names its path and writes nothing: fix it
-   and run the same command again. Then
+   The patch has `nodes`, `edges` and `notes` for what you add -- nothing
+   from the map itself. `<map.json>` is the file the user named (or the one
+   saved in step 1); it is never modified.
+
+   A patch that cannot be applied, or a suggestion or note error, names
+   its path and writes nothing: fix that part of the patch and run the
+   same command again. Then
    `<sequentdraw> check <folder>/grill.json`. It prints `ok`, or, on a
    business map with no `edge`-layer node, only `unhappy-paths-missing`,
    which is expected: carry on. Never loop on `check` waiting for `ok`.
@@ -157,10 +165,13 @@ folder outside any repository, for example `$TMPDIR/sequentdraw-grill/`.
 8. **Accepting an alternative is two changes**, and ask about both in one
    message: accept the suggested node (drop `status`, `rationale` and
    `cites`, keep `integration`, `source: "user"`), then remove the node it
-   replaces and move that node's edges to the new one. Declining removes
-   the suggested node, its edges and its trade-off note. Save with
-   `check - --emit-open` into the same folder, re-check, re-render and
-   republish to the **same** artifact.
+   replaces and wire the new one where it stood. As one patch against the
+   last saved file: `remove` the suggested node and the replaced node
+   (their edges go with them), then add the accepted node and the edges the
+   replaced node had, pointed at it. Declining is a patch that removes the
+   suggested node and its trade-off note. Save with `--merge - --emit-open`
+   to a new file name in the same folder, re-check, re-render and republish
+   to the **same** artifact.
 
 ## What this skill refuses to do
 

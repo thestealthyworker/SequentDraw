@@ -42,8 +42,8 @@ user  <---- eight questions, one unit of value ---->  this skill (inline)
   |  <sequentdraw> check <folder>/gaps.json              |
   |                                                      v
   |  "I can suggest up to five n8n integrations..." -- yes / no
-  |     yes: <sequentdraw> catalogue --json, add suggested nodes,
-  |          printf '%s' '<map>' | <sequentdraw> check - --emit-open <folder>/suggested.json
+  |     yes: <sequentdraw> catalogue --json, then a patch of suggested nodes:
+  |          printf '%s' '<patch>' | <sequentdraw> check <folder>/gaps.json --merge - --emit-open <folder>/suggested.json
   |                                                      v
   |  <sequentdraw> render <folder>/<gaps|suggested>.json <folder>/map.html --fragment
   |                                                      v
@@ -54,16 +54,19 @@ user  <---- eight questions, one unit of value ---->  this skill (inline)
 `<sequentdraw>` resolves and holds the three command shapes this skill
 uses. In short:
 
-- A document reaches the CLI only as
-  `printf '%s' '<the whole JSON document>' | <sequentdraw> check - ...`,
-  with every apostrophe inside the JSON written as `\u0027`.
+- The freshly interviewed map is not a file yet, so it is piped in once,
+  whole: `printf '%s' '<the whole JSON document>' | <sequentdraw> check - --emit-open <folder>/gaps.json`.
+- **Every later change is a small patch against the last saved file**,
+  never the map re-typed:
+  `printf '%s' '<patch>' | <sequentdraw> check <folder>/<last>.json --merge - --emit-open <folder>/<next>.json`.
+- Write **no apostrophes and no backticks** inside the JSON; reword
+  instead (`\u0027` only if one is unavoidable).
 - A file the CLI wrote is passed by path: `<sequentdraw> check <file>`,
   `<sequentdraw> render <file> <folder>/map.html --fragment`.
-- **Never** a heredoc with the JSON as its body, **never** `mkdir`,
+- **Never** a heredoc with JSON as its body, **never** `mkdir`,
   `touch`, `echo`/`cat` redirects, `tee` or `node -e` to create a file, and
   **never** anything chained before or after the command. The CLI writes
-  every file and creates the folder itself: `check - --emit-open` is how a
-  document is saved.
+  every file and creates the folder itself.
 
 Use one session or temp folder outside any repository for everything, for
 example `$TMPDIR/sequentdraw-<short-name>/`.
@@ -143,22 +146,24 @@ example `$TMPDIR/sequentdraw-<short-name>/`.
      from memory; every `integration` is an `id` from that list.
    - Read `<folder>/gaps.json` with the host's file-reading tool, so the
      emitted open nodes (their `q_` ids) are there to cite.
-   - Add each suggestion to that document as a node with `id` prefixed
+   - Write a **patch** whose `nodes` are the suggestions -- `id` prefixed
      `s_`, `status: "suggested"`, `source: "model"`, `integration`, a
      `rationale` of at most 500 characters that names its anchor in the
      user's own words, `cites` listing the confirmed or open nodes it
-     answers, and at least one edge to its anchor. Target three, at most
-     five, and zero is a correct answer when nothing fits.
+     answers -- and whose `edges` wire each one to its anchor. Target
+     three, at most five, and zero is a correct answer when nothing fits.
+     Do not copy the map into the patch.
    - **Workflow improvements only.** Never reason about budget, price,
      cost, financial fit or region; the user decides what fits.
    - Save and check it:
 
      ```
-     printf '%s' '<gaps.json plus the suggestions>' | <sequentdraw> check - --emit-open <folder>/suggested.json
+     printf '%s' '<patch with the suggestions>' | <sequentdraw> check <folder>/gaps.json --merge - --emit-open <folder>/suggested.json
      ```
 
-     A suggestion error names the node's path and writes nothing: fix that
-     node and run the same command again. On success it prints
+     A suggestion error, or a patch that cannot be applied, names its path
+     and writes nothing: fix that part of the patch and run the same
+     command again. On success it prints
      `wrote <folder>/suggested.json (0 open nodes)`; gap checks ignore
      suggested nodes, so a suggestion never adds or hides a question.
    - Tell the user each suggestion in one line: the product, what it would
@@ -188,9 +193,11 @@ example `$TMPDIR/sequentdraw-<short-name>/`.
    answer describes. When the user accepts a suggestion, drop its `status`,
    `rationale` and `cites`, keep `integration`, and set `source: "user"`;
    when they decline one, remove the node and every edge touching it (see
-   `references/suggestions.md`). Then save the edited document with
-   `check - --emit-open` into the same folder, re-check it, re-render, and
-   republish to the **same** artifact rather than creating a new one.
+   `references/suggestions.md`). Write each of these as one patch against
+   the last saved file -- `remove` what goes, add what replaces it -- and
+   save it with `--merge - --emit-open` to a new file name in the same
+   folder. Then re-check it, re-render, and republish to the **same**
+   artifact rather than creating a new one.
 
 ## What this skill refuses to do
 
