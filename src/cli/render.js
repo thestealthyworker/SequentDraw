@@ -1,4 +1,4 @@
-// `sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]`
+// `sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment] [--merge <patch.json|->]`
 //
 // Same strict-argument-handling contract as the original
 // `node src/n8n/cli.js` (tests/n8n-cli.test.js): unknown flags and extra
@@ -8,13 +8,19 @@
 // artifact output rule -- and "-" as the input path, which reads the
 // document from stdin (src/cli/read-document.js). The output path is
 // always a real file.
+//
+// --merge applies a patch (src/n8n/merge.js) to the input before rendering,
+// exactly as `check --merge` does, so doc-map can put confirmed descriptions
+// into a figure without re-typing the map and without the open gap nodes
+// `check --emit-open` would add. Nothing is written back to the input.
 
 const fs = require('fs');
 const path = require('path');
 const { renderMap, renderSvg, ValidationError } = require('../n8n/index');
 const { readDocument, STDIN_PATH } = require('./read-document');
+const { applyPatch } = require('../n8n/merge');
 
-const USAGE = 'Usage: sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]';
+const USAGE = 'Usage: sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment] [--merge <patch.json|->]';
 
 const HELP = `${USAGE}
 
@@ -24,7 +30,7 @@ with inline captions.
 
 Input:
   <in.json>      A file path, or "-" to read the document from stdin (for
-                 example from a quoted heredoc), so no file has to be
+                 example piped from printf), so no file has to be
                  written first. The output is always a real file path.
 
 Options:
@@ -35,6 +41,12 @@ Options:
                  <!DOCTYPE>, <html>, <head> or <body>. For embedding in a
                  host page that supplies its own shell (a published Claude
                  artifact).
+  --merge <patch> Apply a patch to the input first and render the result;
+                 the input file is never changed. Same patch as
+                 "sequentdraw check --merge": {"nodes": [...], "edges":
+                 [...], "notes": [...], "remove": {"nodes": [ids],
+                 "edges": [{"from", "to"}], "notes": [ids]}}. A file, or
+                 "-" for stdin when the input itself is a file.
   --help         Show this help.
 `;
 
@@ -44,6 +56,7 @@ function parseArgs(args) {
   const positional = [];
   let layersRaw = null;
   let fragment = false;
+  let mergePath = null;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--layers') {
@@ -54,6 +67,14 @@ function parseArgs(args) {
     } else if (arg.startsWith('--layers=')) {
       layersRaw = arg.slice('--layers='.length);
       if (!layersRaw) return null;
+    } else if (arg === '--merge') {
+      const value = args[i + 1];
+      if (value == null || (value !== STDIN_PATH && value.startsWith('-'))) return null;
+      mergePath = value;
+      i++;
+    } else if (arg.startsWith('--merge=')) {
+      mergePath = arg.slice('--merge='.length);
+      if (!mergePath) return null;
     } else if (arg === '--fragment') {
       fragment = true;
     } else if (arg !== STDIN_PATH && arg.startsWith('-')) {
@@ -63,7 +84,7 @@ function parseArgs(args) {
     }
   }
   if (positional.length !== 2) return null;
-  return { inputPath: positional[0], outputPath: positional[1], layersRaw, fragment };
+  return { inputPath: positional[0], outputPath: positional[1], layersRaw, fragment, mergePath };
 }
 
 async function run(args, io = {}) {
@@ -81,7 +102,7 @@ async function run(args, io = {}) {
     stderr.write(`${USAGE}\n`);
     return 1;
   }
-  const { inputPath, outputPath, layersRaw, fragment } = parsed;
+  const { inputPath, outputPath, layersRaw, fragment, mergePath } = parsed;
 
   if (outputPath === STDIN_PATH) {
     stderr.write(`${USAGE}\nThe output must be a real .html or .svg path; "-" (stdin) is only valid as the input document.\n`);
@@ -101,6 +122,11 @@ async function run(args, io = {}) {
     return 1;
   }
 
+  if (mergePath === STDIN_PATH && inputPath === STDIN_PATH) {
+    stderr.write(`${USAGE}\n--merge - and an input of - cannot both read stdin; give the input as a file.\n`);
+    return 1;
+  }
+
   // Every argument is settled before stdin is touched, so a usage error
   // never leaves a piped document half-consumed.
   let doc;
@@ -109,6 +135,23 @@ async function run(args, io = {}) {
   } catch (err) {
     stderr.write(`${err.message}\n`);
     return 1;
+  }
+
+  if (mergePath != null) {
+    let patch;
+    try {
+      patch = await readDocument(mergePath, stdin);
+    } catch (err) {
+      stderr.write(`--merge: ${err.message}\n`);
+      return 1;
+    }
+    const merged = applyPatch(doc, patch);
+    if (merged.errors.length > 0) {
+      stderr.write('--merge could not apply the patch; nothing was written.\n');
+      merged.errors.forEach(e => stderr.write(`${e.path || '/'}  ${e.message}\n`));
+      return 1;
+    }
+    doc = merged.doc;
   }
 
   let output;
