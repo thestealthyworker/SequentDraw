@@ -1,4 +1,4 @@
-// `sequentdraw check <map.json|-> [--evidence <bundle.json>] [--emit-open <out.json>]`
+// `sequentdraw check <map.json|-> [--merge <patch.json|->] [--evidence <bundle.json>] [--emit-open <out.json>]`
 //
 // Runs validateDoc() (structural/schema validation), then checkEvidence()
 // (src/scan/check-evidence.js: every "source": "scan" node/edge in the map
@@ -25,6 +25,11 @@
 // Nothing is written on any error -- a structural error, an evidence error, a
 // copy that would breach a validation cap, or an unwritable path. Same
 // guarantee as render (src/cli/render.js:3-5).
+//
+// --merge applies a small patch (src/n8n/merge.js) to the map before any
+// check runs, so a skill adds or removes nodes, edges and notes on an existing
+// map without re-typing it. The merged document is what is checked and what
+// --emit-open writes. The map and the patch cannot both be "-".
 
 const fs = require('fs');
 const path = require('path');
@@ -32,8 +37,9 @@ const { validateDoc, ValidationError } = require('../n8n/validate');
 const { checkEvidence } = require('../scan');
 const { checkCompleteness, buildOpenDocument } = require('../gaps/completeness');
 const { readDocument, STDIN_PATH } = require('./read-document');
+const { applyPatch } = require('../n8n/merge');
 
-const USAGE = 'Usage: sequentdraw check <map.json|-> [--evidence <bundle.json>] [--emit-open <out.json>]';
+const USAGE = 'Usage: sequentdraw check <map.json|-> [--merge <patch.json|->] [--evidence <bundle.json>] [--emit-open <out.json>]';
 
 const HELP = `${USAGE}
 
@@ -55,10 +61,19 @@ drawing it with --emit-open).
 
 Input:
   <map.json>          A file path, or "-" to read the map from stdin (for
-                       example from a quoted heredoc), so no file has to be
+                       example piped from printf), so no file has to be
                        written first.
 
 Options:
+  --merge <patch>     Apply a patch to the map first, then check the merged
+                       document (and write it with --emit-open). The patch
+                       is a JSON object: {"nodes": [...], "edges": [...],
+                       "notes": [...], "remove": {"nodes": [ids], "edges":
+                       [{"from", "to"}], "notes": [ids]}}. Removals run first;
+                       removing a node removes its edges. An added id that is
+                       already taken, or a removal of something that is not
+                       there, is an error and nothing is written. A file, or
+                       "-" for stdin when the map itself is a file.
   --evidence <file>   The evidence bundle produced by "sequentdraw scan".
                        Optional: without it the evidence cross-reference is
                        skipped. Always a real file: "-" is not accepted here.
@@ -81,6 +96,7 @@ function parseArgs(args) {
   const positional = [];
   let evidencePath = null;
   let emitOpenPath = null;
+  let mergePath = null;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--evidence') {
@@ -91,6 +107,14 @@ function parseArgs(args) {
     } else if (arg.startsWith('--evidence=')) {
       evidencePath = arg.slice('--evidence='.length);
       if (!evidencePath) return null;
+    } else if (arg === '--merge') {
+      const value = flagValue(args, i);
+      if (value == null) return null;
+      mergePath = value;
+      i++;
+    } else if (arg.startsWith('--merge=')) {
+      mergePath = arg.slice('--merge='.length);
+      if (!mergePath) return null;
     } else if (arg === '--emit-open') {
       const value = flagValue(args, i);
       if (value == null) return null;
@@ -106,7 +130,7 @@ function parseArgs(args) {
     }
   }
   if (positional.length !== 1) return null;
-  return { mapPath: positional[0], evidencePath, emitOpenPath };
+  return { mapPath: positional[0], evidencePath, emitOpenPath, mergePath };
 }
 
 function readJson(filePath, stderr) {
@@ -159,6 +183,14 @@ async function run(args, io = {}) {
     stderr.write(`${USAGE}\n--emit-open must be a real file; "-" (stdin) is only valid for the map document.\n`);
     return 1;
   }
+  if (parsed.mergePath === STDIN_PATH && parsed.mapPath === STDIN_PATH) {
+    stderr.write(`${USAGE}\n--merge - and a map of - cannot both read stdin; give the map as a file.\n`);
+    return 1;
+  }
+  if (parsed.emitOpenPath != null && parsed.mergePath != null && parsed.mergePath !== STDIN_PATH && samePath(parsed.emitOpenPath, parsed.mergePath)) {
+    stderr.write(`${USAGE}\n--emit-open writes a copy and must not name the patch ("${parsed.mergePath}").\n`);
+    return 1;
+  }
   // Every argument is settled before stdin is touched or anything is read, so
   // a usage error never leaves a piped document half-consumed.
   if (parsed.emitOpenPath != null && parsed.mapPath !== STDIN_PATH && samePath(parsed.emitOpenPath, parsed.mapPath)) {
@@ -172,6 +204,23 @@ async function run(args, io = {}) {
   } catch (err) {
     stderr.write(`${err.message}\n`);
     return 1;
+  }
+
+  if (parsed.mergePath != null) {
+    let patch;
+    try {
+      patch = await readDocument(parsed.mergePath, stdin);
+    } catch (err) {
+      stderr.write(`--merge: ${err.message}\n`);
+      return 1;
+    }
+    const merged = applyPatch(doc, patch);
+    if (merged.errors.length > 0) {
+      stderr.write('--merge could not apply the patch; nothing was written.\n');
+      writeLines(stderr, merged.errors);
+      return 1;
+    }
+    doc = merged.doc;
   }
 
   let bundle = null;
