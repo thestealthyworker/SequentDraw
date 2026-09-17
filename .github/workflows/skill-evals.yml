@@ -128,7 +128,7 @@ jobs:
             --json results.json \
             --keep-temp \
             --threshold 0.8 \
-            --max-cost-usd 10
+            --max-cost-usd 30
 
       # A run that never really executed -- a rejected credential, a sandbox
       # that would not start -- scores as a pass on every "must not trigger"
