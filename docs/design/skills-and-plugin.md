@@ -102,8 +102,54 @@ Each description states what the skill is not for, and skill evals assert it.
 | "Draw a map of our repo for the docs" (no map exists yet) | `git-map` first, then `doc-map` | `doc-map` alone, which never invents structure |
 
 `business-map` runs inline and never as a forked subagent, because it is a
-conversation with the user. `git-map` may run as `context: fork`, because it reads
+conversation with the user. `git-map` runs as `context: fork`, because it reads
 code without needing the user.
+
+#### Decision: `git-map` keeps `context: fork` (issue #51, 2026-09-17)
+
+Issue #51 asked whether a forked `git-map` can use Bash at all under the narrow
+`Bash(node:*)` grant the skill evals run with. The two CI traces of
+`git-map-output-compose-app` (eval run 35214567992) answer it: **yes**.
+
+- Run 1: the forked subagent ran `node "/home/runner/work/SequentDraw/SequentDraw/bin/sequentdraw"
+  scan fixture/compose-app --out "$TMPDIR/bundle.json"`, which printed `wrote
+  /tmp/claude-eval-.../tmp/bundle.json`, and later `printf '\x7b"title": "x", ...' | node
+  ".../bin/sequentdraw" validate -`, which printed `ok`. Of the 92 tool calls that returned,
+  51 were allowed (the Skill call itself is the 93rd). The 41 refused were forms outside
+  the grant: `ls` of the repository root or `$TMPDIR`, `echo "CLAUDE_PLUGIN_ROOT=$CLAUDE_PLUGIN_ROOT"`,
+  chains starting with `ls ... &&`, JSON heredocs such as
+  `node ".../bin/sequentdraw" check - --evidence "$TMPDIR/bundle.json" <<'EOF'`,
+  redirects such as `printf 'hello\n' > "$TMPDIR/probe.txt"`, and Glob or Grep with a
+  `path` outside the working directory. It spent the rest of its 600 seconds probing
+  the schema with trial documents and timed out without rendering.
+- Run 0: the forked subagent's only two Bash calls were
+  `cd /home/runner/work/SequentDraw/SequentDraw && ls && ... cat bin/sequentdraw` and
+  `ls /home/runner/work/SequentDraw/SequentDraw`. Both were refused ("Permission to use
+  Bash has been denied because Claude Code is running in don't ask mode"). It concluded
+  that "the Bash tool is fully denied in this session" and returned without trying
+  `node`. The parent then tried `cd ... && ls -la`, was refused the same way, and gave
+  up.
+
+So the failures came from the command forms and from reading one refusal as "no shell",
+not from the fork. Moving the skill inline would not have changed either run: the parent
+in run 0 made the same mistake. The fix is in the skill text instead. `git-map` and
+`doc-map` now use the same `references/cli-pipeline.md` as the three suggestion
+skills (kept byte-identical by `tests/skill-cli-pipeline.test.js`): a literal
+absolute `node <plugin root>/bin/sequentdraw`, a `printf` pipe for the first save
+(`check - --evidence <bundle> --emit-open <map.json>`, which writes nothing unless every
+scan claim is backed), `--merge` patches for corrections, files passed by path, no
+heredocs, no variables in the program path, no `cd`, no wrapper script. The reference
+also says that a refused command is not a denied shell, and that the document shape is
+read from `<plugin root>/schema/sequentdraw.schema.json` (`schema/` ships in the npm
+package and the plugin; `docs/` does not ship in the npm package, so skills never point
+at `docs/SPEC.md`), never learned by probing the CLI.
+
+`doc-map` needed one CLI addition: `render --merge <patch|->`. Its confirmed
+descriptions used to reach the figure through a heredoc of the whole map. The only
+narrow-grant alternative, `check --merge - --emit-open`, also draws an open node for every
+completeness gap on a business map (four on the Medusa example), which would put
+structure into a figure that must never invent any. `render --merge` applies the patch
+to the rendered output only and leaves the map file unchanged.
 
 ### Routing context
 

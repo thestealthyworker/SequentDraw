@@ -32,52 +32,57 @@ already there, plus node descriptions the user explicitly confirms.
    those captions, and list the drafts in your final reply so they can be
    added later. Never touch any other field.
 
-4. **Validate, then write the local copy first.** Render into a folder
-   outside the repository (a session folder, or a path under the system
-   temp directory), never into the repository. The CLI creates the output
-   directory itself, so do not make it first. When the map is unchanged,
-   point both commands at the file:
+4. **Validate, then write the local copy first.** Read
+   `references/cli-pipeline.md` before the first CLI call: it says how
+   `<sequentdraw>` resolves (`node <plugin root>/bin/sequentdraw`, the plugin
+   root written out as a literal absolute path two directories above the
+   "Base directory for this skill"; double-quoted if it contains a space)
+   and which command shapes a narrowly granted host accepts. Never
+   `${CLAUDE_PLUGIN_ROOT}` or any other variable in the program path, never
+   `cd ... &&`, never `scripts/sequentdraw.sh`, never a heredoc, and nothing
+   chained before or after the command. Find the map with the host's file
+   tools (Read, or Glob in the working directory), not with `ls` or `find`.
+
+   Render into a folder outside the repository (a session folder, or a
+   path under the system temp directory written out as a real path), never
+   into the repository. The CLI creates the output folder itself, so do not
+   make it first. Point both commands at the map file:
    ```
-   <sequentdraw> validate map.json
-   <sequentdraw> render map.json <folder>/map.svg --layers <chosen-layers>
+   <sequentdraw> validate <path>/map.json
+   <sequentdraw> render <path>/map.json <folder>/map.svg --layers <chosen-layers>
    ```
-   When you added confirmed descriptions, do not write the changed document
-   back through a shell string: pipe it in instead. `-` reads the input
-   document from stdin, and a quoted heredoc keeps the command starting
-   with the CLI (the `'EOF'` quotes stop the shell expanding anything in
-   the JSON):
+   Leave out `--layers` for the base layer alone.
+
+   When the user confirmed descriptions, put them into the figure with a
+   patch instead of re-typing the map: for each described node, remove it
+   and add it back under the same id with every field it had plus its new
+   `description`, and add back every edge that touches it, exactly as it
+   is in the file. `render --merge -` applies the patch to the figure only;
+   the map file is never changed:
    ```
-   <sequentdraw> validate - <<'EOF'
-   { ...the updated map document... }
-   EOF
-   <sequentdraw> render - <folder>/map.svg --layers <chosen-layers> <<'EOF'
-   { ...the updated map document... }
-   EOF
+   printf '%s' '<patch>' | <sequentdraw> render <path>/map.json <folder>/map.svg --layers <chosen-layers> --merge -
    ```
-   Only the input may be `-`; the output is always a real path.
-   Run each of these as its own command, beginning with `<sequentdraw>`.
-   Never chain one behind `mkdir ... &&`, `echo ... |` or any other prefix:
-   a host may grant the CLI narrowly -- this plugin's own CI grants
-   `Bash(node:*)` -- and such a grant matches only a command that *starts*
-   with what was granted, so a chained call is refused outright.
+   Write no apostrophes or backticks inside the patch (`\u0027` only if one
+   is unavoidable). Do not use `check --emit-open` to save a described
+   copy: it also draws open question nodes for any gaps, which would change
+   the figure.
+
    The CLI prints `wrote <path> (<size>kb)`. Keep that output and print the
-   path, so the figure exists on disk even if publishing is unavailable.
-   `<sequentdraw>` means `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...`
-   when that variable is set (an installed Claude Code plugin), falling
-   back to `npx sequentdraw ...` when it is not (Codex, or any other host)
-   -- `scripts/sequentdraw.sh` implements exactly that resolution. If
-   validation fails, fix only the descriptions just confirmed and re-run;
-   never patch around an unrelated existing error without telling the
-   user.
+   path, so the figure exists on disk even if publishing is unavailable. If
+   validation or the patch fails, fix only the descriptions just confirmed
+   and re-run; never patch around an unrelated existing error without
+   telling the user. When a field is unclear, Read
+   `<plugin root>/schema/sequentdraw.schema.json`; never probe the CLI with
+   trial documents.
 
 5. **Output like an artifact -- see `references/artifact-output.md`.** In
    Claude Code: publish a private Claude artifact (an HTML page that shows
    the SVG inline) and give the user the link; artifact pages cannot offer
    file downloads, so the actual `.svg` file comes from the local copy.
-   Always also write the local copy (`map.svg`, plus the updated `map.json`
-   when descriptions were added and the host has a file-writing tool;
-   without one, list the confirmed descriptions in your reply instead) to
-   a temp or session folder outside the repository, and print the paths.
+   Always also write the local copy (`map.svg`) to a temp or session folder
+   outside the repository, and print its path. When descriptions were
+   confirmed, also list them in your reply, since the map file itself is
+   left unchanged.
    Write into the repository only if the user asks, and ask before
    overwriting anything there.
    In Codex, other agents, or a CLI-only host: skip the artifact step and
@@ -92,7 +97,7 @@ already there, plus node descriptions the user explicitly confirms.
 - Not for building or editing an n8n workflow (that is n8n's own skills).
 - Not a general Mermaid, sequence-diagram or chart tool.
 - Not for reviewing, evaluating or "grilling" an architecture -- that is
-  `eval-build` / `grill-build` (not yet shipped). If the user wants a review
+  `eval-build` / `grill-build`. If the user wants a review
   rather than a picture, say so and stop.
 - If no map exists yet, this skill does not create one. Point the user to
   `git-map` first (for a repository) or `business-map` (for a business or

@@ -129,13 +129,13 @@ jobs:
 
       - name: Run skill evals
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.select.outputs.filter != 'none' }}
-        # --allow-tools "Bash(node:*)": narrow operator grant so the two
-        # output-correctness cases (doc-map-output-produces-svg,
-        # git-map-output-compose-app) can actually invoke the sequentdraw
-        # CLI -- every skill invokes it as
-        # `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...` (see
-        # skills/*/scripts/sequentdraw.sh), never anything else through
-        # Bash.
+        # --allow-tools "Bash(node:*)": narrow operator grant so the
+        # output-correctness cases can actually invoke the sequentdraw CLI --
+        # every skill invokes it as `node <literal plugin root>/bin/sequentdraw ...`,
+        # optionally fed by `printf '%s' '<json>' |` (see
+        # skills/*/references/cli-pipeline.md), never anything else through
+        # Bash. A variable in the program path, a heredoc or `cd ... &&` is
+        # refused under this grant (issue #51).
         # --ablation none: the no-plugin baseline arm cannot run sequentdraw at
         # all, so for the output cases it only burns turns and budget toward
         # the cost cap. Triggering causality was measured locally (skills fire

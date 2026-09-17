@@ -13,9 +13,10 @@ write into the repository only on request.
    further.
 2. **Always** also write a local copy to a temp or session folder outside
    the repository:
-   - `doc-map`: the `.svg` file, and the updated `.json` if any node
-     descriptions were confirmed and written.
-   - Print both paths.
+   - `doc-map`: the `.svg` file. Confirmed descriptions reach the figure
+     through `render --merge` and the map file is left unchanged, so list
+     them in the reply too.
+   - Print the path.
 3. Artifact pages cannot offer file downloads. The `.svg` a user actually
    needs for their docs comes from the local copy on disk, not from the
    published page -- the artifact is for *viewing*, the local file is for
@@ -24,8 +25,8 @@ write into the repository only on request.
    into our architecture folder"), and **ask before overwriting** anything
    already there.
 5. A conversational correction ("make the Payment description shorter")
-   edits the local files and republishes to the *same* artifact, rather
-   than creating a new one.
+   re-renders the figure with the corrected patch into a new file name and
+   republishes to the *same* artifact, rather than creating a new one.
 
 ## Outside Claude Code (Codex, other agents, CLI-only hosts)
 
