@@ -26,14 +26,21 @@ below that says otherwise; the original analysis is kept in §2 and §6 for the 
   a suggestion must answer something the map shows.
 - **Completeness ignores suggested nodes** (§1, question 3). A suggestion never changes
   what the map says about the real system. Being fixed in its own PR.
+- **`cites` and `integration`: both added as node fields** (§3, question 4). `cites` is
+  1–10 unique ids of existing nodes that are not themselves suggested; it is required on
+  a `suggested` node and forbidden on every other status, like `rationale`.
+  `integration` is a `src/catalogue` id; it is required on a `suggested` node and also
+  allowed on `confirmed` and `open` nodes, because accepting a suggestion drops
+  `rationale` and `cites` but keeps `integration`. At most five `suggested` nodes per
+  document. All of this is enforced in `validateDoc`; the codes are listed under
+  question 4.
 
 Lead developer defaults the owner did not object to: at most five suggestions and zero
 is acceptable, target three (question 5); declined suggestions are not remembered across
 conversations (6); `grill-build` replacements cite the node they replace (7); "suggest
 integrations for this map" routes to `eval-build` (8); an accepted suggestion becomes
 `source: "user"` (10); `grill-build` may question whether the business needs n8n at
-all (11). Still open: `cites` and `integration` as schema changes (4), and
-`eval-build` getting no engine gap findings on base-only maps (9).
+all (11). Still open: `eval-build` getting no engine gap findings on base-only maps (9).
 
 Decisions already made by the owner, written up here and not reopened:
 
@@ -645,7 +652,20 @@ deliberately **not** named. What it would grade depends on question B.
 3. **Completeness and suggestions — decided 2026-09-17: ignore suggestions entirely.** Ignore suggestions entirely (proposed, §1), or
    treat them like `open` nodes, which satisfy rules but are never subjects (simpler,
    but a proposal then counts towards completeness, as measured in A2 and D2)?
-4. **`cites` and `integration` as schema changes.** Accept both (proposed, §3). The
+4. **`cites` and `integration` as schema changes — decided 2026-09-17: both added.**
+   `cites` (1–10 unique node ids) is required on a `suggested` node and forbidden on any
+   other status; every entry must be a declared node that is not itself suggested.
+   `integration` must be an id in `src/catalogue`; it is required on a `suggested` node
+   and **stays on the node when the suggestion is accepted**: the node flips to
+   `confirmed`, `rationale` and `cites` are dropped, and `integration` still says which
+   tool it is. At most five `suggested` nodes per document. These replace the §3 table
+   (which proposed 1–5 cites and split the catalogue rules into `check`): all are in
+   `validateDoc`, with the codes `cites-required`, `cites-not-allowed`, `invalid-cites`,
+   `duplicate-cite`, `unknown-cite`, `cite-is-suggested`, `integration-required`,
+   `invalid-integration`, `unknown-integration` and `too-many-suggestions`. The JSON
+   Schema enforces the shapes, required/forbidden by status and the five-suggestion cap;
+   whether a cite exists, whether it is suggested, and whether an integration is in the
+   catalogue are `validateDoc`-only. The original question follows. Accept both (proposed, §3). The
    no-schema-change alternative is to put cited node ids and the catalogue key into the
    rationale text in a fixed syntax the engine parses, which prints them on the details
    card, or to match the node `label` against catalogue names, which breaks as soon as

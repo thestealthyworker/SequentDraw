@@ -18,16 +18,34 @@
       "label": "B",
       "kind": "service",
       "status": "suggested",
+      "rationale": "A hands work to nobody.",
       "cites": [
         "a"
       ],
       "integration": "slack"
+    },
+    {
+      "id": "c",
+      "label": "Gmail",
+      "kind": "service",
+      "status": "suggested",
+      "rationale": "r",
+      "cites": [
+        "b"
+      ],
+      "integration": "gmail"
     }
   ],
   "edges": [
     {
       "from": "a",
       "to": "b",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "b",
+      "to": "c",
       "type": "solid",
       "condition": null
     }

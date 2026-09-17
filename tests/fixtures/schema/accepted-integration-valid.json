@@ -1,0 +1,40 @@
+{
+  "title": "Accepted suggestion doc",
+  "nodes": [
+    {
+      "id": "a",
+      "label": "A",
+      "kind": "service"
+    },
+    {
+      "id": "b",
+      "label": "Slack",
+      "kind": "service",
+      "status": "confirmed",
+      "source": "user",
+      "integration": "slack"
+    },
+    {
+      "id": "c",
+      "label": "Stripe",
+      "kind": "external",
+      "status": "open",
+      "prompt": "Which payment tool?",
+      "integration": "stripe"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "type": "solid",
+      "condition": null
+    },
+    {
+      "from": "a",
+      "to": "c",
+      "type": "solid",
+      "condition": null
+    }
+  ]
+}
