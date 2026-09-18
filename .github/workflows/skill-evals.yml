@@ -10,10 +10,18 @@ on:
   pull_request:
     paths:
       - "skills/**"
+      - ".agents/skills/**"
       - "evals/**"
       - "hooks/**"
       - ".claude-plugin/**"
       - "bin/**"
+      - "src/**"
+      - "schema/**"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/select-eval-tags.js"
+      - "scripts/eval-results-guard.js"
+      - ".github/workflows/skill-evals.yml"
 
 permissions:
   contents: read
@@ -25,6 +33,9 @@ jobs:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The case selection below diffs this PR against its base branch.
+          fetch-depth: 0
 
       - name: Skip gracefully when the eval credential is unavailable (fork PRs)
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN == '' }}
@@ -83,6 +94,32 @@ jobs:
           bwrap --ro-bind / / --dev /dev --proc /proc --unshare-all true
           echo "sandbox backend OK"
 
+      # Every eval run spends the owner's Claude plan quota, which this
+      # session's own work shares; a full suite ran it out mid-run on PR #50.
+      # A PR runs only the cases for the skills it touches (by tag -- see
+      # scripts/select-eval-tags.js); anything shared (src/, bin/, schema/,
+      # hooks/, .claude-plugin/, package*.json, this workflow) runs them all.
+      - name: Select eval cases for this PR
+        id: select
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
+          echo "Changed paths:"
+          echo "$changed" | sed 's/^/  /'
+          selection="$(echo "$changed" | node scripts/select-eval-tags.js)"
+          if [ "$selection" = "all" ]; then
+            echo "Eval selection: full suite"
+            echo "filter=" >> "$GITHUB_OUTPUT"
+          elif [ "$selection" = "none" ]; then
+            echo "Eval selection: no skill touched; skipping evals"
+            echo "filter=none" >> "$GITHUB_OUTPUT"
+          else
+            echo "Eval selection: --tag $selection"
+            echo "filter=--tag $selection" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Claude Code
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         # Pinned to the exact version this plugin was verified against
@@ -91,14 +128,14 @@ jobs:
         run: npm i -g @anthropic-ai/claude-code@2.1.272
 
       - name: Run skill evals
-        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
-        # --allow-tools "Bash(node:*)": narrow operator grant so the two
-        # output-correctness cases (doc-map-output-produces-svg,
-        # git-map-output-compose-app) can actually invoke the sequentdraw
-        # CLI -- every skill invokes it as
-        # `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...` (see
-        # skills/*/scripts/sequentdraw.sh), never anything else through
-        # Bash.
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.select.outputs.filter != 'none' }}
+        # --allow-tools "Bash(node:*)": narrow operator grant so the
+        # output-correctness cases can actually invoke the sequentdraw CLI --
+        # every skill invokes it as `node <literal plugin root>/bin/sequentdraw ...`,
+        # optionally fed by `printf '%s' '<json>' |` (see
+        # skills/*/references/cli-pipeline.md), never anything else through
+        # Bash. A variable in the program path, a heredoc or `cd ... &&` is
+        # refused under this grant (issue #51).
         # --ablation none: the no-plugin baseline arm cannot run sequentdraw at
         # all, so for the output cases it only burns turns and budget toward
         # the cost cap. Triggering causality was measured locally (skills fire
@@ -118,7 +155,19 @@ jobs:
         # here only because this repository owns the suite -- every
         # scaffold script does nothing but copy a file already committed to
         # this repository into the run's workspace.
+        # --concurrency 4: the suite ran one agent at a time and took 80+
+        # minutes. Four in flight share the same rate limit, so this cuts wall
+        # time, not quota. Results keep case order, and neither the guard nor
+        # the trace collection below depends on run order (both key on case
+        # name, arm and run index).
+        # --max-cost-usd 50: owner-approved after PR #50's full suite with the
+        # step 7 cases (the cap is checked before each run launches).
+        # The selection filter (--tag <skill...>) goes last: --tag is variadic
+        # and would swallow any option after it.
+        env:
+          EVAL_FILTER: ${{ steps.select.outputs.filter }}
         run: |
+          # shellcheck disable=SC2086 -- EVAL_FILTER is intentionally split into words
           claude plugin eval . \
             --trust-plugin \
             --scaffold \
@@ -128,64 +177,22 @@ jobs:
             --json results.json \
             --keep-temp \
             --threshold 0.8 \
-            --max-cost-usd 30
+            --concurrency 4 \
+            --max-cost-usd 50 \
+            $EVAL_FILTER
 
       # A run that never really executed -- a rejected credential, a sandbox
-      # that would not start -- scores as a pass on every "must not trigger"
-      # grader, because a skill that never ran also never fired. Catching that
-      # is why this step exists, and it still fails the job for any such run.
-      #
-      # It does NOT fail the job for a run that executed and then stopped at a
-      # limit its own case declared. `max_turns` and `timeout_seconds` are set
-      # per case in prompt.md, and reaching one is a legitimate terminal
-      # outcome of a real run, not a broken environment. The trigger-only
-      # cases are expected to reach them: their single grader
-      # (`tool_used: Skill`) is satisfied on the first turn and nothing tells
-      # the agent to stop afterwards, so it keeps working until the limit.
-      # git-map additionally runs `context: fork`, so its forked subagent
-      # attempts a full map and can outlast timeout_seconds. Failing the job
-      # on that would gate the suite on how long the agent keeps going after
-      # it has already been graded.
-      #
-      # Two conditions keep the original protection intact:
-      #   * a limit-stop counts as legitimate only if the run actually took a
-      #     turn (turns > 0), so a run that died before its first turn stays
-      #     fatal whatever message it carries; and
-      #   * in a case that asserts a skill must NOT fire (a grader with
-      #     max: 0), ANY error is fatal -- that is precisely where a run that
-      #     half-executed can masquerade as a pass.
+      # that would not start, a plan usage limit -- scores as a pass on every
+      # "must not trigger" grader. scripts/eval-results-guard.js (tested in
+      # tests/eval-ci-scripts.test.js) fails the job for those. It tolerates a
+      # run that took a turn and stopped at its own case limit, except in a
+      # must-not-fire case (a grader with max: 0), where only "Reached maximum
+      # number of turns (N)" with turns >= N is tolerated: the other skill
+      # fired and used every turn, which is a full real run. A results file
+      # with zero cases also fails.
       - name: Fail on errored eval runs
-        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
-        run: |
-          node -e "
-          const r = require('./results.json');
-          const LIMIT_STOP = /Reached maximum number of turns|timed out after \\d+\\s*s/i;
-          const fatal = [];
-          const tolerated = [];
-          for (const c of r.cases || []) {
-            const mustNotTrigger = (c.graders || []).some(g => g.config && g.config.max === 0);
-            for (const [arm, runs] of Object.entries(c.arms || {})) {
-              (runs || []).forEach((run, i) => {
-                if (!run.error) return;
-                const where = c.name + ' [' + arm + '.' + i + '] turns=' + run.turns;
-                const msg = String(run.error).slice(0, 200);
-                const ranAtLeastOneTurn = Number(run.turns) > 0;
-                if (!mustNotTrigger && ranAtLeastOneTurn && LIMIT_STOP.test(msg)) {
-                  tolerated.push(where + ': ' + msg);
-                  return;
-                }
-                fatal.push(where + ': ' + msg);
-              });
-            }
-          }
-          tolerated.forEach(e => console.log('note: stopped at its own case limit -- ' + e));
-          if (fatal.length) {
-            console.log('::error::' + fatal.length + ' eval run(s) did not execute normally; their scores are not evidence.');
-            fatal.slice(0, 10).forEach(e => console.log(e));
-            process.exit(1);
-          }
-          console.log('No eval run failed for anything other than its own declared limit (' + tolerated.length + ' limit-stop(s) tolerated).');
-          "
+        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.select.outputs.filter != 'none' }}
+        run: node scripts/eval-results-guard.js results.json
 
       # A failing output grader reports only "pattern not found in trace",
       # which says nothing about why. The transcripts live outside the

@@ -21,7 +21,7 @@ Prints "ok" and exits 0 when the document is valid. Otherwise prints one
 
 Input:
   <in.json>   A file path, or "-" to read the document from stdin (for
-              example from a quoted heredoc), so no file has to be written
+              example piped from printf), so no file has to be written
               first.
 
 Options:

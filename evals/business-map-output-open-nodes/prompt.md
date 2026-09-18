@@ -3,6 +3,7 @@ max_turns: 40
 timeout_seconds: 900
 allowed_tools: [Read, Glob, Grep, Skill, Bash]
 runs: 2
+tags: [business-map]
 ---
 
 Map my cleaning business: one booking, from enquiry to paid. Here are all my
@@ -25,5 +26,5 @@ draw the open questions and render it.
 8. The enquiry form and the invoice email are software. Everything else is
    done by hand.
 
-Write the map as map.json in a temp folder, emit the open questions to
-gaps.json, re-check gaps.json, then render gaps.json as map.html.
+Use one temp folder: save the map with its open questions as gaps.json,
+re-check gaps.json, then render gaps.json as map.html.

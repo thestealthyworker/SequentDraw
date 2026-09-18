@@ -162,7 +162,9 @@ is reproducible without re-running the model.
       "status": "confirmed",      // confirmed | open | suggested (see Gaps)
       "source": "scan",           // scan | user | model, optional
       "prompt": "string",         // optional; the open question for an open node
-      "rationale": "string"       // required on suggested nodes, not allowed elsewhere
+      "rationale": "string",      // required on suggested nodes, not allowed elsewhere
+      "cites": ["node id"],       // required on suggested nodes, not allowed elsewhere (see Suggestions)
+      "integration": "string"     // catalogue id; required on suggested nodes, allowed on confirmed and open
     }
   ],
   "edges": [
@@ -203,6 +205,8 @@ callers can read it as documentation. A test keeps it in agreement with the vali
 - group nesting is one level; a group may not have a `parentId`
 - every entry in `layers` is one of the four named layers
 - a `suggested` node has a `rationale`; no other node does
+- a `suggested` node has `cites` and an `integration`, and a document has at most five
+  `suggested` nodes (the rules and codes are under Suggestions)
 - every note `attachTo` and tour `nodeIds` entry names an existing node or group
 - ids are unique across nodes, groups and notes
 - unknown fields are errors, with a "did you mean" hint for near misses (`parent_id`)
@@ -275,6 +279,80 @@ Completeness in the absolute sense is not achievable and chasing it produces a m
 nobody reads. The working definition: one full lifecycle of the unit of value, with
 a named owner at every handoff. If a reader can answer "who does what next, and what
 do they get", it is done.
+
+### Suggestions
+
+A node with `status: "suggested"` is a proposal, not a fact: an integration from
+SequentDraw's catalogue (`sequentdraw catalogue`) that the host AI thinks would
+improve the workflow. The completeness checks ignore suggested nodes and every edge
+touching them, so a suggestion can neither close a gap nor open one. Suggestions are
+workflow improvements only; nothing in the schema or the engine reasons about price,
+cost or region.
+
+| Field | On a `suggested` node | On any other node |
+|---|---|---|
+| `rationale` | required, at most 500 characters | not allowed |
+| `cites` | required: 1 to 10 unique node ids, each a declared node that is not itself suggested | not allowed |
+| `integration` | required: an id in the catalogue | allowed, so an accepted suggestion keeps it |
+
+A document holds at most five `suggested` nodes. Accepting a suggestion removes
+`status` (or sets `confirmed`), `rationale` and `cites`, keeps `integration`, and sets
+`source: "user"`. Declining removes the node and its edges.
+
+`validateDoc` reports each violation with one of these codes:
+
+| Code | When |
+|---|---|
+| `rationale-required` / `rationale-not-allowed` | `rationale` missing on a suggested node, or present on another |
+| `cites-required` / `cites-not-allowed` | `cites` missing or empty on a suggested node, or present on another |
+| `invalid-cites` | `cites` is not an array, has more than 10 entries, or an entry is not a valid id |
+| `duplicate-cite` | the same id appears twice in `cites` |
+| `unknown-cite` | a `cites` entry is not a declared node |
+| `cite-is-suggested` | a `cites` entry is itself a suggested node |
+| `integration-required` | a suggested node has no `integration` |
+| `invalid-integration` | `integration` is not a string |
+| `unknown-integration` | `integration` is not an id in the catalogue |
+| `too-many-suggestions` | the document has more than five suggested nodes (path `/nodes`) |
+
+The JSON Schema enforces the shapes, the required and forbidden fields by status, and
+the five-suggestion cap. Whether a cite exists, whether it is suggested, and whether an
+integration is in the catalogue are checked by `validateDoc` only.
+
+### Changing a map with a patch
+
+`sequentdraw check <map.json> --merge <patch.json|->` applies a small patch to a map
+before checking it, so a tool adds findings, suggestions and corrections without
+re-sending the whole document. The merged result is what is checked, and what
+`--emit-open <out.json>` writes; the map file itself is never modified.
+
+```jsonc
+{
+  "nodes": [ /* nodes to add */ ],
+  "edges": [ /* edges to add */ ],
+  "notes": [ /* notes to add */ ],
+  "remove": {
+    "nodes": ["node id"],              // also removes every edge touching the node
+    "edges": [{ "from": "id", "to": "id" }], // every edge from -> to
+    "notes": ["note id"]
+  }
+}
+```
+
+Removals run first, then additions, so a node can be replaced under the same id (how a
+suggestion is accepted). Every key is optional; an unknown key is an error. Errors carry
+a JSON Pointer into the patch, and nothing is written when any occurs:
+
+| Code | When |
+|---|---|
+| `merge-invalid-base` / `merge-invalid-patch` | the map is not an object with `nodes` and `edges` arrays, or the patch is not an object |
+| `merge-unknown-key` | a top-level or `remove` key the patch does not take |
+| `merge-invalid-list` / `merge-invalid-item` | a list is not an array, or an entry has the wrong shape |
+| `merge-too-many` | a list is longer than the document cap for it (100 nodes, 500 edges, 20 notes), checked before any entry is read |
+| `merge-remove-unknown-node` / `-edge` / `-note` | a removal names something the map does not have |
+| `merge-duplicate-id` | an added id is already used by a node, group or note after removals, or earlier in the patch |
+
+Both inputs are read under the same 16MB limit as any document, and the map and the
+patch cannot both be `-`.
 
 ## Layers
 

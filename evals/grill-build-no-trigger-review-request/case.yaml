@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: grill-build-no-trigger-review-request
+# Every eval run starts in an EMPTY workspace, so the map this prompt names
+# does not exist unless it is scaffolded in. Without it the premise is false
+# (there is no map to review) and the agent burns its turns hunting for the
+# file instead of showing which skill the request routes to.
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh

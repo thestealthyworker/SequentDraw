@@ -1,16 +1,40 @@
 ---
 type: regex
 target: trace
-pattern: check[\s\S]{0,400}?--evidence[\s\S]{0,16000}?\bok\b
+pattern: 'bin/sequentdraw(?:\\")?\s+check(?=\s)(?:[^"\\]|\\.){0,600}?\s--evidence[\s=](?:[^"\\]|\\.){0,600}?"(?:(?!"type":"tool_use")[\s\S]){0,4000}?(?:\\n|"(?:content|text|stdout)":")(?:ok"|wrote [^\s"\\]+\.json \(\d+ open nodes?)'
 match: contains
 weight: 1
 ---
 
-`sequentdraw check - --evidence <bundle.json>` prints exactly "ok" and exits
-0 once every scan-sourced node and edge cites real, connecting evidence. The
-pattern requires the `check … --evidence` invocation followed, within a
-bounded window of the trace, by that "ok" output. The window is wide enough
-to span the map document itself, which the skill now pipes in through a
-heredoc on the same command (so the whole JSON sits between `--evidence`
-and the CLI's reply in the trace), but still bounded, so a stray "ok"
-elsewhere in the conversation does not count.
+The engine accepted every scan claim in the map. `sequentdraw check … --evidence
+<bundle.json>` enforces that each `source: "scan"` node and edge cites real,
+connecting evidence, and succeeds in one of two ways: `ok` when it only
+checks, or `wrote <file>.json (<n> open nodes)` when it also saves with
+`--emit-open`, which writes nothing unless the evidence holds. The skill
+does both: the first save is
+`printf '%s' '<map>' | node ".../bin/sequentdraw" check - --evidence <bundle> --emit-open <map.json>`,
+then `node ".../bin/sequentdraw" check <map.json> --evidence <bundle>`.
+
+The pattern needs, inside one Bash command string, `bin/sequentdraw check`
+followed by `--evidence` before the command ends, and then, before the next
+`"type":"tool_use"` marker and within 4,000 characters, a tool result line
+that starts with one of those two outputs. Captured locally for issue #51,
+against `evals/git-map-output-compose-app/fixture/compose-app`:
+
+    $ printf '%s' '<map>' | node ".../bin/sequentdraw" check - --evidence ".../gitmap-run/bundle.json" --emit-open ".../gitmap-run/map.json"
+    wrote .../gitmap-run/map.json (0 open nodes)
+    $ node ".../bin/sequentdraw" check ".../gitmap-run/map.json" --evidence ".../gitmap-run/bundle.json"
+    ok
+
+and in earlier CI traces of this case (runs that passed):
+
+    node /home/runner/work/SequentDraw/SequentDraw/bin/sequentdraw check /tmp/claude-eval-xBAFvf/tmp/map.json --evidence /tmp/claude-eval-xBAFvf/tmp/bundle.json
+    ok
+
+A failed check prints `path  message` lines and no `ok` or `wrote`, a
+refused command prints a permission message, and a later unrelated `ok`
+(for example a plain `check` without `--evidence`) is in a different tool
+call, so none of them can match. The skill text writes these commands inside
+one long quoted string with no closing quote within 600 characters and never
+writes `ok` or `wrote` followed by a closing quote, so reading the skill
+cannot satisfy this grader either.

@@ -1,6 +1,8 @@
 # Design: suggestion agent, `eval-build` and `grill-build` (build step 7)
 
-Status: **proposed** · 2026-09-17
+Status: **decided** · 2026-09-17. Built: the engine rules (#47, #48, #49) and, in the
+step 7 PR, the `business-map` suggestion step, `eval-build`, `grill-build` and the 13
+evals of §5. Where the body below says "proposed", the decisions block overrides it.
 
 Step 7 is the suggestion agent: recommending tools from n8n's integration catalogue
 for the business a map describes (`docs/HANDOVER.md:238-239`). It closes the M2 gate,
@@ -41,6 +43,54 @@ conversations (6); `grill-build` replacements cite the node they replace (7); "s
 integrations for this map" routes to `eval-build` (8); an accepted suggestion becomes
 `source: "user"` (10); `grill-build` may question whether the business needs n8n at
 all (11). Still open: `eval-build` getting no engine gap findings on base-only maps (9).
+
+**Lead developer decisions for the step 7 PR (2026-09-17).** These override §2, §4 and
+§5 where they differ.
+
+- **Both review skills run inline**, never `context: fork`.
+- **`grill-build` axes: lock-in, single points of failure, scaling, operational burden,
+  and whether the business needs an automation platform at all.** There is no cost
+  axis: the owner withdrew budget and cost reasoning (B), so the §4 bullet on the cost
+  axis is withdrawn too. Harsh means specific and anchored to nodes, never louder.
+- **`grill-build` alternatives** are a suggested node that `cites` the node it would
+  replace, wired beside it with a dashed edge, plus one gold "Consider:" note attached
+  to both stating the trade-off. No `replaces` field (question 7 decided).
+- **`eval-build` is balanced and suggests additions only**, never replacements.
+- **"Suggest integrations for this map"** with a map and no review asked routes to
+  `eval-build` (question 8 decided as the owner-accepted default); the §4 boundaries
+  table is corrected.
+- **Base-only maps (question 9):** the engine reports no completeness gaps on a map
+  without a `business` layer. Both review skills say their findings are their own
+  judgement there and never cite "the engine found no gaps" as evidence of soundness.
+  Whether rules 1, 2 and 4 should run on base-only maps stays open.
+- **At most five notes written per review**, trade-off notes included; the cap of five
+  suggested nodes counts suggestions already in the map. Review notes carry an id
+  prefix, `n_review_` or `n_grill_`, like `q_` and `s_`.
+- **Documents reach the CLI through `printf`, not a heredoc.** The CI traces of the
+  last eval run show that a `Bash(node:*)` grant refused every
+  `node .../bin/sequentdraw ... - <<'EOF'` whose body was a JSON object, and accepted
+  `printf '%s' '<json>' | node .../bin/sequentdraw check -`. The skills therefore pipe
+  each document from `printf`, write apostrophes inside it as `\u0027`, save it with
+  `check - --emit-open <folder>/<name>.json` (the CLI writes every file and creates
+  the folder), and render from that file. `--emit-open` no longer adds a second
+  rule-6a note when the copy already carries one, so a document can be saved more than
+  once.
+- **Existing maps are changed by patch, never re-typed (PR #50, round 2).** Eval run
+  35176295107 showed the balanced review re-typing the 23KB Medusa map into one
+  `printf` string. The map's own apostrophes broke the quoting, the command was refused,
+  and the run timed out. `check <map.json> --merge <patch|->` now applies a small patch
+  (add nodes, edges, notes; remove nodes with their edges, edges by from/to, notes), and
+  `eval-build` and `grill-build` use only that form against an existing map.
+  `business-map` pipes the whole document once, for the freshly interviewed map, then
+  patches `gaps.json` for suggestions, accepts and declines. Patches are written with no
+  apostrophes or backticks.
+- **Suggestions happen before rendering, and only when wanted.** `business-map` offers
+  once; a user who declines, or who asked not to be asked anything and did not ask for
+  suggestions, gets the map with no catalogue read.
+- **Evals (§5):** as named, with runs 2 throughout. The `llm` rubrics grade grounding and
+  trade-offs, not cost. Every regex is written against captured CLI output and tested
+  against the real CI trace of the open-nodes case and against the skill text, which a
+  trace also contains.
 
 Decisions already made by the owner, written up here and not reopened:
 
@@ -116,13 +166,13 @@ engine does not follow this rule today.
 | Rendering: purple 2px border, "+" badge | **Built** | `src/n8n/constants.js:52`; `src/n8n/render-svg.js:41-48`, `64-74`, `94` |
 | Details card: "Why suggested:" line and a purple status badge | **Built** | `src/n8n/card-data.js:94`; `src/n8n/render-shell.js:100`, `546-550` |
 | Gap detection: six completeness rules, gated on the `business` layer, `--emit-open` | **Built** (#39) | `src/gaps/completeness.js:153-441`; `src/cli/check.js:207-249` |
-| Any suggestion agent or suggestion step in a skill | **Not built.** `business-map` refuses: "Not shipped yet" | `skills/business-map/SKILL.md:154-156`; `hooks/session-start.js:15` |
+| Any suggestion agent or suggestion step in a skill | **Built in the step 7 PR** (was: `business-map` refused, "Not shipped yet") | `skills/business-map/SKILL.md`, step 4 |
 | An n8n integration catalogue of any kind | **Not built** | — |
 | Accept or decline, in the viewer or in conversation | **Not built** | — |
 | A way for a rationale to cite a node, other than free text | **Not built.** `rationale` is a plain string | `src/n8n/validate.js:571` |
 | A field naming which catalogue entry a node is | **Not built.** An unknown field is an error | `src/n8n/validate.js:107-121` (`NODE_KEYS`); measured in §1 |
 | Any suggested state on edges | **Not built.** Edges carry no `status` | `src/n8n/validate.js:123` (`EDGE_KEYS`) |
-| `eval-build`, `grill-build` | **Not built.** The routing note lists them as not shipped | `hooks/session-start.js:15` |
+| `eval-build`, `grill-build` | **Built in the step 7 PR** (was: listed as not shipped in the routing note) | `skills/eval-build/`, `skills/grill-build/`; `hooks/session-start.js` |
 
 Grepping `src/` for `suggested` finds only the node styling, the card and the
 validator rows above (**measured**). Nothing else in the engine treats a suggested node
@@ -239,10 +289,13 @@ interview ─► map.json ─► check --emit-open gaps.json ─► [suggestion 
 
 The step is **proposed** throughout.
 
-1. **Tell the user first and let them skip it.** One sentence: "I can suggest up to
-   five n8n integrations that fit this map. Want them?" A user who says no gets the map
-   without suggestions, and that map is still complete. Suggestions are never the price
-   of getting a map.
+1. **Never pause for it.** *Decided 2026-09-17 (lead developer), after a CI eval run
+   where the skill stopped before rendering to ask and never produced the map.* The
+   step runs before rendering only when the user already asked for suggestions.
+   Otherwise the map is rendered and published first, and the closing message offers
+   once: "I can also suggest up to five n8n integrations that fit this map -- want
+   them?" A later yes runs the step against the saved map. Suggestions are never the
+   price of getting a map.
 2. **Read the pool.** The host gets the catalogue from the engine (see "Engine
    surface" below). It does not draw on its own memory of which tools exist. That rule
    is what makes "drawn from the catalogue" checkable, and it is the only defence
@@ -497,8 +550,8 @@ runs `git-map` first, that sub-step may still fork.
 
 - **Trigger**: only the explicit asks in decision 9. The draft description in
   `docs/design/skills-and-plugin.md:131-135` stands as the starting point.
-- **Stance**: challenge every tool choice on five axes: cost, lock-in, single points of
-  failure, scaling and operational burden (`docs/design/skills-and-plugin.md:46`). Harsh
+- **Stance** (decided: no cost axis, see the decisions block): challenge every tool
+  choice on lock-in, single points of failure, scaling and operational burden (`docs/design/skills-and-plugin.md:46`). Harsh
   means specific and unsparing, not louder. Every challenge is anchored to a node, like
   every rationale. "Everyone knows X doesn't scale" fails the same grounding rule as
   "most teams use X".
@@ -510,7 +563,8 @@ runs `git-map` first, that sub-step may still fork.
   message. Listed in §6.
 - **The same cap of five.** A grill that proposes fifteen swaps is the popularity
   failure again.
-- **The cost axis has the same data problem as question B.** "This costs too much" needs
+- **~~The cost axis has the same data problem as question B.~~ Withdrawn: there is no
+  cost axis.** "This costs too much" needs
   a budget, and "cheaper alternative" needs a price. Until B is answered, `grill-build`
   may challenge cost only in terms the map supports (usage-based pricing on a flow the
   user said is high-volume, three overlapping tools doing one job). It never quotes a
@@ -528,7 +582,7 @@ runs `git-map` first, that sub-step may still fork.
 | "Grill my architecture", "tear this build apart", "stress-test this stack" | `grill-build` | `eval-build` |
 | "Grill me on this plan" (no build, no map) | not SequentDraw | `grill-build` (`docs/design/skills-and-plugin.md:94`) |
 | "What CRM should a small cleaning company use?" (no map) | not SequentDraw | `business-map`, `eval-build` |
-| "Suggest integrations for this map" (map exists, no review asked) | `business-map`'s suggestion step, run against the existing map (**proposed**; §6) | `grill-build` |
+| "Suggest integrations for this map" (map exists, no review asked) | `eval-build` (decided, default 8) | `business-map`, `grill-build` |
 
 ### Changes to shipped skills and the hook
 
@@ -592,7 +646,7 @@ That is the lesson of #40 and #42.
 | Case | Prompt (gist) | Graders |
 |---|---|---|
 | `eval-build-output-medusa` | Review the scaffolded Medusa map, no questions asked | `fires-eval-build`; `check` passes on the result; rendered HTML exists; `llm` rubric: every suggestion's rationale names a node in the map |
-| `grill-build-output-medusa` | Grill the same map | `fires-grill-build`; `check` passes; rendered HTML exists; `llm` rubric: each challenge is anchored to a node and names a trade-off, and the critique is harsher than a balanced review (`docs/design/skills-and-plugin.md:173`) |
+| `grill-build-output-medusa` | Grill the same map | `fires-grill-build`; `check` passes; rendered HTML exists; `llm` rubric: each challenge is anchored to a node and names a trade-off, and the critique is direct rather than balanced (`docs/design/skills-and-plugin.md:173`) |
 
 That is 13 new cases, on top of 17 on `main` (`evals/`, **measured** by listing). How
 long a full run takes was not measured. The per-skill `--case` narrowing in

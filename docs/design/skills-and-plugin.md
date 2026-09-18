@@ -43,7 +43,7 @@ Six user-facing skills, as named by the owner. Skill names use lowercase and hyp
 | `git-map` | A map of a git repository | Scans the repo: services, data stores, integrations and the flow between them. Writes the technical layer, marks unknowns `open`, renders. |
 | `business-map` | A map of a business idea or process | Interviews the user (about 8 questions tracing one unit of value from "work is needed" to "paid"). Writes business and edge layers with `open` gaps, then runs the suggestion agent: 3–5 n8n integrations as `suggested` nodes. Renders. |
 | `eval-build` | A balanced review of the current architecture | Reads the existing map, building one with `git-map` first if none exists. Runs gap checks and the suggestion agent in review mode. Findings become `open` nodes and sticky notes; improvements become `suggested` nodes; plus a short written summary. |
-| `grill-build` | A harsh critique with stronger alternatives | Same inputs as `eval-build`, but adversarial. Challenges each tool choice on lock-in, single points of failure, scaling and operational burden — never on price, cost or budget, which are the user's call. Proposes stronger alternative tools as `suggested` replacements, each with trade-offs. |
+| `grill-build` | A harsh critique with stronger alternatives | Same inputs as `eval-build`, but adversarial. Challenges each tool choice on lock-in, single points of failure, scaling and operational burden — never on price, cost or budget, which are the user's call. Proposes stronger alternative tools as `suggested` nodes beside what they would replace, each with a trade-off note. Also asks whether the business needs an automation platform at all. |
 | `gitrepo-suggest` | Open-source code that could improve the design | For the map's weakest or most custom-built nodes, searches GitHub for relevant **MIT-licensed** repositories. Verifies each licence through the GitHub licence API (SPDX `MIT` exactly), checks activity and fit, and attaches candidates as sticky notes linked to the node. |
 | `doc-map` | A static figure of a map for documentation, with no hover | Reads an existing map, asks which layers to include, and writes a minimal description (about 12 words, never more than 2 lines) for each included node that has none, marking them for the user to confirm. Exports an SVG with inline captions (`docs/design/n8n-visual-style.md`, "Documentation export"). Adds nothing else to the map. |
 
@@ -93,6 +93,7 @@ Each description states what the skill is not for, and skill evals assert it.
 | Request | Goes to | Not |
 |---|---|---|
 | "Review my architecture" | `eval-build` | `grill-build`, which is only for explicit asks: grill, harsh, brutal, stress-test, tear apart |
+| "Suggest integrations for this map" (a map exists, no review asked) | `eval-build` | `business-map`, `grill-build` |
 | "Grill me on this plan" (no build or map involved) | Not SequentDraw; general grilling skills handle it | `grill-build` |
 | "Build me an n8n workflow that emails leads" | n8n's own skills; SequentDraw designs flows, it does not deploy them | any SequentDraw skill |
 | "Find a library for PDF parsing" (no map) | Not SequentDraw | `gitrepo-suggest` |
@@ -101,8 +102,54 @@ Each description states what the skill is not for, and skill evals assert it.
 | "Draw a map of our repo for the docs" (no map exists yet) | `git-map` first, then `doc-map` | `doc-map` alone, which never invents structure |
 
 `business-map` runs inline and never as a forked subagent, because it is a
-conversation with the user. `git-map` may run as `context: fork`, because it reads
+conversation with the user. `git-map` runs as `context: fork`, because it reads
 code without needing the user.
+
+#### Decision: `git-map` keeps `context: fork` (issue #51, 2026-09-17)
+
+Issue #51 asked whether a forked `git-map` can use Bash at all under the narrow
+`Bash(node:*)` grant the skill evals run with. The two CI traces of
+`git-map-output-compose-app` (eval run 35214567992) answer it: **yes**.
+
+- Run 1: the forked subagent ran `node "/home/runner/work/SequentDraw/SequentDraw/bin/sequentdraw"
+  scan fixture/compose-app --out "$TMPDIR/bundle.json"`, which printed `wrote
+  /tmp/claude-eval-.../tmp/bundle.json`, and later `printf '\x7b"title": "x", ...' | node
+  ".../bin/sequentdraw" validate -`, which printed `ok`. Of the 92 tool calls that returned,
+  51 were allowed (the Skill call itself is the 93rd). The 41 refused were forms outside
+  the grant: `ls` of the repository root or `$TMPDIR`, `echo "CLAUDE_PLUGIN_ROOT=$CLAUDE_PLUGIN_ROOT"`,
+  chains starting with `ls ... &&`, JSON heredocs such as
+  `node ".../bin/sequentdraw" check - --evidence "$TMPDIR/bundle.json" <<'EOF'`,
+  redirects such as `printf 'hello\n' > "$TMPDIR/probe.txt"`, and Glob or Grep with a
+  `path` outside the working directory. It spent the rest of its 600 seconds probing
+  the schema with trial documents and timed out without rendering.
+- Run 0: the forked subagent's only two Bash calls were
+  `cd /home/runner/work/SequentDraw/SequentDraw && ls && ... cat bin/sequentdraw` and
+  `ls /home/runner/work/SequentDraw/SequentDraw`. Both were refused ("Permission to use
+  Bash has been denied because Claude Code is running in don't ask mode"). It concluded
+  that "the Bash tool is fully denied in this session" and returned without trying
+  `node`. The parent then tried `cd ... && ls -la`, was refused the same way, and gave
+  up.
+
+So the failures came from the command forms and from reading one refusal as "no shell",
+not from the fork. Moving the skill inline would not have changed either run: the parent
+in run 0 made the same mistake. The fix is in the skill text instead. `git-map` and
+`doc-map` now use the same `references/cli-pipeline.md` as the three suggestion
+skills (kept byte-identical by `tests/skill-cli-pipeline.test.js`): a literal
+absolute `node <plugin root>/bin/sequentdraw`, a `printf` pipe for the first save
+(`check - --evidence <bundle> --emit-open <map.json>`, which writes nothing unless every
+scan claim is backed), `--merge` patches for corrections, files passed by path, no
+heredocs, no variables in the program path, no `cd`, no wrapper script. The reference
+also says that a refused command is not a denied shell, and that the document shape is
+read from `<plugin root>/schema/sequentdraw.schema.json` (`schema/` ships in the npm
+package and the plugin; `docs/` does not ship in the npm package, so skills never point
+at `docs/SPEC.md`), never learned by probing the CLI.
+
+`doc-map` needed one CLI addition: `render --merge <patch|->`. Its confirmed
+descriptions used to reach the figure through a heredoc of the whole map. The only
+narrow-grant alternative, `check --merge - --emit-open`, also draws an open node for every
+completeness gap on a business map (four on the Medusa example), which would put
+structure into a figure that must never invent any. `render --merge` applies the patch
+to the rendered output only and leaves the map file unchanged.
 
 ### Routing context
 
@@ -202,10 +249,22 @@ environment variable. It is never printed,
 committed or pasted into a conversation. The job uses `pull_request`, never
 `pull_request_target`, so pull requests from forks never receive the secret.
 
-With a subscription there is no per-call bill. `--max-cost-usd 10` is a usage guard,
-metered at API-equivalent prices, that stops a runaway suite before it eats the
-subscription's usage limits. Runs are sequential (`--concurrency 1`), because
-parallel runs share one rate limit.
+With a subscription there is no per-call bill. `--max-cost-usd` (50 since PR #50,
+owner-approved) is a usage guard, metered at API-equivalent prices, that stops a runaway
+suite before it eats the subscription's usage limits. It does not protect the plan's
+session limit: PR #50's first full run hit that limit mid-suite, and every later run
+failed with "You've hit your session limit". Runs use `--concurrency 4` since PR #50
+(they share one rate limit, so this shortens wall time, not usage).
+
+**A PR runs only the cases for the skills it touches** (PR #50).
+`scripts/select-eval-tags.js` maps changed paths to skills, and the workflow passes
+`--tag <skill...>`. Every case's `prompt.md` is tagged with each skill it exercises,
+and a test enforces it. `--case` takes a single glob (`claude plugin eval --help`:
+`--case <glob>`), while `--tag <tag...>` takes several. A change to `src/`, `bin/`,
+`schema/`, `hooks/`, `.claude-plugin/`, `package*.json`, the selection or guard
+script, or the workflow runs the full suite. `scripts/eval-results-guard.js` fails the
+job on a results file with zero cases and on any run error, except a run that stopped
+at its own limit; in a must-not-fire case only a turn limit with turns >= N is tolerated.
 
 **Narrow the suite while iterating.** A full run is 28 agent runs: roughly 25 minutes
 and a real slice of the subscription's usage. While fixing one skill, run only the
@@ -239,7 +298,7 @@ as the engine feature they drive:
 |---|---|
 | 5 — extraction, Mode A | `git-map` and `doc-map`, plus the plugin scaffold (`plugin.json`, `marketplace.json`, hooks, `using-sequentdraw`) and the eval CI job |
 | 6 — Mode B as a question flow, with gap rendering | `business-map`, without its suggestion step |
-| 7 — suggestion agent | the `business-map` suggestion step, `eval-build` and `grill-build` |
+| 7 — suggestion agent | the `business-map` suggestion step, `eval-build` and `grill-build` (shipped) |
 | 7a — correction mode (after M2) | none. Every skill from `git-map` on already accepts conversational corrections and re-validates before rendering |
 | 7b — GitHub search with licence verification | `gitrepo-suggest` |
 | 8 — tours, then the MCP server and HTTP API, then `skills install` | none |

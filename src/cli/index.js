@@ -24,19 +24,20 @@ const COMMANDS = {
 const TOP_USAGE = `Usage: sequentdraw <command> [options]
 
 Commands:
-  render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]
+  render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment] [--merge <patch|->]
                                         Render a workflow JSON document to
                                         HTML or SVG.
   validate <in.json|->                 Validate a workflow JSON document.
   scan <path|url> --out <bundle.json>  Scan a repository into an evidence
                                         bundle.
-  check <map.json|-> [--evidence <f>] [--emit-open <out.json>]
+  check <map.json|-> [--merge <patch|->] [--evidence <f>] [--emit-open <out.json>]
                                         Check a map: structure, scan-sourced
                                         claims against an evidence bundle,
                                         and completeness.
 
-"-" as the input document reads it from stdin. Output paths, --evidence and
---emit-open are always real files.
+"-" as the input document reads it from stdin, and so does "-" as a --merge
+patch when the input is a file. Output paths, --evidence and --emit-open are
+always real files.
 
 Run "sequentdraw <command> --help" for command-specific options.
 `;

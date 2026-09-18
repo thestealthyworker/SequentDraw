@@ -5,25 +5,23 @@ plus a local copy, write into the repository only on request.
 
 ## In Claude Code
 
-1. Render with the fragment mode (`sequentdraw render - map.html
-   --fragment` with the map document piped to stdin through a quoted
-   heredoc, or `render map.json map.html --fragment` when the map is
-   already a file) and publish it as a **private Claude artifact**. Give
-   the user the link. Say the page is private by default and is never
-   shared further.
-2. **Always** also keep `map.html` in a session or temp folder outside the
-   repository, plus `map.json` beside it whenever the host has a
-   file-writing tool, and print the paths -- this must happen even when
-   this skill is running as a forked subagent (`context: fork`), since the
-   fork has no other way to hand the result back to the user. Without a
-   file-writing tool, `map.html` alone is the local copy; never create
-   `map.json` through a shell string.
+1. Render the saved map by path with the fragment mode
+   (`render <folder>/map.json <folder>/map.html --fragment`, in the command
+   shape `references/cli-pipeline.md` gives) and publish it as a **private
+   Claude artifact**. Give the user the link. Say the page is private by
+   default and is never shared further.
+2. **Always** also keep `map.json` (written by `check --emit-open`) and
+   `map.html` in a session or temp folder outside the repository, and print
+   both paths -- this must happen even when this skill is running as a
+   forked subagent (`context: fork`), since the fork has no other way to
+   hand the result back to the user. Never create a file through a shell
+   string: the CLI writes both.
 3. Write into the repository **only when the user asks**
    ("save it into our architecture folder"), and **ask before overwriting**
    anything already there.
-4. A conversational correction ("Stripe belongs in Payment") edits the
-   JSON, re-validates, re-checks evidence, and republishes to the *same*
-   artifact -- never a new one.
+4. A conversational correction ("Stripe belongs in Payment") is a patch
+   against the saved map, re-checked against the evidence into a new file,
+   re-rendered, and republished to the *same* artifact -- never a new one.
 
 ## Outside Claude Code (Codex, other agents, CLI-only hosts)
 

@@ -8,10 +8,12 @@ context: fork
 # git-map
 
 Turns a repository into a SequentDraw map of its technical (`base`) layer.
-It may run as a forked subagent (`context: fork`) because it reads code and
+It runs as a forked subagent (`context: fork`) because it reads code and
 needs no back-and-forth with the user -- but it must still return the
 artifact link and local file paths to the main conversation when it
-finishes.
+finishes. A forked run has the same shell access as the main conversation:
+if one command is refused, that says nothing about the next one (see
+`references/cli-pipeline.md`).
 
 ## Principle: evidence, not guesses
 
@@ -32,56 +34,66 @@ writing the map files in the output location below.
 
 ```
 repo (local path or GitHub URL)
-  │
-  ▼
-<sequentdraw> scan <path|url> --out bundle.json         deterministic, engine
-  │
-  ▼
-build workflow JSON from the bundle ONLY                  this skill: group, name, ask
-  │
-  ▼
-<sequentdraw> check - --evidence bundle.json <<'EOF'     every scan claim cited;
-{ ...map document... }                                    the map is piped in
-EOF
-  │
-  ▼
-<sequentdraw> render - map.html --fragment <<'EOF'        artifact fragment;
-{ ...map document... }                                    the map is piped in
-EOF
-  │
-  ▼
+  |
+  |  <sequentdraw> scan <path|url> --out <folder>/bundle.json          deterministic, engine
+  v
+build the map JSON from the bundle ONLY                               this skill: group, name, ask
+  |
+  |  printf '%s' '<map>' | <sequentdraw> check - --evidence <folder>/bundle.json --emit-open <folder>/map.json
+  |  <sequentdraw> check <folder>/map.json --evidence <folder>/bundle.json      prints ok
+  v
+  |  <sequentdraw> render <folder>/map.json <folder>/map.html --fragment
+  v
 publish private artifact + keep local copy
+  |
+  +-- corrections: printf '%s' '<patch>' | <sequentdraw> check <folder>/map.json --merge - --evidence <folder>/bundle.json --emit-open <folder>/map-2.json
 ```
 
-`<sequentdraw>` means `node "${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw" ...` when
-that variable is set (an installed Claude Code plugin), falling back to
-`npx sequentdraw ...` when it is not (Codex, or any other host) --
-`scripts/sequentdraw.sh` implements exactly that resolution; use it, or the
-same fallback logic, rather than hardcoding either form.
+**Read `references/cli-pipeline.md` before the first CLI call.** It says how
+`<sequentdraw>` resolves and holds every command shape. In short:
 
-**The map never has to touch disk before it is rendered.** `check` and
-`render` accept `-` as the input document and read it from stdin, so the
-JSON this skill builds goes straight into each command through a quoted
-heredoc (`<<'EOF' ... EOF`, which keeps the shell from expanding anything
-inside the JSON). Never try to create `map.json` with `node -e`, `echo`,
-`cat` or any other shell string: that is slower, easy to get wrong, and
-often not even permitted. Only the input is ever `-`; the output path and
-`--evidence` are always real files.
+- `<sequentdraw>` is `node <plugin root>/bin/sequentdraw` with the plugin
+  root written out as a literal absolute path: two directories above the
+  "Base directory for this skill" the host gave you. Double-quote it if it
+  contains a space. Never `${CLAUDE_PLUGIN_ROOT}` or any other variable in
+  the program path, never `cd ... &&`, never `scripts/sequentdraw.sh`.
+- The map is not a file until the first save, so it is piped in once,
+  whole, through `printf '%s' '...'`. That same command checks the evidence
+  and writes the file: nothing is written if any claim is not backed.
+- **Every later change is a small patch** against the last saved file,
+  never the map re-typed.
+- Write **no apostrophes and no backticks** inside the JSON; reword instead
+  (`'` only if one is unavoidable).
+- A file the CLI wrote is passed by path.
+- **Never** a heredoc with JSON as its body, **never** `mkdir`, `touch`,
+  `ls`, `echo`/`cat` or redirects, and **never** anything chained before or
+  after the command. The CLI creates every folder it writes into.
+- When a field of the map is unclear, Read
+  `<plugin root>/schema/sequentdraw.schema.json`. Never probe the CLI with
+  trial documents to learn the schema.
+
+Use one session or temp folder outside any repository for everything, for
+example `$TMPDIR/sequentdraw-<repo-name>/`, written out as a real path.
 
 ## Steps
 
 1. **Acquire.** A local path the user named, or the current project; or a
    `https://github.com/<owner>/<repo>` URL (optionally `/tree/<ref>`),
-   cloned shallow and read-only. Never execute anything in the repository:
-   no installs, builds, scripts, dynamic imports, git hooks or submodules.
+   cloned shallow and read-only by `scan` itself. Never execute anything in
+   the repository: no installs, builds, scripts, dynamic imports, git hooks
+   or submodules. To find a local path, use Glob in the working directory,
+   not `ls` or `find`.
 
-2. **Scan.** `<sequentdraw> scan <path|url> --out bundle.json` produces a
+2. **Scan.**
+   `<sequentdraw> scan <path|url> --out <folder>/bundle.json` produces a
    structured evidence bundle (compose/K8s services, IaC resources, SDK
    imports, dependency manifest entries, env variable names, routes, CI
-   jobs) -- never free prose from the repo. Real `.env` files are never
-   read; `.env.example` contributes variable names only. On a bad source, a
-   bad ref, or a scan that exceeds its deadline, the CLI fails loudly with
-   one clear line and writes nothing -- report that to the user rather than
+   jobs) -- never free prose from the repo -- and prints
+   `wrote <folder>/bundle.json (<n> evidence entries)`. Read the bundle with
+   the host's file-reading tool. Real `.env` files are never read;
+   `.env.example` contributes variable names only. On a bad source, a bad
+   ref, or a scan that exceeds its deadline, the CLI fails loudly with one
+   clear line and writes nothing -- report that to the user rather than
    retrying blindly or inventing a map.
 
 3. **Build the map from the bundle only.** Group services into
@@ -125,49 +137,41 @@ often not even permitted. Only the input is ever `-`; the output path and
    `runtime` facts are what the repository says it IS, as opposed to what it
    depends on; prefer them when naming the product's own building blocks.
 
-4. **Check evidence.** Pipe the map you built straight into `check`; `-`
-   reads the map document from stdin, so nothing is written to disk first:
+4. **Save and check evidence in one command.** Pipe the map you built into
+   `check` with the bundle; `-` reads the map from stdin, and `--emit-open`
+   writes it to disk only once every check passes:
 
    ```
-   <sequentdraw> check - --evidence bundle.json <<'EOF'
-   { ...the whole map document... }
-   EOF
+   printf '%s' '<the whole map document>' | <sequentdraw> check - --evidence <folder>/bundle.json --emit-open <folder>/map.json
    ```
 
    `check` runs schema/structural validation, then enforces that every
    `source: "scan"` node cites a real evidence id and every `source: "scan"`
    edge cites a real dependency/import/route fact connecting its two
-   endpoints. It prints `ok` and exits 0 when both pass, or one
-   `path  message` line per problem. Fix any violation by demoting the item
-   to `open` or `source: "model"` -- never by inventing evidence -- then
-   re-run `check` the same way until it prints `ok`.
+   endpoints. On success it prints `wrote <folder>/map.json (0 open nodes)`.
+   Otherwise it prints one `path  message` line per problem and writes
+   nothing. Fix any violation by demoting the item to `open` or
+   `source: "model"` -- never by inventing evidence -- and run the same
+   command again.
+
+   Then confirm the saved file, by path:
+
+   ```
+   <sequentdraw> check <folder>/map.json --evidence <folder>/bundle.json
+   ```
+
+   It prints `ok`.
 
 5. **Write the local copy first -- see `references/artifact-output.md`.** As
-   soon as `check` prints `ok`, render the same document, again from stdin,
-   into a folder outside the repository (a session folder, or a path under
-   the system temp directory):
+   soon as `check` prints `ok`, render the saved file:
 
    ```
-   <sequentdraw> render - <folder>/map.html --fragment <<'EOF'
-   { ...the same map document... }
-   EOF
+   <sequentdraw> render <folder>/map.json <folder>/map.html --fragment
    ```
 
-   Only the input is `-`; the output is always a real path. The CLI creates
-   the output directory itself, so do not make it first, and run each CLI
-   call as its own command beginning with `<sequentdraw>` -- never chained
-   behind `mkdir ... &&`, `echo ... |`, `cat ... |` or any other prefix,
-   because a host may grant the CLI narrowly (this plugin's own CI grants
-   `Bash(node:*)`) and such a grant matches only a command that *starts*
-   with what was granted. A heredoc keeps the CLI first; a pipe from
-   another program does not.
-   The CLI prints `wrote <path> (<size>kb)`. Keep that output and print the
-   path. Do this before anything else, so a finished map always exists on
-   disk even if a later step is unavailable. If the host also gives you a
-   file-writing tool, save the same JSON as `<folder>/map.json` beside the
-   HTML and print both paths; if it does not, say that only `map.html` was
-   saved and move on -- never detour through a shell string to create
-   `map.json`.
+   The CLI prints `wrote <path> (<size>kb)`. Keep that output and print both
+   paths (`map.json` and `map.html`). Do this before anything else, so a
+   finished map always exists on disk even if a later step is unavailable.
 
 6. **Then publish.** In Claude Code, publish `map.html` as a private Claude
    artifact and give the user the link, saying the page is private and is
@@ -179,9 +183,16 @@ often not even permitted. Only the input is ever `-`; the output path and
    overwriting.
 
 7. **Corrections are conversational.** "Stripe belongs in Payment" or
-   similar: edit the JSON, re-check evidence and re-render (both from stdin,
-   exactly as in steps 4 and 5), and republish to the *same* artifact
-   rather than creating a new one.
+   similar: write only the change as a patch against the last saved file,
+   with the bundle still enforced, into a new file name:
+
+   ```
+   printf '%s' '<patch>' | <sequentdraw> check <folder>/map.json --merge - --evidence <folder>/bundle.json --emit-open <folder>/map-2.json
+   ```
+
+   To move a node, remove it and add it back under the same id with its
+   new fields and the edges it keeps. Re-render `map-2.json` by path and
+   republish to the *same* artifact rather than creating a new one.
 
 ## Boundaries
 

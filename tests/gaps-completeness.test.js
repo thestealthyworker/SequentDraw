@@ -427,6 +427,29 @@ describe('rule 6a: unhappy-paths-missing', () => {
     assert.deepStrictEqual(codesOf(checkCompleteness(copy)), ['unhappy-paths-missing']);
   });
 
+  test('re-emitting a copy that already carries the note does not add a second one', () => {
+    // Skills save a reviewed or suggested document by piping it through
+    // `check - --emit-open`, so the same copy can be emitted more than once.
+    // The question is still reported, but the note it asks with is not
+    // duplicated (it used to come back as n_consider_unhappy_paths_2).
+    const first = buildOpenDocument(happyOnly, checkCompleteness(happyOnly).additions);
+    const again = checkCompleteness(first);
+    assert.deepStrictEqual(codesOf(again), ['unhappy-paths-missing']);
+    assert.deepStrictEqual(again.additions.notes, []);
+    const second = buildOpenDocument(first, again.additions);
+    assert.deepStrictEqual(second.notes.map(n => n.id), ['n_consider_unhappy_paths']);
+  });
+
+  test('an id clash with a node still gets the note, under a fresh id', () => {
+    const clash = {
+      ...happyOnly,
+      nodes: [...happyOnly.nodes, { id: 'n_consider_unhappy_paths', label: 'Clash', kind: 'manual', layers: ['base'] }],
+      edges: [...happyOnly.edges, { from: 'step', to: 'n_consider_unhappy_paths', type: 'solid' }],
+    };
+    const [note] = checkCompleteness(clash).additions.notes;
+    assert.strictEqual(note.id, 'n_consider_unhappy_paths_2');
+  });
+
   test('any edge-layer node silences it', () => {
     assert.deepStrictEqual(codesOf(checkCompleteness(doc([]))), []);
   });

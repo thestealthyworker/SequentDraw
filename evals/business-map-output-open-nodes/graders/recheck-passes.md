@@ -1,23 +1,35 @@
 ---
 type: regex
 target: trace
-pattern: check [^\s"'\\]*gaps[^\s"'\\]*\.json[\s\S]{0,2000}?\bok\b
+pattern: 'bin/sequentdraw(?:\\")?\s+check\s+(?:\\")?[^\s"\\]*gaps[^\s"\\]*\.json(?:\\")?(?:\s+2>&1)?"(?:(?!"type":"tool_use")[\s\S]){0,4000}?(?:\\n|"(?:content|text|stdout)":")ok"'
 match: contains
 weight: 1
 ---
 
-The emitted copy was re-checked and passed. `sequentdraw check gaps.json`
-prints exactly "ok" and exits 0 when the copy is complete, which it is by
-construction: an open node satisfies the rule that emitted it and is never
-itself a subject. The pattern requires the second `check` invocation -- the
-one naming the emitted copy, not the `--emit-open` call that wrote it --
-followed within a bounded window by that "ok", so a stray "ok" elsewhere in
-the conversation does not count.
+The emitted copy was re-checked and passed. The pattern requires the actual
+Bash call -- `node ".../bin/sequentdraw" check <folder>/gaps.json`, with
+nothing after the path, so it is the re-check and not the `--emit-open` call
+that wrote the file -- followed within 4,000 characters of trace by a tool
+result whose output ends in `ok`. In the CI trace of this case's last passing
+run the call and its result are 993 characters apart and read:
+
+    "command":"node \"/home/runner/work/SequentDraw/SequentDraw/bin/sequentdraw\" check /tmp/claude-eval-GEkoKS/home/cleaning-map/gaps.json"
+    "content":"/bin/bash: ...: Permission denied\n/bin/bash: ...: Permission denied\nok"
+
+Locally the same command prints exactly:
+
+    ok
+
+The skill's own text writes the command as `<sequentdraw> check
+<folder>/gaps.json` and never as `bin/sequentdraw" check`, and never has
+`ok` directly after a newline and before a quote, so loading the skill into
+the trace cannot satisfy this grader (the previous pattern could).
 
 This prompt names an unhappy path ("about a third of customers never reply
 to the quote"), so the map carries an `edge`-layer node and the one rule
 that would still report on the copy, `unhappy-paths-missing`, does not
-apply. That rule answers "nothing goes wrong in this map" with a map-level
-note rather than a node, so its condition stays true of its own copy -- a
-map whose author named no failure at all would legitimately still report it,
-which is why the skill is told not to loop on `check` waiting for "ok".
+apply.
+
+A result is only accepted from the same tool call: the window from the
+command to its output may not cross a `"type":"tool_use"` marker, so a
+failed check followed by some later successful command cannot match.

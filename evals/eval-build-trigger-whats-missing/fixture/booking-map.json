@@ -1,0 +1,267 @@
+{
+  "title": "How a cleaning booking becomes a paid job",
+  "nodes": [
+    {
+      "id": "customer",
+      "label": "Customer",
+      "kind": "external",
+      "layers": [
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "enquiry_form",
+      "label": "Enquiry form",
+      "sublabel": "website",
+      "kind": "service",
+      "layers": [
+        "base"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "owner",
+      "label": "Owner",
+      "kind": "human",
+      "layers": [
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "decide",
+      "label": "Accept booking?",
+      "sublabel": "postcode and date",
+      "kind": "logic",
+      "layers": [
+        "base"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "send_quote",
+      "label": "Send quote",
+      "kind": "manual",
+      "layers": [
+        "base",
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "confirm_quote",
+      "label": "Customer confirms",
+      "kind": "manual",
+      "layers": [
+        "base",
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "schedule",
+      "label": "Schedule cleaner",
+      "kind": "manual",
+      "layers": [
+        "base",
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "dana",
+      "label": "Dana",
+      "sublabel": "cleaner",
+      "kind": "human",
+      "layers": [
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "clean",
+      "label": "Clean property",
+      "kind": "manual",
+      "layers": [
+        "base",
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "job_sheet",
+      "label": "Job sheet",
+      "kind": "artifact",
+      "layers": [
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "invoice_email",
+      "label": "Invoice email",
+      "kind": "service",
+      "layers": [
+        "base"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "invoice",
+      "label": "Invoice",
+      "kind": "artifact",
+      "layers": [
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "bank_transfer",
+      "label": "Bank transfer",
+      "kind": "manual",
+      "layers": [
+        "base",
+        "business"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "no_reply",
+      "label": "No reply to quote",
+      "kind": "logic",
+      "layers": [
+        "edge"
+      ],
+      "source": "user"
+    },
+    {
+      "id": "q_owner_no_reply",
+      "label": "Who handles this?",
+      "kind": "human",
+      "layers": [
+        "edge"
+      ],
+      "status": "open",
+      "prompt": "When No reply to quote happens, nobody in the map deals with it. Who owns it?"
+    }
+  ],
+  "edges": [
+    {
+      "from": "customer",
+      "to": "enquiry_form",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "enquiry_form",
+      "to": "decide",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "owner",
+      "to": "decide",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "decide",
+      "to": "send_quote",
+      "type": "dashed",
+      "condition": "accepted",
+      "source": "user"
+    },
+    {
+      "from": "owner",
+      "to": "send_quote",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "send_quote",
+      "to": "confirm_quote",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "confirm_quote",
+      "to": "schedule",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "owner",
+      "to": "schedule",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "schedule",
+      "to": "clean",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "dana",
+      "to": "clean",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "clean",
+      "to": "job_sheet",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "job_sheet",
+      "to": "invoice_email",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "invoice_email",
+      "to": "invoice",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "invoice",
+      "to": "customer",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "customer",
+      "to": "bank_transfer",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "bank_transfer",
+      "to": "owner",
+      "type": "solid",
+      "source": "user"
+    },
+    {
+      "from": "send_quote",
+      "to": "no_reply",
+      "type": "dashed",
+      "condition": "no reply",
+      "source": "user"
+    },
+    {
+      "from": "no_reply",
+      "to": "q_owner_no_reply",
+      "type": "solid"
+    }
+  ],
+  "notes": [
+    {
+      "id": "n_unit",
+      "content": "Unit of value: one cleaning booking.",
+      "color": "yellow"
+    }
+  ]
+}

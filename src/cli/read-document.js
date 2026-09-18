@@ -6,8 +6,9 @@
 // and then the only way to get a map document onto disk for `check` and
 // `render` was `node -e "fs.writeFileSync(...)"` with the whole document
 // inlined in a shell string. Whether an agent found that path was luck.
-// With "-" the document is piped straight in (a quoted heredoc keeps the
-// command starting with `node`), and no file has to be materialised.
+// With "-" the document is piped straight in (`printf '%s' '<json>' | node
+// ...` keeps the command starting with `node`; a narrow grant refuses a JSON
+// heredoc), and no file has to be materialised.
 //
 // "-" is only ever the INPUT document. Output paths and `--evidence` stay
 // real files; each subcommand rejects "-" there itself.

@@ -111,7 +111,7 @@ with it."
 **If the user can name no failure at all:** write none, and let the engine
 report the empty layer. It answers that with a gold sticky note rather than
 a node, which is why `check` on the emitted copy still reports
-`unhappy-paths-missing` -- expected, not a failure (see SKILL.md step 4).
+`unhappy-paths-missing` -- expected, not a failure (see SKILL.md step 3).
 
 ## 8. The systems
 

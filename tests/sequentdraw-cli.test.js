@@ -733,6 +733,230 @@ test('check --emit-open with a missing value prints usage and writes nothing', (
   });
 });
 
+// --- the skills' suggestion pipeline --------------------------------------
+//
+// business-map, eval-build and grill-build pass documents as
+// `printf '%s' '<json>' | node <bin> check - --emit-open <folder>/x.json`,
+// with every apostrophe in the JSON written as ', then check and render
+// the written file. A quoted heredoc is not used: a narrow `Bash(node:*)`
+// grant refuses a heredoc whose body is a JSON object. This runs that exact
+// shell form, so a change to how stdin, --emit-open or rule 6a behave cannot
+// silently break the documented pipeline.
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
+function runPrintfPipe(doc, args, cwd) {
+  const json = JSON.stringify(doc, null, 2).replace(/'/g, '\\u0027');
+  const command = `printf '%s' '${json}' | ${shellQuote(process.execPath)} ${shellQuote(BIN)} ${args.map(shellQuote).join(' ')}`;
+  return spawnSync('bash', ['-c', command], { cwd, encoding: 'utf8' });
+}
+
+const SUGGESTION_BASE = {
+  title: "Owner's booking flow",
+  nodes: [
+    { id: 'customer', label: 'Customer', kind: 'external', layers: ['business'], source: 'user' },
+    { id: 'schedule', label: 'Schedule cleaner', kind: 'manual', layers: ['base', 'business'], source: 'user' },
+    { id: 'invoice', label: 'Invoice', kind: 'artifact', layers: ['business'], source: 'user' },
+  ],
+  edges: [
+    { from: 'customer', to: 'schedule', type: 'solid', source: 'user' },
+    { from: 'schedule', to: 'invoice', type: 'solid', source: 'user' },
+    { from: 'invoice', to: 'customer', type: 'solid', source: 'user' },
+  ],
+};
+
+test('skill pipeline: printf-piped emit into a new folder, suggestions, re-emit, render', () => {
+  withTempDir(dir => {
+    const gaps = runPrintfPipe(SUGGESTION_BASE, ['check', '-', '--emit-open', 'out/deep/gaps.json'], dir);
+    assert.strictEqual(gaps.status, 0, gaps.stderr);
+    assert.match(gaps.stdout, /^wrote out\/deep\/gaps\.json \(0 open nodes, 1 note\)$/m);
+    assert.match(gaps.stderr, /unhappy-paths-missing|nothing goes wrong in it/);
+
+    const emitted = JSON.parse(fs.readFileSync(path.join(dir, 'out', 'deep', 'gaps.json'), 'utf8'));
+    assert.strictEqual(emitted.title, "Owner's booking flow");
+
+    const suggested = {
+      ...emitted,
+      nodes: [
+        ...emitted.nodes,
+        {
+          id: 's_calendly',
+          label: 'Calendly',
+          kind: 'service',
+          layers: ['base'],
+          status: 'suggested',
+          source: 'model',
+          rationale: "You schedule the cleaner by hand; a booking link lets the customer pick the slot.",
+          cites: ['schedule'],
+          integration: 'calendly',
+        },
+      ],
+      edges: [...emitted.edges, { from: 'schedule', to: 's_calendly', type: 'dashed', source: 'model' }],
+    };
+    const saved = runPrintfPipe(suggested, ['check', '-', '--emit-open', 'out/deep/suggested.json'], dir);
+    assert.strictEqual(saved.status, 0, saved.stderr);
+    // Re-emitting a copy that already carries rule 6a's note adds nothing.
+    assert.match(saved.stdout, /^wrote out\/deep\/suggested\.json \(0 open nodes\)$/m);
+    const written = JSON.parse(fs.readFileSync(path.join(dir, 'out', 'deep', 'suggested.json'), 'utf8'));
+    assert.deepStrictEqual(written.notes.map(n => n.id), ['n_consider_unhappy_paths']);
+    assert.strictEqual(written.nodes.find(n => n.id === 's_calendly').rationale, suggested.nodes[3].rationale);
+
+    const render = runCli(['render', 'out/deep/suggested.json', 'out/site/map.html', '--fragment'], dir);
+    assert.strictEqual(render.status, 0, render.stderr);
+    assert.match(render.stdout, /^wrote out\/site\/map\.html \(\d+kb\)$/m);
+  });
+});
+
+test('skill pipeline: a suggestion error is reported and nothing is written', () => {
+  withTempDir(dir => {
+    const bad = {
+      ...SUGGESTION_BASE,
+      nodes: [
+        ...SUGGESTION_BASE.nodes,
+        { id: 's_x', label: 'X', kind: 'service', layers: ['base'], status: 'suggested', source: 'model', rationale: 'r', cites: ['schedule'], integration: 'not-in-catalogue' },
+      ],
+      edges: [...SUGGESTION_BASE.edges, { from: 'schedule', to: 's_x', type: 'dashed' }],
+    };
+    const result = runPrintfPipe(bad, ['check', '-', '--emit-open', 'out/x.json'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /^\/nodes\/3\/integration {2}Node "s_x" integration "not-in-catalogue" is not in the SequentDraw catalogue\.$/m);
+    assert.strictEqual(fs.existsSync(path.join(dir, 'out')), false);
+  });
+});
+
+// --- check --merge --------------------------------------------------------
+//
+// eval-build and grill-build never re-type an existing map: they pipe a small
+// patch, `printf '%s' '<patch>' | node <bin> check <map.json> --merge -
+// --emit-open <folder>/review.json`.
+
+const REVIEW_PATCH = {
+  nodes: [
+    {
+      id: 's_postmark',
+      label: 'Postmark',
+      sublabel: 'return emails',
+      kind: 'service',
+      layers: ['base'],
+      status: 'suggested',
+      source: 'model',
+      rationale: 'The Notification module sends return updates itself and no_notification is an edge case; a delivery service reports bounces.',
+      cites: ['notif_mod'],
+      integration: 'postmark',
+    },
+  ],
+  edges: [{ from: 'event_bus', to: 's_postmark', type: 'dashed', source: 'model' }],
+  notes: [
+    {
+      id: 'n_review_refund_retry',
+      content: 'Consider: nothing in the map retries a failed refund call. Who notices when it fails?',
+      attachTo: ['pay_mod', 'pay_provider'],
+      color: 'gold',
+    },
+  ],
+};
+
+test('check --merge: printf-piped patch onto the Medusa map, emitted into a new folder', () => {
+  withTempDir(dir => {
+    const result = runPrintfPipe(REVIEW_PATCH, ['check', FIXTURE, '--merge', '-', '--emit-open', 'out/review/review.json'], dir);
+    assert.strictEqual(result.status, 0, result.stderr);
+    // The Medusa map's own four gaps are still drawn; the patch adds none.
+    assert.match(result.stdout, /^wrote out\/review\/review\.json \(4 open nodes\)$/m);
+    const written = JSON.parse(fs.readFileSync(path.join(dir, 'out', 'review', 'review.json'), 'utf8'));
+    const base = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
+    assert.strictEqual(written.nodes.length, base.nodes.length + 1 + 4);
+    assert.ok(written.nodes.some(n => n.id === 's_postmark' && n.status === 'suggested'));
+    assert.ok(written.notes.some(n => n.id === 'n_review_refund_retry'));
+    assert.strictEqual(fs.readFileSync(FIXTURE, 'utf8'), JSON.stringify(base, null, 2) + '\n');
+
+    const recheck = runCli(['check', 'out/review/review.json'], dir);
+    assert.strictEqual(recheck.status, 0, recheck.stderr);
+    assert.strictEqual(recheck.stdout, 'ok\n');
+  });
+});
+
+test('check --merge: without --emit-open the merged document is checked and nothing is written', () => {
+  withTempDir(dir => {
+    const map = path.join(dir, 'map.json');
+    fs.writeFileSync(map, JSON.stringify(SUGGESTION_BASE));
+    const patch = path.join(dir, 'patch.json');
+    fs.writeFileSync(patch, JSON.stringify({ remove: { nodes: ['invoice'] }, edges: [{ from: 'schedule', to: 'customer', type: 'solid' }] }));
+    const result = runCli(['check', map, '--merge', patch], dir);
+    // Rule 6a still fires on this business map with no edge layer.
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /nothing goes wrong in it/);
+    assert.deepStrictEqual(fs.readdirSync(dir).sort(), ['map.json', 'patch.json']);
+  });
+});
+
+test('check --merge: accepting a suggestion is remove plus re-add under the same id', () => {
+  withTempDir(dir => {
+    const map = path.join(dir, 'suggested.json');
+    fs.writeFileSync(map, JSON.stringify({
+      ...SUGGESTION_BASE,
+      nodes: [...SUGGESTION_BASE.nodes, { id: 's_calendly', label: 'Calendly', kind: 'service', layers: ['base'], status: 'suggested', source: 'model', rationale: 'r', cites: ['schedule'], integration: 'calendly' }],
+      edges: [...SUGGESTION_BASE.edges, { from: 'schedule', to: 's_calendly', type: 'dashed' }],
+    }));
+    const patch = {
+      remove: { nodes: ['s_calendly'] },
+      nodes: [{ id: 's_calendly', label: 'Calendly', kind: 'service', layers: ['base'], source: 'user', integration: 'calendly' }],
+      edges: [{ from: 'schedule', to: 's_calendly', type: 'dashed' }],
+    };
+    const result = runPrintfPipe(patch, ['check', map, '--merge', '-', '--emit-open', 'out/accepted.json'], dir);
+    assert.strictEqual(result.status, 0, result.stderr);
+    const accepted = JSON.parse(fs.readFileSync(path.join(dir, 'out', 'accepted.json'), 'utf8')).nodes.find(n => n.id === 's_calendly');
+    assert.deepStrictEqual(accepted, patch.nodes[0]);
+  });
+});
+
+test('check --merge: a merge error names the patch path, exits 1 and writes nothing', () => {
+  withTempDir(dir => {
+    const result = runPrintfPipe({ nodes: [{ id: 'customer', label: 'Again', kind: 'external' }], remove: { nodes: ['nope'] } }, ['check', FIXTURE, '--merge', '-', '--emit-open', 'out/x.json'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /^--merge could not apply the patch; nothing was written\.$/m);
+    assert.match(result.stderr, /^\/remove\/nodes\/0 {2}--merge: "nope" is not a node in the base document; nothing to remove\.$/m);
+    assert.match(result.stderr, /^\/nodes\/0\/id {2}--merge: id "customer" is already used in the document; remove it first to replace it\.$/m);
+    assert.strictEqual(fs.existsSync(path.join(dir, 'out')), false);
+  });
+});
+
+test('check --merge: a merged document that fails validation writes nothing', () => {
+  withTempDir(dir => {
+    const result = runPrintfPipe({ nodes: [{ id: 's_x', label: 'X', kind: 'service', status: 'suggested', source: 'model', rationale: 'r', cites: ['notif_mod'], integration: 'freshbooks' }], edges: [{ from: 'event_bus', to: 's_x', type: 'dashed' }] }, ['check', FIXTURE, '--merge', '-', '--emit-open', 'out/x.json'], dir);
+    assert.strictEqual(result.status, 1);
+    assert.match(result.stderr, /integration "freshbooks" is not in the SequentDraw catalogue/);
+    assert.strictEqual(fs.existsSync(path.join(dir, 'out')), false);
+  });
+});
+
+test('check --merge: usage errors', () => {
+  withTempDir(dir => {
+    const bothStdin = runCli(['check', '-', '--merge', '-'], dir, { input: '{}' });
+    assert.strictEqual(bothStdin.status, 1);
+    assert.match(bothStdin.stderr, /cannot both read stdin/);
+
+    const patch = path.join(dir, 'patch.json');
+    fs.writeFileSync(patch, '{}');
+    const overPatch = runCli(['check', FIXTURE, '--merge', patch, '--emit-open', patch], dir);
+    assert.strictEqual(overPatch.status, 1);
+    assert.match(overPatch.stderr, /must not name the patch/);
+    assert.strictEqual(fs.readFileSync(patch, 'utf8'), '{}');
+
+    const missing = runCli(['check', FIXTURE, '--merge'], dir);
+    assert.strictEqual(missing.status, 1);
+    assert.match(missing.stderr, /Usage: sequentdraw check/);
+
+    const badJson = runCli(['check', FIXTURE, '--merge', '-'], dir, { input: '{nope' });
+    assert.strictEqual(badJson.status, 1);
+    assert.match(badJson.stderr, /^--merge: /m);
+
+    const help = runCli(['check', '--help']);
+    assert.match(help.stdout, /--merge <patch>/);
+  });
+});
+
 test('check --help documents --evidence as optional and --emit-open', () => {
   const result = runCli(['check', '--help']);
   assert.strictEqual(result.status, 0);

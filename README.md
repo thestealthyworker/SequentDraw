@@ -50,41 +50,47 @@ const fragment = await renderMap(workflowJson, { fragment: true }); // no <!DOCT
 /plugin install sequentdraw@sequentdraw
 ```
 
-This installs the `git-map` and `doc-map` skills (`/sequentdraw:git-map`,
-`/sequentdraw:doc-map`) and a `SessionStart` hook that gives Claude a short
-routing note on which skill applies. `git-map` turns a repository (a local
-path or a GitHub URL) into an interactive architecture map, built only from
-a deterministic scan — see [`docs/design/git-map.md`](docs/design/git-map.md).
-`doc-map` exports an existing SequentDraw map as a static SVG figure for
-docs and slides — see [`docs/design/n8n-visual-style.md`](docs/design/n8n-visual-style.md)'s
-"Documentation export". Every skill that produces a map or figure publishes
-it as a private Claude artifact and keeps a local copy outside the repo,
-writing into the repo only when asked.
+This installs five skills and a `SessionStart` hook that gives Claude a short
+routing note on which skill applies:
 
-The same `skills/` directory is Codex-usable too: `.agents/skills/doc-map`
-and `.agents/skills/git-map` mirror `skills/doc-map` and `skills/git-map`
-(as a symlink, or a synced copy via `npm run sync-agent-skills` on a
-platform where symlinks are unavailable).
+| Skill | What it does |
+|---|---|
+| `/sequentdraw:git-map` | Maps a repository (a local path or a GitHub URL) into an interactive architecture map, built only from a deterministic scan. Anything the scan cannot establish becomes an open question. See [`docs/design/git-map.md`](docs/design/git-map.md). |
+| `/sequentdraw:business-map` | Maps a business, process or idea by interviewing you, then offers up to five n8n integrations as suggestions you accept or decline. See [`docs/design/business-map.md`](docs/design/business-map.md). |
+| `/sequentdraw:eval-build` | A balanced review of an existing map: what works, what is missing, what is fragile, drawn into the map. |
+| `/sequentdraw:grill-build` | A harsh critique of an existing map, only when you ask to grill or stress-test it, with alternatives drawn beside what they replace. |
+| `/sequentdraw:doc-map` | Exports an existing map as a static SVG figure for docs and slides. See [`docs/design/n8n-visual-style.md`](docs/design/n8n-visual-style.md)'s "Documentation export". |
+
+Every skill that produces a map or figure publishes it as a private Claude artifact
+and keeps a local copy outside the repo, writing into the repo only when asked.
+
+The same `skills/` directory is Codex-usable too: `.agents/skills/<skill>` mirrors
+`skills/<skill>` for all five (as a symlink, or a synced copy via
+`npm run sync-agent-skills` on a platform where symlinks are unavailable).
 
 ## CLI
 
 ```sh
-npx sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment]
+npx sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment] [--merge <patch.json|->]
 npx sequentdraw validate <in.json|->
 npx sequentdraw scan <path|github-url> --out <bundle.json> [--timeout <ms>]
-npx sequentdraw check <map.json|-> [--evidence <bundle.json>] [--emit-open <out.json>]
+npx sequentdraw check <map.json|-> [--merge <patch.json|->] [--evidence <bundle.json>] [--emit-open <out.json>]
+npx sequentdraw catalogue [--category <name>] [--json]
 ```
 
 - `-` as the input document reads it from stdin, so a map built in
-  conversation can be piped straight in (a quoted heredoc keeps the command
-  starting with the CLI) without being written to disk first. Only the
-  input is ever stdin: output paths, `--evidence` and `--emit-open` are
-  always real files. Both sources share one 16MB cap and fail loudly past it.
+  conversation can be piped straight in (`printf '%s' '<json>' | node
+  .../bin/sequentdraw check - ...` keeps the command starting with `node`)
+  without being written to disk first. When the input is a file, `-` may
+  instead be a `--merge` patch. Output paths, `--evidence` and `--emit-open`
+  are always real files. Both sources share one 16MB cap and fail loudly past it.
 
 - `render` writes an interactive HTML map (`.html`) or a static SVG
   documentation figure (`.svg`). `--layers a,b` (SVG only) adds layers
   beyond the always-included `base`. `--fragment` (HTML only) emits the
-  artifact fragment shown above instead of a full document.
+  artifact fragment shown above instead of a full document. `--merge <patch>`
+  applies a patch (below) to the rendered output only; the input file is
+  never changed.
 - `validate` prints `ok` and exits 0 for a valid workflow JSON document, or
   one `path  message` line per error to stderr and exits 1.
 - `scan` turns a local path or a `https://github.com/<owner>/<repo>` URL
@@ -104,6 +110,11 @@ npx sequentdraw check <map.json|-> [--evidence <bundle.json>] [--emit-open <out.
   `path  message` line per problem and exits 1. `--emit-open <out.json>`
   writes a *copy* of the map with one `open` question node per gap and exits
   0; the input is never modified in place, and the copy passes `check`.
+  `--merge <patch>` first applies a small patch to the map, so a change
+  never means re-typing it: `{"nodes": [...], "edges": [...], "notes": [...],
+  "remove": {"nodes": [ids], "edges": [{"from", "to"}], "notes": [ids]}}`.
+  Removals run first; removing a node removes its edges.
+- `catalogue` lists the n8n integrations a suggestion may name.
 - Every subcommand takes `--help`. Unknown flags or extra arguments print
   usage and exit 1, and nothing is written to disk on error.
 

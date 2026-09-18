@@ -44,8 +44,12 @@ file-writing tool -- and the only other way to get `map.json` onto disk for `che
 `render` was `node -e "fs.writeFileSync(...)"` with the whole document inlined in a shell
 string. Whether an agent found that path was luck: the same eval case scored 1.0, 0.75 and
 0.25 across runs, and one run burned 39 tool calls and hit its turn limit without
-rendering (issue #31). The skill now pipes the document in through a quoted heredoc, so
-each command still *starts* with `node` and matches the grant. Only the input is ever
+rendering (issue #31). The skill first piped the document in through a quoted heredoc; the CI
+traces of issue #51 then showed a narrow grant refuses a heredoc whose body is JSON, so the
+skill now pipes the first save in through `printf '%s' '<map>'`, writes it with
+`check - --evidence <bundle> --emit-open <map.json>`, and passes every later command the
+file by path (`skills/git-map/references/cli-pipeline.md`). Each command still *starts*
+with `node` and matches the grant. Only the input is ever
 stdin: output paths and `--evidence` are always real files, and both sources are bounded
 by the same 16MB cap and fail loudly past it.
 
