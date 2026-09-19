@@ -218,8 +218,10 @@ Made in the viewer on 2026-09-19, against a map rendered from
 
 Provenance: any node an operation changes gets `source: "user"`, the same mark an
 accepted suggestion gets. A reader of the corrected document can then tell what came
-from a scan, what came from the model, and what a human fixed by hand. Edges carry no
-`source` field in the schema and are not given one here.
+from a scan, what came from the model, and what a human fixed by hand. An edge carries
+`source` too (`src/n8n/validate.js`), but a reattached edge is left alone: it is the
+same connection, and stamping it would claim the user authored the connection rather
+than moved one end of it. The change list is where that is recorded.
 
 ### In an artifact host
 
