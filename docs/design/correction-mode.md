@@ -266,18 +266,30 @@ collisions, note placement), all of which depend on the layout the re-render com
 
 ## Implementation shape
 
-One new pure module, `src/n8n/correct-ops.js`, holding the whole of the logic above:
-`applyOp(doc, op)` → the new document, `guard(doc, op)` → `null` or a refusal with its
-offered fix, `describeOp(doc, op)` → the change-list line.
+One new pure module, `src/n8n/correct-ops.js`, holding the whole of the logic above as
+small top-level functions: `applyOp(doc, op)` → the new document, `guard(doc, op)` →
+`null` or a refusal with its offered fix, `describeOp(doc, op)` → the change-list line,
+plus the per-operation helpers those three dispatch to.
 
-It is authored as browser-safe ES5 with `module.exports` at the end. `render-shell.js`
-reads it once at require time, strips the export line, and embeds it in the existing
-single `<script>`; the tests `require()` the same file. One implementation, two
-consumers, no build step, and the "exactly one `<script>` element" rule is preserved. A
-test asserts the embedded source contains no `require(`, no `import` and no `process`.
+It follows the convention `edge-visibility.js`, `handle-visibility.js` and
+`frame-box.js` already set for logic the viewer needs: the module is authored in plain
+ES5 `var`/`function` style, and `render-shell.js` inlines a verbatim copy of each
+function into the single `<script>`, because the browser cannot `require()` it.
+`tests/n8n-inlined-functions.test.js` compares each inlined copy with its module source
+with all whitespace stripped, so the two cannot drift: a renamed variable, a different
+operator or an added line fails the test. The new functions join that test rather than
+introducing a second mechanism.
 
-The viewer script keeps only the wiring: menus built from `SOURCE_DOC`, the operation
-stack, badges, the panel, the downloads.
+The rejected alternative was reading the module at require time and stripping its
+export line. It removes the duplication, but it puts file IO behind a renderer
+documented as pure, and it makes the shipped viewer depend on a file the npm `files`
+list has to keep in step. Verbatim copies with a parity test are what this codebase
+already trusts.
+
+Because of that duplication cost, the split matters: `correct-ops.js` holds the
+decisions (what an operation changes, what refuses it, how it reads in the change
+list), and the viewer script holds the wiring the browser owns anyway — menus built
+from `SOURCE_DOC`, the operation stack, badges, the panel, the downloads.
 
 ## Security
 
@@ -310,8 +322,9 @@ Engine tests (offline, deterministic):
    applying the operations one by one (the undo invariant).
 6. `describeOp` output is stable text for each operation, so the change list is
    reviewable in a diff.
-7. The embedded source carries no `require(`, `import` or `process`, and the output
-   still holds exactly one `<script>`.
+7. Each inlined copy matches its `correct-ops.js` source exactly, whitespace aside
+   (`tests/n8n-inlined-functions.test.js`), and the output still holds exactly one
+   `<script>`.
 
 Viewer behaviour that needs a DOM (menus, badges, downloads) is covered by the existing
 rendered-output assertions plus one screenshot check at the M3 gate. No new skill and no
