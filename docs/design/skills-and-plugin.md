@@ -299,6 +299,6 @@ as the engine feature they drive:
 | 5 — extraction, Mode A | `git-map` and `doc-map`, plus the plugin scaffold (`plugin.json`, `marketplace.json`, hooks, `using-sequentdraw`) and the eval CI job |
 | 6 — Mode B as a question flow, with gap rendering | `business-map`, without its suggestion step |
 | 7 — suggestion agent | the `business-map` suggestion step, `eval-build` and `grill-build` (shipped) |
-| 7a — correction mode (after M2) | none. Every skill from `git-map` on already accepts conversational corrections and re-validates before rendering |
+| 7a — correction mode (after M2, `docs/design/correction-mode.md`) | none. Every skill from `git-map` on already accepts conversational corrections and re-validates before rendering |
 | 7b — GitHub search with licence verification | `gitrepo-suggest` |
 | 8 — tours, then the MCP server and HTTP API, then `skills install` | none |
