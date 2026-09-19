@@ -95,6 +95,11 @@ example `$TMPDIR/sequentdraw-<short-name>/`.
      prompt naming what is missing. Question 1 is the only one with no
      fallback -- a map with no unit of value has nothing to trace, so say so
      and stop rather than picking one.
+   - **The happy path is a chain of steps.** Every step carries a solid edge
+     from the step before it, trigger through to the money. Actors and
+     artifacts hang off that chain, they never stand in for a piece of it:
+     a step reached only through the customer is drawn where the customer
+     is, which is the start. `references/interview.md`, "How the edges go".
 
 3. **Check, save and emit the questions** in one command:
 
