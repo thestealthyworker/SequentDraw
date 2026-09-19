@@ -47,6 +47,21 @@ function correctFind(list, id) {
   return null;
 }
 
+// Every lookup keyed by a document id uses a null-prototype object. An id
+// is author-controlled and validate.js's ID_RE allows "__proto__" (and
+// "constructor", "toString", ...) as a legal id: on a plain {}, reading
+// one of those returns something inherited and truthy before anything is
+// stored, and assigning to "__proto__" is swallowed instead of creating an
+// own key. Both directions corrupt the orphan-rule arithmetic below -- a
+// legal deletion refused, or a stranding missed and a document produced
+// that validateDoc then rejects. Same defence as render.js and
+// render-shell.js.
+function correctIdSet(ids) {
+  var set = Object.create(null);
+  ids.forEach(function(id){ set[id] = true; });
+  return set;
+}
+
 function correctRefuse(code, message, fix) {
   return { code: code, message: message, fix: fix || null };
 }
@@ -67,11 +82,10 @@ function correctGroupKey(node) {
 // ungrouped node shares one bucket. Returns the ids that WOULD be stranded
 // if `keptEdges` were the document's edges.
 function correctStrandedBy(doc, keptEdges, removedNodeIds) {
-  var removed = {};
-  (removedNodeIds || []).forEach(function(id){ removed[id] = true; });
-  var incident = {};
+  var removed = correctIdSet(removedNodeIds || []);
+  var incident = Object.create(null);
   keptEdges.forEach(function(e){ incident[e.from] = true; incident[e.to] = true; });
-  var bucketSizes = {};
+  var bucketSizes = Object.create(null);
   var survivors = correctNodes(doc).filter(function(n){ return !removed[n.id]; });
   survivors.forEach(function(n){
     var key = correctGroupKey(n);
@@ -83,8 +97,7 @@ function correctStrandedBy(doc, keptEdges, removedNodeIds) {
 }
 
 function correctEdgesWithout(doc, nodeIds) {
-  var gone = {};
-  nodeIds.forEach(function(id){ gone[id] = true; });
+  var gone = correctIdSet(nodeIds);
   return correctEdges(doc).filter(function(e){ return !gone[e.from] && !gone[e.to]; });
 }
 
@@ -107,7 +120,7 @@ function correctSuggestionsCiting(doc, nodeId) {
 }
 
 function correctNextNoteId(doc) {
-  var taken = {};
+  var taken = Object.create(null);
   correctNodes(doc).forEach(function(n){ taken[n.id] = true; });
   correctGroups(doc).forEach(function(g){ taken[g.id] = true; });
   correctNotes(doc).forEach(function(n){ taken[n.id] = true; });
@@ -116,8 +129,14 @@ function correctNextNoteId(doc) {
   return 'n_user_' + i;
 }
 
+var CORRECT_NOTE_FIELDS = ['content', 'color', 'layers', 'attachTo'];
+
+function correctHasField(fields, key) {
+  return Object.prototype.hasOwnProperty.call(fields, key);
+}
+
 function correctNoteFields(doc, fields) {
-  if (fields.content !== undefined) {
+  if (correctHasField(fields, 'content')) {
     if (typeof fields.content !== 'string' || !fields.content.trim()) {
       return correctRefuse('empty-note', 'A sticky note needs some text.');
     }
@@ -125,14 +144,14 @@ function correctNoteFields(doc, fields) {
       return correctRefuse('note-too-long', 'A sticky note holds at most ' + CORRECT_NOTE_CONTENT_MAX + ' characters.');
     }
   }
-  if (fields.color !== undefined && CORRECT_NOTE_COLORS.indexOf(fields.color) === -1) {
+  if (correctHasField(fields, 'color') && CORRECT_NOTE_COLORS.indexOf(fields.color) === -1) {
     return correctRefuse('unknown-color', 'A sticky note is one of: ' + CORRECT_NOTE_COLORS.join(', ') + '.');
   }
-  if (fields.layers !== undefined) {
+  if (correctHasField(fields, 'layers')) {
     var layerRefusal = correctLayerSet(fields.layers);
     if (layerRefusal) return layerRefusal;
   }
-  if (fields.attachTo !== undefined) {
+  if (correctHasField(fields, 'attachTo')) {
     if (!Array.isArray(fields.attachTo)) {
       return correctRefuse('invalid-attach', 'A sticky note attaches to a list of nodes or groups.');
     }
@@ -257,19 +276,35 @@ function guardAddNote(doc, op) {
   if (correctNotes(doc).length >= CORRECT_NOTES_MAX) {
     return correctRefuse('too-many-notes', 'A map holds at most ' + CORRECT_NOTES_MAX + ' sticky notes.');
   }
-  return correctNoteFields(doc, {
+  // Built key by key: correctNoteFields() now reads presence, not value,
+  // so an "attachTo: undefined" written here would be checked as if the
+  // caller had asked for an attachment and left it blank.
+  var fields = {
     content: op.content,
     color: op.color === undefined ? 'yellow' : op.color,
     layers: op.layers === undefined ? ['base'] : op.layers,
-    attachTo: op.attachTo,
-  });
+  };
+  if (op.attachTo !== undefined) fields.attachTo = op.attachTo;
+  return correctNoteFields(doc, fields);
 }
 
 function guardEditNote(doc, op) {
   if (!correctFind(correctNotes(doc), op.note)) {
     return correctRefuse('unknown-note', 'That sticky note is no longer in the map.');
   }
-  return correctNoteFields(doc, op.patch || {});
+  var patch = op.patch || {};
+  // Allow-list, the way validate.js rejects an unknown document field. A
+  // patch is the one place an operation carries caller-supplied KEYS
+  // rather than values, and applyEditNote must never copy a key it has
+  // not checked -- "__proto__" among them, which arrives as a real own
+  // key from JSON.parse and would reassign the copy's prototype.
+  var keys = Object.keys(patch);
+  for (var i = 0; i < keys.length; i++) {
+    if (CORRECT_NOTE_FIELDS.indexOf(keys[i]) === -1) {
+      return correctRefuse('unknown-note-field', 'A sticky note has no field called "' + keys[i] + '".');
+    }
+  }
+  return correctNoteFields(doc, patch);
 }
 
 function guardDeleteNote(doc, op) {
@@ -404,7 +439,11 @@ function applyEditNote(doc, op) {
       if (note.id !== op.note) return note;
       var next = {};
       Object.keys(note).forEach(function(k){ next[k] = note[k]; });
-      Object.keys(patch).forEach(function(k){ next[k] = patch[k]; });
+      // Named fields only, never a copy of the patch's own keys: the guard
+      // has checked exactly these four.
+      CORRECT_NOTE_FIELDS.forEach(function(k){
+        if (correctHasField(patch, k)) next[k] = patch[k];
+      });
       return next;
     }),
   });

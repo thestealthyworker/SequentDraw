@@ -345,6 +345,156 @@ describe('describeOp reads as a change list', () => {
   });
 });
 
+describe('an id that names something on Object.prototype is just an id', () => {
+  // validate.js's ID_RE allows "__proto__", "constructor" and "toString".
+  // On a plain {} used as an id set, reading one is truthy before anything
+  // is stored and writing "__proto__" is swallowed -- which silently broke
+  // the orphan arithmetic in both directions.
+  function hostileDoc() {
+    return {
+      title: 'Hostile ids',
+      groups: [{ id: 'g', label: 'Group', color: 'blue' }],
+      nodes: [
+        { id: '__proto__', label: 'Proto', kind: 'service', layers: ['base'], parentId: 'g' },
+        { id: 'constructor', label: 'Ctor', kind: 'service', layers: ['base'], parentId: 'g' },
+        { id: 'toString', label: 'Str', kind: 'service', layers: ['base'], parentId: 'g' },
+      ],
+      edges: [
+        { from: '__proto__', to: 'constructor', type: 'solid' },
+        { from: 'constructor', to: 'toString', type: 'solid' },
+      ],
+    };
+  }
+
+  test('a stranding is detected even when the stranded node is named __proto__', () => {
+    const refusal = guard(hostileDoc(), { type: 'delete-edge', index: 0 });
+    assert.strictEqual(refusal.code, 'would-strand-node');
+    assert.ok(refusal.fix.some(op => op.node === '__proto__'));
+  });
+
+  test('a legal deletion is not refused because some other node is named __proto__', () => {
+    const doc = hostileDoc();
+    doc.nodes.push({ id: 'a', label: 'A', kind: 'service', layers: ['base'] });
+    doc.nodes.push({ id: 'b', label: 'B', kind: 'service', layers: ['base'] });
+    doc.nodes.push({ id: 'c', label: 'C', kind: 'service', layers: ['base'] });
+    doc.edges.push({ from: 'a', to: 'b', type: 'solid' });
+    doc.edges.push({ from: 'b', to: 'c', type: 'solid' });
+    doc.edges.push({ from: 'a', to: 'c', type: 'solid' });
+    assert.strictEqual(guard(doc, { type: 'delete-edge', index: 4 }), null);
+  });
+
+  test('deleting a node named __proto__ takes only its own edges', () => {
+    const next = applyOp(hostileDoc(), { type: 'delete-node', node: 'toString' });
+    assert.deepStrictEqual(next.edges, [{ from: '__proto__', to: 'constructor', type: 'solid' }]);
+  });
+
+  test('a generated note id skips one already taken by a hostile id', () => {
+    const doc = hostileDoc();
+    doc.notes = [{ id: 'n_user_1', content: 'Taken.', color: 'yellow', layers: ['base'] }];
+    const next = applyOp(doc, { type: 'add-note', content: 'Mine.', color: 'yellow', layers: ['base'] });
+    assert.strictEqual(next.notes[1].id, 'n_user_2');
+  });
+});
+
+describe('a note patch carries only the four fields a note has', () => {
+  test('refuses an unknown key rather than copying it', () => {
+    const refusal = guard(baseDoc(), { type: 'edit-note', note: 'n_cap', patch: { color: 'red', sticky: true } });
+    assert.strictEqual(refusal.code, 'unknown-note-field');
+  });
+
+  test('refuses __proto__ arriving as a real own key from JSON.parse', () => {
+    const patch = JSON.parse('{"color":"red","__proto__":{"pwned":true}}');
+    const refusal = guard(baseDoc(), { type: 'edit-note', note: 'n_cap', patch });
+    assert.strictEqual(refusal.code, 'unknown-note-field');
+    assert.throws(() => applyOp(baseDoc(), { type: 'edit-note', note: 'n_cap', patch }), /unknown-note-field/);
+  });
+
+  test('does not leave the edited note with an attacker-chosen prototype', () => {
+    const patch = JSON.parse('{"color":"red","__proto__":{"pwned":true}}');
+    let edited = null;
+    try {
+      edited = applyOp(baseDoc(), { type: 'edit-note', note: 'n_cap', patch });
+    } catch (e) {
+      edited = null;
+    }
+    assert.strictEqual(edited, null);
+  });
+
+  test('refuses content present but undefined, rather than blanking the note', () => {
+    // JSON cannot carry `undefined`, but a JS caller can: `{ content: x }`
+    // where x is undefined. Object.keys still lists the key, so copying the
+    // patch would have overwritten required content with undefined.
+    const refusal = guard(baseDoc(), { type: 'edit-note', note: 'n_cap', patch: { content: undefined } });
+    assert.strictEqual(refusal.code, 'empty-note');
+  });
+
+  test('an empty patch changes nothing', () => {
+    const doc = baseDoc();
+    const next = apply(doc, { type: 'edit-note', note: 'n_cap', patch: {} });
+    assert.deepStrictEqual(next.notes, doc.notes);
+  });
+});
+
+describe('two suggestions citing the same node', () => {
+  function twoSuggestions() {
+    const doc = baseDoc();
+    doc.nodes.push({
+      id: 's_stripe',
+      label: 'Stripe',
+      kind: 'service',
+      status: 'suggested',
+      integration: 'stripe',
+      rationale: 'Takes the payment on the invoice instead of waiting for a transfer.',
+      cites: ['invoice'],
+      layers: ['base'],
+    });
+    doc.edges.push({ from: 'invoice', to: 's_stripe', type: 'dashed' });
+    return doc;
+  }
+
+  test('both are named in the refusal, and the deletion comes last in the fix', () => {
+    const refusal = guard(twoSuggestions(), { type: 'delete-node', node: 'invoice' });
+    assert.strictEqual(refusal.code, 'cited-by-suggestion');
+    assert.deepStrictEqual(refusal.fix, [
+      { type: 'delete-node', node: 's_xero' },
+      { type: 'delete-node', node: 's_stripe' },
+      { type: 'delete-node', node: 'invoice' },
+    ]);
+    assert.match(refusal.message, /Xero/);
+    assert.match(refusal.message, /Stripe/);
+  });
+
+  test('applying the offered fix in order leaves a valid document', () => {
+    let doc = twoSuggestions();
+    guard(doc, { type: 'delete-node', node: 'invoice' }).fix.forEach(op => { doc = applyOp(doc, op); });
+    assert.doesNotThrow(() => validateDoc(doc));
+    assert.strictEqual(doc.nodes.filter(n => n.status === 'suggested').length, 0);
+  });
+});
+
+describe('refusals that name something no longer in the map', () => {
+  test('delete-edge past the end', () => {
+    assert.strictEqual(guard(baseDoc(), { type: 'delete-edge', index: 42 }).code, 'unknown-edge');
+  });
+
+  test('edit-note and delete-note on a note that is gone', () => {
+    assert.strictEqual(guard(baseDoc(), { type: 'edit-note', note: 'n_gone', patch: {} }).code, 'unknown-note');
+    assert.strictEqual(guard(baseDoc(), { type: 'delete-note', note: 'n_gone' }).code, 'unknown-note');
+  });
+
+  test('set-group, set-layers, set-kind, accept and delete on a node that is gone', () => {
+    ['set-group', 'set-layers', 'set-kind', 'accept-suggestion', 'delete-node'].forEach(type => {
+      const op = { type, node: 'n_gone', group: null, layers: ['base'], kind: 'service' };
+      assert.strictEqual(guard(baseDoc(), op).code, 'unknown-node', type);
+    });
+  });
+
+  test('a note with no text, and an attachTo that is not a list', () => {
+    assert.strictEqual(guard(baseDoc(), { type: 'add-note', content: '   ', color: 'yellow', layers: ['base'] }).code, 'empty-note');
+    assert.strictEqual(guard(baseDoc(), { type: 'add-note', content: 'hi', attachTo: 'quote' }).code, 'invalid-attach');
+  });
+});
+
 describe('an unknown operation is refused rather than ignored', () => {
   test('guard names it', () => {
     assert.strictEqual(guard(baseDoc(), { type: 'move-node-to-x-1180' }).code, 'unknown-operation');
