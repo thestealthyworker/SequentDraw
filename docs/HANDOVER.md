@@ -247,6 +247,7 @@ plugin scaffold arrives with the first of them, `git-map`.
     stored positions, since stored positions would break computed layout, layer toggles
     and the documentation export. Conversational correction ("move Stripe into
     Payment") is available earlier, through the skills from `git-map` on.
+    Designed in `docs/design/correction-mode.md`.
 7b. GitHub repository search with licence verification → `gitrepo-suggest`. For the
     map's weakest or most custom-built nodes, search GitHub for relevant MIT-licensed
     repositories, verify each licence through the GitHub licence API (SPDX `MIT`
