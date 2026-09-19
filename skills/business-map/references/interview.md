@@ -86,8 +86,12 @@ this?", prompt "<artifact> is produced but no one is named as receiving it."
 > payment, a deposit, a signed acceptance?"
 
 **Writes:** an `artifact` node for the invoice or receipt, the payment
-`service` node (or a `manual` "bank transfer" node), and edges through to
-the party the money comes from and the person who sees it settle.
+`service` node (or a `manual` "bank transfer" node), and **a solid edge from
+the invoice node to the payment node**. The payer and the person who sees it
+settle are attached to the payment node as well (`external` -> payment,
+payment -> `human`), but they are never the payment step's only link back
+into the map -- see "How the edges go" below, which this question is the
+easiest one to get wrong.
 
 **If the user does not know:** an open `artifact` node, label "How is this
 paid?", prompt "The work is delivered but you could not say how payment or
@@ -126,6 +130,35 @@ data between them, insert a `manual` node for that person.
 **If the user does not know:** nothing is flipped. A `manual` node the user
 is unsure about stays `manual`: hand-done is the honest default for a
 business flow, and the only one that never claims code exists.
+
+## How the edges go
+
+The happy path is a **chain of steps**: every step carries a solid edge from
+the step before it, from the trigger through to the money. That chain is the
+map's spine.
+
+Actors and artifacts hang off the spine; they never replace a piece of it:
+
+| Edge | Meaning | Direction |
+|---|---|---|
+| actor -> step | who performs this step | into the step |
+| step -> artifact | what the step produces | out of the step |
+| artifact -> actor | who receives it | out of the artifact |
+| step -> step | the flow itself | always written, for every consecutive pair |
+
+**Why it matters, concretely.** Position is computed from the edges: a node is
+drawn one column after the nodes that point at it. A step whose only incoming
+edge comes from the customer -- who is also where the map starts -- is drawn
+at the start, however late it happens. Measured on a real cleaning-business
+map: with "Bank transfer" reached only through `Customer -> Bank transfer`,
+it was drawn in the second column, left of the enquiry form, with a loop edge
+running back under the whole map. Adding the one missing spine edge
+`Invoice -> Bank transfer` moved it to the last column, where it belongs.
+
+So, before rendering, read the spine back to yourself: trigger, decision,
+each step of the work, the handover, the invoice, the payment. If any two
+consecutive steps have no edge between them, that edge is missing -- an actor
+or an artifact standing between them is not the same thing.
 
 ## Where things go
 

@@ -125,6 +125,46 @@ The reference fixture `examples/medusa-return-flow.json` keeps its `manual` step
 off a map written that way loses its happy path, which is what `base` exists to keep.
 Listed under open questions.
 
+### How the edges go — added 2026-09-19 after CTO-M2-01
+
+The happy path is a **chain of steps**: every step carries a solid edge from the step
+before it, trigger through to the money. Actors and artifacts hang off that chain
+(actor -> step, step -> artifact, artifact -> actor) and never stand in for a piece of
+it. `skills/business-map/references/interview.md`, "How the edges go", is where the
+skill states it; question 6 is where it was being got wrong.
+
+Why it is a rule rather than a preference: position is computed from the edges, and a
+layered layout draws a node one column after the nodes that point at it. On the M2
+review's cleaning map, "Bank transfer" was reached only through
+`Customer -> Bank transfer`, and `Customer` is where the map starts, so the payment
+step was drawn in the second column — the reader met "paid" before "enquiry".
+
+Measured on that map with `layoutMap()`:
+
+| Variant | `n_bank` x | `n_invoice` x | Reads left to right |
+|---|---|---|---|
+| As the interview wrote it | 240 | 2256 | no |
+| Add `n_invoice -> n_bank` | 2480 | 2256 | yes |
+| Add `n_invoice -> n_bank`, drop `n_bank -> n_owner` | 2256 | 2032 | yes |
+
+So the return edge into an early actor (`n_bank -> n_owner`, "who sees it settle") is
+harmless once the spine is continuous, and removing it alone fixes nothing.
+
+A layout-side fix was measured and rejected: replacing `topo.js`'s first-appearance
+cycle break with a greedy feedback-arc heuristic (Eades–Lin–Smyth) moved the payment
+step only from x=240 to x=464. No choice of reversed edges does better, because the
+document genuinely says the payment step is adjacent to the node the map begins at.
+
+`tests/n8n-reading-order.test.js` pins both halves: a spine-complete map reads left to
+right even with participation edges at both ends of it, and the same map with the one
+spine edge removed does not.
+
+**Not enforced by the engine.** A rule such as "every `base` step is reachable from the
+trigger through `base` steps" needs transitive closure, which
+`src/gaps/completeness.js` deliberately does not do — every rule there asks one
+question about one subject and follows the graph no more than one edge. Whether to add
+a reachability rule to `check` is an open question for the owner, logged as an issue.
+
 ## 2. Completeness checks
 
 ### What "complete" means here
