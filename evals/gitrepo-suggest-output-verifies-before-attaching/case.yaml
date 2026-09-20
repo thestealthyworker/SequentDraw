@@ -1,0 +1,10 @@
+schema_version: "1.1"
+name: gitrepo-suggest-output-verifies-before-attaching
+# Every eval run starts in an EMPTY workspace, so the map this prompt names
+# is not reachable without a scaffold. The sibling doc-map output case
+# records what that costs: the agent searches the filesystem for a file that
+# was never there, is denied outside its sandbox, and burns its whole turn
+# budget without reaching the CLI at all.
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh

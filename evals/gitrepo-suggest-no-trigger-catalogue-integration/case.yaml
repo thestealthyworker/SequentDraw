@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: gitrepo-suggest-no-trigger-catalogue-integration
+# The map the prompt names must exist for the routing question to be the one
+# under test: with a map present, the only open question is WHERE the
+# suggestions come from -- the catalogue or GitHub. Without it the agent is
+# deciding something else entirely.
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh
