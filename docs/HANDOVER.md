@@ -258,12 +258,21 @@ plugin scaffold arrives with the first of them, `git-map`.
     repositories, verify each licence through the GitHub licence API (SPDX `MIT`
     exactly), check activity and fit, and attach candidates as sticky notes linked to
     the node. Numbered `7b` rather than renumbering the steps after it, so existing
-    references to steps 8, 8a and 9 keep meaning what they meant.
+    references to steps 8, 8a and 9 keep meaning what they meant. Designed in
+    `docs/design/gitrepo-suggest.md`; shipped as `sequentdraw licences`,
+    `check --repos` and the `gitrepo-suggest` skill.
 8. Tours last.
 8a. **Before the first npm publish:** vendor the stack-analyser detection rules SequentDraw
     uses into `src/scan/rules/`, keeping the MIT notice, and drop the dependency. npm
     ignores a dependency's `overrides`, so downstream installs would otherwise inherit its
     transitive advisories (see `docs/design/git-map.md`, "Supply chain").
+8b. **Clear the tree, immediately before the M3 gate** (added by the owner, 2026-09-20).
+    Every open pull request is merged or closed, and every open issue is fixed or
+    explicitly deferred by the owner, so the final gate reviews a finished product
+    rather than a work in progress. A gate report that spends its findings on things
+    already logged tells the owner nothing they do not know, and each round costs a
+    full CTO run. Deferred issues are labelled as such and named in the M3 brief, so
+    the CTO does not re-raise them.
 9. **Internal cleanup, after the M3 gate passes:** remove the CTO agent, the review
    reports and the gate process (see `CLAUDE.md`). They are internal checks, not part
    of the product. The work is not complete until this is merged.
