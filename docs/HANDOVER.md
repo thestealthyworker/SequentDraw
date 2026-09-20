@@ -248,6 +248,11 @@ plugin scaffold arrives with the first of them, `git-map`.
     and the documentation export. Conversational correction ("move Stripe into
     Payment") is available earlier, through the skills from `git-map` on.
     Designed in `docs/design/correction-mode.md`.
+7c. Export from the viewer, added by the owner (2026-09-20). **Export SVG** and **PNG**
+    buttons that write what is on screen — the reader's layers, their Notes setting, the
+    visible content cropped — with no dependency and no network. Distinct from `doc-map`,
+    which re-lays-out the map with full captions for a figure nobody can hover. Design in
+    `docs/design/n8n-visual-style.md`, "Export from the viewer".
 7b. GitHub repository search with licence verification → `gitrepo-suggest`. For the
     map's weakest or most custom-built nodes, search GitHub for relevant MIT-licensed
     repositories, verify each licence through the GitHub licence API (SPDX `MIT`

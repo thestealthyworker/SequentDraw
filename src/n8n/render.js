@@ -4,6 +4,7 @@ const { esc, layersOf, nodeMarkup, handleMarkup, frameMarkup, edgeMarkup } = req
 const { noteMarkup } = require('./notes-render');
 const { css, script } = require('./render-shell');
 const { correctBarMarkup } = require('./render-correct');
+const { exportBarMarkup } = require('./render-export');
 const { buildCardData } = require('./card-data');
 const {
   DOT_GRID_GAP,
@@ -166,6 +167,7 @@ ${layerBarMarkup(doc)}
 </div>
 <div id="details-card" class="details-card" hidden></div>
 ${correctBarMarkup()}
+${exportBarMarkup()}
 <script>${script(canvas, cardData, geometry, doc, { fragment })}</script>`;
 
   if (fragment) {

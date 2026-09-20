@@ -188,6 +188,32 @@ Security: the SVG is as likely as the HTML to be opened by people who did not wr
 input. Every value is escaped for its context, there is no `<script>`, `<foreignObject>`
 or event attribute, and there are no `href` values at all.
 
+### Export from the viewer (build step 7c)
+
+Requested by the owner (2026-09-20). Two buttons beside the canvas: **Export SVG** and
+**PNG**. Both write *what is on screen* — the reader's layer choices, their Notes
+setting, the same coordinates — cropped to the visible content, with the pan and zoom
+undone so the file is not a picture of a scroll position.
+
+**This is not the documentation export.** `doc-map` lays the map out again with room for
+a full caption under every node, for a figure nobody can hover. This one is a picture of
+the map the reader is looking at, captions and all absent. Two jobs, two commands, and
+the viewer's button titles say which is which.
+
+| Aspect | Rule |
+|---|---|
+| Dependencies | none. The page serialises its own inline SVG; the PNG is that SVG drawn once into a canvas. No network, works from `file://`. |
+| What travels | drawing only. `script`, `foreignObject`, `iframe`, `image`, `use` and the animation elements are removed, every `on*` attribute is removed, and an `href` survives only when it is plain `http(s)` — a note's link stays clickable, anything else goes. |
+| When it is cleaned | immediately before serialising, **after** the clone's moment in the document to be measured. Anything watching the DOM can write into it in that window: a browser extension injecting a geolocation shim is how this was found. |
+| Ground | white, in both formats, rather than transparency that lands on black in a viewer defaulting dark. |
+| PNG size | 2× for a retina screen, clamped so the longest side never exceeds 8,000px. |
+| Name | the map title, lowercased and slugged, capped at 60 characters, falling back to `map`. |
+
+Measured in a clean headless Chrome on the Medusa fixture: 98,009-byte SVG with no
+script, no `on*` attribute and no `foreignObject`; 2.0MB PNG at 7968×3616. With the
+business layer and the notes off, the same export drops to 30 nodes, no notes and a
+smaller view box.
+
 ### The Notes control
 
 Requested by the owner (2026-09-20). Sticky notes are **not** a layer — each note
