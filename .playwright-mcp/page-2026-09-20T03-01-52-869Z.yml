@@ -1,0 +1,274 @@
+- generic [ref=e1]:
+  - img [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: Request
+        - generic [ref=e11]: Order domain
+        - generic [ref=e14]: Fulfillment
+        - generic [ref=e17]: Payment
+        - generic [ref=e20]: Platform
+      - generic [ref=e23]:
+        - generic "Customer to Request return, solid" [ref=e24]:
+          - generic [ref=e25] [cursor=pointer]
+        - generic "Merchant to Create return, solid"
+        - generic "Request return to Storefront, solid"
+        - generic "Create return to Admin dashboard, solid"
+        - generic "Storefront to Store API, solid" [ref=e27]:
+          - generic [ref=e28] [cursor=pointer]
+        - generic "Admin dashboard to Admin API, solid"
+        - generic "Store API to Workflow engine, solid" [ref=e30]:
+          - generic [ref=e31] [cursor=pointer]
+        - generic "Admin API to Workflow engine, solid"
+        - generic "Guest return to Store API, dashed" [ref=e33]:
+          - generic [ref=e34] [cursor=pointer]
+        - generic "Workflow engine to Order module, solid"
+        - generic "Order module to Return model, solid" [ref=e36]:
+          - generic [ref=e37] [cursor=pointer]
+        - generic "Return model to ReturnItem, solid" [ref=e39]:
+          - generic [ref=e40] [cursor=pointer]
+        - generic "Return model to Version bump, solid"
+        - generic "Order module to Fulfillment module, solid" [ref=e42]:
+          - generic [ref=e43] [cursor=pointer]
+        - generic "Fulfillment module to Return option, solid"
+        - generic "Return option to Fulfillment provider, solid"
+        - generic "Fulfillment provider to Return label, solid"
+        - generic "Return label to Ship items back, solid"
+        - generic "Ship items back to Receive parcel, solid"
+        - generic "Receive parcel to Inspect items, solid" [ref=e45]:
+          - generic [ref=e46] [cursor=pointer]
+        - generic "Inspect items to Mark received, solid" [ref=e48]:
+          - generic [ref=e49] [cursor=pointer]
+        - generic "Inspect items to Item mismatch, dashed" [ref=e51]:
+          - generic [ref=e52] [cursor=pointer]
+        - generic "Inspect items to Damaged quantity, dashed" [ref=e54]:
+          - generic [ref=e55] [cursor=pointer]
+        - generic "Item mismatch to requires_action, solid" [ref=e57]:
+          - generic [ref=e58] [cursor=pointer]
+        - generic "Mark received to Admin API, solid" [ref=e60]:
+          - generic [ref=e61] [cursor=pointer]
+        - generic "ReturnItem to Inventory module, solid"
+        - generic "Damaged quantity to Inventory module, dashed" [ref=e63]:
+          - generic [ref=e64] [cursor=pointer]
+        - generic "Order module to Payment module, solid" [ref=e66]:
+          - generic [ref=e67] [cursor=pointer]
+        - generic "Payment module to Refund exceeds cap, dashed" [ref=e69]:
+          - generic [ref=e70] [cursor=pointer]
+        - generic "Refund exceeds cap to requires_action, dashed" [ref=e72]:
+          - generic [ref=e73] [cursor=pointer]
+        - generic "Payment module to Payment provider, solid" [ref=e75]:
+          - generic [ref=e76] [cursor=pointer]
+        - generic "Payment provider to OrderTransaction, solid"
+        - generic "OrderTransaction to Refund issued, solid"
+        - generic "Order module to Partially returned, dashed" [ref=e78]:
+          - generic [ref=e79] [cursor=pointer]
+        - generic "Return model to Cancel return, dashed" [ref=e81]:
+          - generic [ref=e82] [cursor=pointer]
+        - generic "Order module to Event bus, solid" [ref=e84]:
+          - generic [ref=e85] [cursor=pointer]
+        - generic "Event bus to Notification module, solid"
+        - generic "no_notification to Notification module, dashed" [ref=e87]:
+          - generic [ref=e88] [cursor=pointer]
+        - generic "Notification module to Customer, solid" [ref=e90]:
+          - generic [ref=e91] [cursor=pointer]
+        - generic "Order module to Postgres, solid" [ref=e93]:
+          - generic [ref=e94] [cursor=pointer]
+        - generic "Inventory module to Postgres, solid" [ref=e96]:
+          - generic [ref=e97] [cursor=pointer]
+        - generic "Migrations to Postgres, dashed" [ref=e99]:
+          - generic [ref=e100] [cursor=pointer]
+        - generic "CI pipeline to Integration tests, solid"
+        - generic "Integration tests to Migrations, solid"
+      - generic [ref=e102]:
+        - generic "Customer, external, receives from 1, sends to 1" [ref=e103] [cursor=pointer]:
+          - generic [ref=e107]: Customer
+          - generic [ref=e108]: buyer
+        - generic "Request return, manual, receives from 1, sends to 1" [ref=e111] [cursor=pointer]:
+          - generic [ref=e115]: Request return
+          - generic [ref=e116]: from storefront
+        - generic "Create return, manual, receives from 1, sends to 1" [ref=e119] [cursor=pointer]:
+          - generic [ref=e123]: Create return
+          - generic [ref=e124]: merchant in admin
+        - generic "Merchant, human, receives from 0, sends to 1" [ref=e127] [cursor=pointer]:
+          - generic [ref=e131]: Merchant
+          - generic [ref=e132]: store operator
+        - generic "Return label, artifact, receives from 1, sends to 1" [ref=e134] [cursor=pointer]:
+          - generic [ref=e138]: Return label
+          - generic [ref=e139]: shipping document
+        - generic "Ship items back, manual, receives from 1, sends to 1" [ref=e142] [cursor=pointer]:
+          - generic [ref=e146]: Ship items back
+          - generic [ref=e147]: customer posts
+        - generic "Receive parcel, human, receives from 1, sends to 1" [ref=e150] [cursor=pointer]:
+          - generic [ref=e154]: Receive parcel
+          - generic [ref=e155]: at warehouse
+        - generic "Inspect items, human, receives from 1, sends to 3" [ref=e158] [cursor=pointer]:
+          - generic [ref=e162]: Inspect items
+          - generic [ref=e163]: condition check
+        - generic "Mark received, manual, receives from 1, sends to 1" [ref=e166] [cursor=pointer]:
+          - generic [ref=e170]: Mark received
+          - generic [ref=e171]: in admin
+        - generic "Refund issued, artifact, receives from 1, sends to 0" [ref=e174] [cursor=pointer]:
+          - generic [ref=e178]: Refund issued
+          - generic [ref=e179]: money returned
+        - generic "Storefront, service, receives from 1, sends to 1" [ref=e181] [cursor=pointer]:
+          - generic [ref=e185]: Storefront
+          - generic [ref=e186]: Next.js
+        - generic "Admin dashboard, service, receives from 1, sends to 1" [ref=e189] [cursor=pointer]:
+          - generic [ref=e193]: Admin dashboard
+          - generic [ref=e194]: merchant UI
+        - generic "Store API, service, receives from 2, sends to 1" [ref=e197] [cursor=pointer]:
+          - generic [ref=e201]: Store API
+          - generic [ref=e202]: public routes
+        - generic "Admin API, service, receives from 2, sends to 1" [ref=e205] [cursor=pointer]:
+          - generic [ref=e209]: Admin API
+          - generic [ref=e210]: authenticated
+        - generic "Workflow engine, service, receives from 2, sends to 1" [ref=e213] [cursor=pointer]:
+          - generic [ref=e217]: Workflow engine
+          - generic [ref=e218]: orchestration
+        - generic "Order module, service, receives from 1, sends to 6" [ref=e221] [cursor=pointer]:
+          - generic [ref=e225]: Order module
+          - generic [ref=e226]: lifecycle
+        - generic "Return model, artifact, receives from 1, sends to 3" [ref=e229] [cursor=pointer]:
+          - generic [ref=e233]: Return model
+          - generic [ref=e234]: return record
+        - generic "ReturnItem, artifact, receives from 1, sends to 1" [ref=e237] [cursor=pointer]:
+          - generic [ref=e241]: ReturnItem
+          - generic [ref=e242]: per line item
+        - generic "Version bump, logic, receives from 1, sends to 0" [ref=e245] [cursor=pointer]:
+          - generic [ref=e249]: Version bump
+          - generic [ref=e250]: request and receipt
+        - generic "Fulfillment module, service, receives from 1, sends to 1" [ref=e252] [cursor=pointer]:
+          - generic [ref=e256]: Fulfillmentmodule
+          - generic [ref=e257]: shipping
+        - generic "Return option, logic, receives from 1, sends to 1" [ref=e260] [cursor=pointer]:
+          - generic [ref=e264]: Return option
+          - generic [ref=e265]: is_return rule
+        - generic "Fulfillment provider, external, receives from 1, sends to 1" [ref=e268] [cursor=pointer]:
+          - generic [ref=e272]: Fulfillmentprovider
+          - generic [ref=e273]: carrier
+        - generic "Inventory module, service, receives from 2, sends to 1" [ref=e276] [cursor=pointer]:
+          - generic [ref=e280]: Inventory module
+          - generic [ref=e281]: stock levels
+        - generic "Payment module, service, receives from 1, sends to 2" [ref=e284] [cursor=pointer]:
+          - generic [ref=e288]: Payment module
+          - generic [ref=e289]: refunds
+        - generic "Payment provider, service, receives from 1, sends to 1" [ref=e292] [cursor=pointer]:
+          - generic [ref=e296]: Payment provider
+          - generic [ref=e297]: Stripe
+        - generic "OrderTransaction, artifact, receives from 1, sends to 1" [ref=e300] [cursor=pointer]:
+          - generic [ref=e304]: OrderTransaction
+          - generic [ref=e305]: refund record
+        - generic "Event bus, service, receives from 1, sends to 1" [ref=e308] [cursor=pointer]:
+          - generic [ref=e312]: Event bus
+          - generic [ref=e313]: Redis
+        - generic "Notification module, service, receives from 2, sends to 1" [ref=e316] [cursor=pointer]:
+          - generic [ref=e320]: Notificationmodule
+          - generic [ref=e321]: customer updates
+        - generic "Postgres, service, receives from 3, sends to 0" [ref=e324] [cursor=pointer]:
+          - generic [ref=e328]: Postgres
+          - generic [ref=e329]: persistence
+        - generic "Guest return, logic, receives from 0, sends to 1" [ref=e331] [cursor=pointer]:
+          - generic [ref=e335]: Guest return
+          - generic [ref=e336]: no auth required
+        - generic "Item mismatch, logic, receives from 1, sends to 1" [ref=e338] [cursor=pointer]:
+          - generic [ref=e342]: Item mismatch
+          - generic [ref=e343]: sent vs received
+        - generic "Damaged quantity, logic, receives from 1, sends to 1" [ref=e346] [cursor=pointer]:
+          - generic [ref=e350]: Damaged quantity
+          - generic [ref=e351]: not resellable
+        - generic "requires_action, logic, receives from 2, sends to 0" [ref=e354] [cursor=pointer]:
+          - generic [ref=e358]: requires_action
+          - generic [ref=e359]: process halts
+        - generic "Refund exceeds cap, logic, receives from 1, sends to 1" [ref=e361] [cursor=pointer]:
+          - generic [ref=e365]: Refund exceedscap
+          - generic [ref=e366]: validation
+        - generic "Partially returned, logic, receives from 1, sends to 0" [ref=e369] [cursor=pointer]:
+          - generic [ref=e373]: Partiallyreturned
+          - generic [ref=e374]: some items only
+        - generic "Cancel return, manual, receives from 1, sends to 0" [ref=e376] [cursor=pointer]:
+          - generic [ref=e380]: Cancel return
+          - generic [ref=e381]: before receipt
+        - generic "no_notification, logic, receives from 0, sends to 1" [ref=e383] [cursor=pointer]:
+          - generic [ref=e387]: no_notification
+          - generic [ref=e388]: silence updates
+        - generic "CI pipeline, service, receives from 0, sends to 1" [ref=e390] [cursor=pointer]:
+          - generic [ref=e394]: CI pipeline
+          - generic [ref=e395]: GitHub Actions
+        - generic "Integration tests, service, receives from 1, sends to 1" [ref=e397] [cursor=pointer]:
+          - generic [ref=e401]: Integrationtests
+          - generic [ref=e402]: module suites
+        - generic "Migrations, artifact, receives from 1, sends to 1" [ref=e405] [cursor=pointer]:
+          - generic [ref=e409]: Migrations
+          - generic [ref=e410]: schema changes
+      - generic [ref=e413]:
+        - generic [ref=e416] [cursor=pointer]:
+          - generic [ref=e417]: Medusa returns
+          - generic [ref=e418]: A customer or merchant opens a return, the
+          - generic [ref=e419]: warehouse receives and inspects the items,
+          - generic [ref=e420]: then a refund is issued through Stripe. See
+          - generic [ref=e421]:
+            - text: the
+            - link "Medusa return docs" [ref=e422]:
+              - /url: https://docs.medusajs.com/
+            - text: for the underlying data
+          - generic [ref=e423]: model.
+        - generic [ref=e426] [cursor=pointer]:
+          - generic [ref=e427]: Return shipping
+          - generic [ref=e428]: Medusa generates the return label ,
+          - generic [ref=e429]: the customer ships the parcel back,
+          - generic [ref=e430]: and the warehouse logs receipt
+          - generic [ref=e431]: before inspection.
+        - generic [ref=e434] [cursor=pointer]:
+          - generic [ref=e435]: Inspection
+          - generic [ref=e436]: Items are checked by hand against
+          - generic [ref=e437]: "the original order line. Notes:"
+          - text: •
+          - generic [ref=e438]: condition, not just quantity
+          - text: •
+          - generic [ref=e439]: photos attached to the return
+          - generic [ref=e440]: record
+          - text: •
+          - generic [ref=e441]: inspect decides the outcome
+        - generic [ref=e444] [cursor=pointer]:
+          - generic [ref=e445]: Refund exceeds cap halts the flow —
+          - generic [ref=e446]: a merchant must approve any refund
+          - generic [ref=e447]: over the configured limit before
+          - generic [ref=e448]: Stripe is called.
+        - generic [ref=e452] [cursor=pointer]:
+          - generic [ref=e453]: "Consider: should the refund wait"
+          - generic [ref=e454]: until inspection confirms the items
+          - generic [ref=e455]: are undamaged, or fire as soon as
+          - generic [ref=e456]: the return is marked received?
+        - generic [ref=e460] [cursor=pointer]:
+          - generic [ref=e461]: "Consider: with no_notification set,"
+          - generic [ref=e462]: the customer sees no update at all —
+          - generic [ref=e463]: is silent processing acceptable for
+          - generic [ref=e464]: every reason code, or only for
+          - generic [ref=e465]: internal/test orders?
+        - generic [ref=e468] [cursor=pointer]:
+          - generic [ref=e469]: "Consider: for a partial return,"
+          - generic [ref=e470]: should inventory and refund proceed
+          - generic [ref=e471]: per item as each is inspected, or
+          - generic [ref=e472]: only once the whole return is
+          - generic [ref=e473]: resolved?
+  - generic [ref=e474]: Medusa order return (RMA) flow
+  - generic [ref=e475]:
+    - generic [ref=e476]:
+      - checkbox "Base (19)" [checked] [disabled] [ref=e477]
+      - text: Base (19)
+    - generic [ref=e478] [cursor=pointer]:
+      - checkbox "Edge cases (8)" [checked] [ref=e479]
+      - text: Edge cases (8)
+    - generic [ref=e480] [cursor=pointer]:
+      - checkbox "Business (10)" [checked] [ref=e481]
+      - text: Business (10)
+    - generic [ref=e482] [cursor=pointer]:
+      - checkbox "Build (3)" [checked] [ref=e483]
+      - text: Build (3)
+  - generic [ref=e484]:
+    - button "Zoom out" [ref=e485] [cursor=pointer]: −
+    - button "Fit to view" [ref=e486] [cursor=pointer]: ◎
+    - button "Zoom in" [ref=e487] [cursor=pointer]: +
+  - button "Correct" [active] [pressed] [ref=e489] [cursor=pointer]
+  - complementary "Corrections" [ref=e490]:
+    - heading "Corrections" [level=2] [ref=e491]
+    - paragraph [ref=e492]: Open a node, a connection or a sticky note to correct what it says. Nothing moves until the map is re-rendered.
