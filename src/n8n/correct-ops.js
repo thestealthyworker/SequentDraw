@@ -562,4 +562,84 @@ function describeNoteChange(doc, op) {
   return (op.type === 'delete-note' ? 'Deleted' : 'Edited') + ' a sticky note on ' + subject + '.';
 }
 
-module.exports = { guard: guard, applyOp: applyOp, describeOp: describeOp };
+// The viewer needs this whole module, and the browser cannot require() it.
+// Rather than keeping a second, hand-copied text of every function -- the
+// convention edge-visibility.js and frame-box.js use, which works for a
+// one-line body and would be 500 lines of duplication here --
+// render-correct.js emits each function's own `toString()` and each
+// constant as JSON. The viewer therefore runs THIS source, not a copy of
+// it, so there is no drift to test for: at worst the emitting is wrong,
+// and tests/n8n-correction-viewer.test.js checks the emitted text holds
+// every name below.
+var VIEWER_CONSTANTS = {
+  CORRECT_KINDS: CORRECT_KINDS,
+  CORRECT_LAYERS: CORRECT_LAYERS,
+  CORRECT_NOTE_COLORS: CORRECT_NOTE_COLORS,
+  CORRECT_NOTE_CONTENT_MAX: CORRECT_NOTE_CONTENT_MAX,
+  CORRECT_NOTES_MAX: CORRECT_NOTES_MAX,
+  CORRECT_NOTE_FIELDS: CORRECT_NOTE_FIELDS,
+};
+
+var VIEWER_FUNCTIONS = [
+  correctNodes,
+  correctEdges,
+  correctNotes,
+  correctGroups,
+  correctFind,
+  correctIdSet,
+  correctRefuse,
+  correctLabelOf,
+  correctGroupKey,
+  correctStrandedBy,
+  correctEdgesWithout,
+  correctStrandRefusal,
+  correctSuggestionsCiting,
+  correctNextNoteId,
+  correctHasField,
+  correctNoteFields,
+  correctLayerSet,
+  correctRequireNode,
+  correctRequireEdge,
+  guard,
+  guardReattachEdge,
+  guardDeleteEdge,
+  guardSetGroup,
+  guardSetLayers,
+  guardSetKind,
+  guardAddNote,
+  guardEditNote,
+  guardDeleteNote,
+  guardAcceptSuggestion,
+  guardDeleteNode,
+  correctWithNodes,
+  correctMapNode,
+  correctNodeWith,
+  applyOp,
+  correctWith,
+  applyReattachEdge,
+  applyDeleteEdge,
+  applySetKind,
+  applyAddNote,
+  applyEditNote,
+  applyDeleteNote,
+  applyAcceptSuggestion,
+  applyDeleteNode,
+  correctNoteSubject,
+  describeOp,
+  describeSetGroup,
+  describeReattachEdge,
+  describeDeleteEdge,
+  describeSetLayers,
+  describeSetKind,
+  describeAcceptSuggestion,
+  describeDeleteNode,
+  describeNoteChange,
+];
+
+module.exports = {
+  guard: guard,
+  applyOp: applyOp,
+  describeOp: describeOp,
+  VIEWER_CONSTANTS: VIEWER_CONSTANTS,
+  VIEWER_FUNCTIONS: VIEWER_FUNCTIONS,
+};

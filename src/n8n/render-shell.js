@@ -8,6 +8,7 @@
 // see docs/design/n8n-visual-style.md "Details card" ("Security").
 
 const { CANVAS_FILL, NOTE_FONT_SIZE, NOTE_H1_SIZE, NOTE_H2_SIZE } = require('./constants');
+const { correctOpsSource, correctCss, correctScript } = require('./render-correct');
 
 // Safe to serialise any value into an inline <script>: JSON.stringify alone
 // does not escape "<", ">", "&", U+2028 or U+2029, so a string value
@@ -107,20 +108,32 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#333}
 .card-connection-detail{color:#666}
 .card-link{display:inline-block;margin-top:8px;color:#2f5fb0;text-decoration:underline;font-weight:600}
 
+${correctCss()}
 @media (prefers-reduced-motion: reduce){
 .n8n-node,.n8n-edge,.n8n-frame,.n8n-note rect,.n8n-edge .edge-line{transition:none!important}
+.correct-panel,.correct-bar button,.card-edit button{transition:none!important}
 }
 `;
   if (!opts.fragment) return sheet;
   return `${sheet}#stage{background:${CANVAS_FILL}}\n`;
 }
 
-function script(canvas, cardData, geometry) {
+function script(canvas, cardData, geometry, doc, opts = {}) {
+  // An empty document keeps the signature usable from a test that only
+  // wants the script text; a real render always passes the validated doc.
+  const sourceDoc = doc || { title: '', nodes: [], edges: [] };
   return `
 (function(){
   var stage = document.getElementById('stage');
   var viewport = document.getElementById('viewport');
   var CANVAS = ${safeJson(canvas)};
+  // The validated document this map was rendered from, so correction mode
+  // can write a corrected one: the card data alone cannot be turned back
+  // into a document (it drops icon, source, cites, integration, group ids
+  // and note bodies). Measured cost on the Medusa fixture: 23kb against a
+  // 149kb render. See docs/design/correction-mode.md.
+  var SOURCE_DOC = ${safeJson(sourceDoc)};
+  var FRAGMENT_MODE = ${opts.fragment ? 'true' : 'false'};
   // Numeric-only: node boxes plus the frame padding/label-reserve/grid
   // constants layout.js used, so the viewer can recompute a frame's box
   // for its currently-visible members with frameBoxFromMemberBoxes()
@@ -623,7 +636,15 @@ function script(canvas, cardData, geometry) {
     var margin = 12;
     var rect = el.getBoundingClientRect();
     var cardRect = card.getBoundingClientRect();
-    var vw = window.innerWidth, vh = window.innerHeight;
+    // In correction mode the change list occupies the right edge, so the
+    // card treats that strip as off the viewport rather than covering the
+    // list the user is reading.
+    var reserved = 0;
+    if (correctPanel && !correctPanel.hidden) {
+      var panelRect = correctPanel.getBoundingClientRect();
+      reserved = Math.max(0, window.innerWidth - panelRect.left) + margin;
+    }
+    var vw = window.innerWidth - reserved, vh = window.innerHeight;
     var x = rect.right + margin;
     if (x + cardRect.width > vw - margin) {
       var flippedX = rect.left - margin - cardRect.width;
@@ -636,11 +657,23 @@ function script(canvas, cardData, geometry) {
     card.style.top = y + 'px';
   }
 
-  function showCard(el){
+  // One place that fills the card, so correction mode can rebuild a
+  // pinned card in place after an operation without re-running the
+  // positioning and highlighting around it.
+  function buildCard(el){
     var isNode = el.classList.contains('n8n-node');
     var entry = isNode ? nodeCardFor(el) : edgeCardFor(el);
-    if (!entry) return;
+    if (!entry) return false;
     if (isNode) buildNodeCard(entry); else buildEdgeCard(entry);
+    if (correcting) {
+      if (isNode) correctAppendNodeEditor(card, el.dataset.id);
+      else correctAppendEdgeEditor(card, parseInt(el.dataset.index, 10));
+    }
+    return true;
+  }
+
+  function showCard(el){
+    if (!buildCard(el)) return;
     card.hidden = false;
     shownEl = el;
     highlightFor(el);
@@ -729,6 +762,9 @@ function script(canvas, cardData, geometry) {
     pinCard(target);
     panIntoView(target);
   }
+
+${correctOpsSource()}
+${correctScript()}
 
   fit();
   applyLayers();

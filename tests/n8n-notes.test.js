@@ -227,6 +227,22 @@ describe('hostile note content', () => {
     return baseDoc({ notes: [{ id: 'hostile', content }] });
   }
 
+  // The viewer carries the document it was rendered from as a JSON literal
+  // inside its one <script>, so correction mode can write a corrected one
+  // (docs/design/correction-mode.md). A hostile note's text therefore DOES
+  // appear in the output -- as string data, never as markup. These tests
+  // are about markup, so they look at everything outside that script; that
+  // the literal cannot be escaped from is asserted separately below and in
+  // tests/n8n-correction-viewer.test.js.
+  function markupOf(html) {
+    const start = html.indexOf('<script>');
+    if (start < 0) return html;
+    const end = html.lastIndexOf('</script>');
+    const body = html.slice(start + '<script>'.length, end);
+    assert.ok(!body.includes('</script'), 'nothing may close the script element from inside it');
+    return html.slice(0, start) + html.slice(end + '</script>'.length);
+  }
+
   test('<script> and </script> in content never produce a live script tag', async () => {
     const html = await renderMap(docWithNote('before <script>alert(1)</script> after'));
     const scriptOpenTags = html.match(/<script[ >]/g) || [];
@@ -235,35 +251,36 @@ describe('hostile note content', () => {
   });
 
   test('<img onerror=...> never produces a live <img> element', async () => {
-    const html = await renderMap(docWithNote('<img src=x onerror="alert(1)">'));
-    assert.ok(!/<img[ >]/.test(html), 'no live <img> element should exist anywhere in the output');
+    const html = markupOf(await renderMap(docWithNote('<img src=x onerror="alert(1)">')));
+    assert.ok(!/<img[ >]/.test(html), 'no live <img> element should exist anywhere in the markup');
   });
 
   test('a raw double quote in content cannot break out of an attribute', async () => {
-    const html = await renderMap(docWithNote('quote" onmouseover="alert(1)'));
+    const html = markupOf(await renderMap(docWithNote('quote" onmouseover="alert(1)')));
     // The quote must render as inert text (entity-escaped), never as a live
     // attribute boundary. "onmouseover=" is expected to appear as plain
     // visible text — what must never happen is a *live* onmouseover=
     // attribute, i.e. one immediately preceded by an unescaped quote.
     assert.ok(html.includes('quote&quot;'), 'the raw quote must survive only as an HTML entity');
-    assert.ok(!/["'`]\s*onmouseover\s*=/.test(html), 'no live onmouseover= attribute may exist anywhere in the output');
+    assert.ok(!/["'`]\s*onmouseover\s*=/.test(html), 'no live onmouseover= attribute may exist anywhere in the markup');
   });
 
   test('[x](javascript:alert(1)) never produces a javascript: href', async () => {
-    const html = await renderMap(docWithNote('[x](javascript:alert(1))'));
+    const html = markupOf(await renderMap(docWithNote('[x](javascript:alert(1))')));
     assert.ok(!/javascript:/i.test(html));
     assert.ok(!/<a[^>]*href/i.test(html), 'no anchor at all should be emitted for a disallowed scheme');
   });
 
   test('[x](JaVaScRiPt:alert(1)) is case-insensitively rejected', async () => {
-    const html = await renderMap(docWithNote('[x](JaVaScRiPt:alert(1))'));
+    const html = markupOf(await renderMap(docWithNote('[x](JaVaScRiPt:alert(1))')));
     assert.ok(!/javascript:/i.test(html));
   });
 
   test('[x](data:text/html,...) never produces a data: href', async () => {
-    const html = await renderMap(docWithNote('[x](data:text/html,<script>alert(1)</script>)'));
+    const full = await renderMap(docWithNote('[x](data:text/html,<script>alert(1)</script>)'));
+    const html = markupOf(full);
     assert.ok(!/data:/i.test(html));
-    const scriptOpenTags = html.match(/<script[ >]/g) || [];
+    const scriptOpenTags = full.match(/<script[ >]/g) || [];
     assert.strictEqual(scriptOpenTags.length, 1);
   });
 
@@ -283,8 +300,9 @@ describe('hostile note content', () => {
       '[c](data:text/html,<script>alert(5)</script>)',
       '[d]( javascript:alert(6))',
     ].join('\n');
-    const html = await renderMap(docWithNote(content));
-    const scriptOpenTags = html.match(/<script[ >]/g) || [];
+    const full = await renderMap(docWithNote(content));
+    const html = markupOf(full);
+    const scriptOpenTags = full.match(/<script[ >]/g) || [];
     assert.strictEqual(scriptOpenTags.length, 1);
     assert.ok(!/javascript:/i.test(html));
     assert.ok(!/href="data:/i.test(html));

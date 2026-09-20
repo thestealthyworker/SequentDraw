@@ -52,7 +52,15 @@ describe('security: escaping and validation', () => {
 
     // None of the injected payloads should appear as live, executable
     // script content (only as escaped text within SVG/HTML text nodes).
-    assert.ok(!/alert\(1\)/.test(html.split('<script')[1] || ''), 'title payload must not reach the inline script');
+    // The title DOES reach the script, inside the SOURCE_DOC literal that
+    // correction mode writes a corrected document from
+    // (docs/design/correction-mode.md). What must not happen is it
+    // escaping that literal: the payload may appear only as JSON string
+    // content, with no tag able to close the script element.
+    const scriptBody = html.slice(html.indexOf('<script>') + '<script>'.length, html.lastIndexOf('</script>'));
+    assert.ok(!scriptBody.includes('</script'), 'nothing may close the script element from inside it');
+    assert.ok(!/<script[ >]/.test(scriptBody), 'no new script tag inside the script');
+    assert.ok(scriptBody.includes('\\u003cscript\\u003ealert(1)'), 'the title payload is escaped inside the JSON literal');
     for (const marker of ['alert(1)', 'alert(2)', 'alert(3)', 'alert(4)', 'alert(5)', 'alert(6)']) {
       // It's fine (expected) for the escaped form to appear in text content;
       // what must never appear is a live "<script>alert(" sequence.

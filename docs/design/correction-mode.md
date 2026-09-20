@@ -70,9 +70,16 @@ literal (`SOURCE_DOC`), alongside `CANVAS`, `GEOMETRY` and `CARD_DATA`, escaped 
 same `safeJson()` and parsed back in the single viewer script.
 
 Cost, measured on `examples/medusa-return-flow.json` (40 nodes, 44 edges, 4 layers):
-document 23kb against a 149kb render, so **+15%**. Accepted: it makes the HTML file
-self-contained in the sense that matters — a map that arrives by email can be corrected
-and saved by whoever received it, with no access to the JSON it came from.
+the render goes from 152,693 to 208,594 bytes, **+37%**. The document itself is only
+23kb of that; the rest is the operations module and its wiring, which the browser
+cannot `require()`. The estimate while designing was +15%, which counted the document
+and forgot the code that reads it.
+
+Accepted at that price, because it makes the HTML self-contained in the sense that
+matters: a map that arrives by email can be corrected and saved by whoever received it,
+with no access to the JSON it came from. Nothing already on the canvas moved — node
+positions, frames, edge routes, handles, notes and note connectors are byte-identical
+across the rebaseline.
 
 `SOURCE_DOC` is the document as validated, byte-for-byte in meaning: a test asserts it
 round-trips (`JSON.parse(SOURCE_DOC)` deep-equals the input document) so the viewer can
@@ -273,25 +280,36 @@ small top-level functions: `applyOp(doc, op)` → the new document, `guard(doc, 
 `null` or a refusal with its offered fix, `describeOp(doc, op)` → the change-list line,
 plus the per-operation helpers those three dispatch to.
 
-It follows the convention `edge-visibility.js`, `handle-visibility.js` and
-`frame-box.js` already set for logic the viewer needs: the module is authored in plain
-ES5 `var`/`function` style, and `render-shell.js` inlines a verbatim copy of each
-function into the single `<script>`, because the browser cannot `require()` it.
-`tests/n8n-inlined-functions.test.js` compares each inlined copy with its module source
-with all whitespace stripped, so the two cannot drift: a renamed variable, a different
-operator or an added line fails the test. The new functions join that test rather than
-introducing a second mechanism.
+`edge-visibility.js`, `handle-visibility.js` and `frame-box.js` set the convention for
+logic the viewer needs: author it in plain ES5, hand-copy it into the `<script>`, and
+let `tests/n8n-inlined-functions.test.js` compare the two copies textually. That works
+for a one-line body. For 53 functions it would be 500 lines of duplication kept in step
+by hand, so correction mode does the same thing one step further on:
+`correct-ops.js` exports its functions and constants, and `render-correct.js` emits
+each function's own `toString()` and each constant as JSON.
 
-The rejected alternative was reading the module at require time and stripping its
-export line. It removes the duplication, but it puts file IO behind a renderer
-documented as pure, and it makes the shipped viewer depend on a file the npm `files`
-list has to keep in step. Verbatim copies with a parity test are what this codebase
-already trusts.
+The viewer therefore **runs the module's own source**, not a copy of it. There is no
+drift to test for: at worst the emitting is wrong, and
+`tests/n8n-correction-viewer.test.js` asserts every exported name reaches the script,
+that the script parses as a program, and that nothing Node-only (`require(...)`,
+`module.exports =`, `process.`) is in it.
 
-Because of that duplication cost, the split matters: `correct-ops.js` holds the
-decisions (what an operation changes, what refuses it, how it reads in the change
-list), and the viewer script holds the wiring the browser owns anyway — menus built
-from `SOURCE_DOC`, the operation stack, badges, the panel, the downloads.
+The rejected alternative was reading the module file at require time and stripping its
+export line: it puts file IO behind a renderer documented as pure, and makes the
+shipped viewer depend on a path the npm `files` list has to keep in step.
+
+The split: `correct-ops.js` holds the decisions (what an operation changes, what
+refuses it, how it reads in the change list). `render-correct.js` holds what the
+browser owns anyway — the stylesheet, the **Correct** button and panel markup, and the
+wiring: menus built from `SOURCE_DOC`, the operation stack, the badges, the change
+list and the downloads. `render-shell.js` splices both into its single `<script>` and
+stylesheet, and `render.js` puts the controls in the body. The split also keeps both
+files inside this repo's 800-line budget.
+
+One departure from the design as first written: a node's and an edge's controls live in
+the details card, but a **sticky note is edited in the panel**, because a note is not a
+card target in the viewer — cards attach to nodes and edges only. Clicking a note in
+correction mode opens its editor in the change-list panel instead.
 
 ## Security
 
@@ -342,6 +360,8 @@ corrections already have cases.
 2. **Two files on save.** The alternative is one download plus a copy button for the
    change list. Two files is chosen so the change list survives the click; say if one
    file is preferred.
-3. **+15% file size** for `SOURCE_DOC` on every render, including renders nobody will
-   correct. The alternative is a `--correct` flag on `render`, at the cost of a map that
-   turns out to need a correction not being correctable. Always-on is chosen.
+3. **+37% file size** on every render, including renders nobody will correct (152,693
+   → 208,594 bytes on the Medusa fixture). The alternative is a `--correct` flag on
+   `render`, at the cost of a map that turns out to need a correction not being
+   correctable, and of two kinds of map file in circulation. Always-on is chosen; say
+   if the size matters more than that.
