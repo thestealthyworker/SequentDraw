@@ -35,7 +35,13 @@
 // edge track (correct-ops.js's trackEdges/edgesRemovedBy) to the emitted
 // script.
 //
+// Rebaselined again for the Notes control in the layer bar, requested by
+// the owner: one more label in the bar, one more branch in applyLayers.
+// Nothing on the canvas moved.
+//
 // Previous baselines:
+//   step 7a, with the edge track:             212519 bytes /
+//     5679c07cdb0a27864f72ecdd9bef0b62923ea8e017d3e95369af4e6c3a197d53
 //   step 7a, before the edge-track fix:       208594 bytes /
 //     48bd65285b79f5ccaa70100d664f2093448d5e108300e8eaa9dbbad06b0c4149
 //   main@aa2bce7, before correction mode:     152693 bytes /
@@ -70,8 +76,8 @@ const path = require('node:path');
 const { renderMap } = require('../src/n8n/index');
 
 const FIXTURE = path.join(__dirname, '..', 'examples', 'medusa-return-flow.json');
-const GOLDEN_LENGTH = 212519;
-const GOLDEN_SHA256 = '5679c07cdb0a27864f72ecdd9bef0b62923ea8e017d3e95369af4e6c3a197d53';
+const GOLDEN_LENGTH = 213108;
+const GOLDEN_SHA256 = '553188edae93887619655aa4cfed93b555a18475265820e41e640e796f94a34c';
 
 test('renderMap(Medusa) is byte-identical to the note-connector-routing baseline', async () => {
   const doc = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));

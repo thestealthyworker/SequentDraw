@@ -85,6 +85,7 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#333}
 .layer-bar label{display:flex;align-items:center;gap:6px;font-size:12px;color:#555;cursor:pointer;white-space:nowrap}
 .layer-bar input{accent-color:#7c5cc4;margin:0}
 .layer-bar label.is-locked{cursor:default;color:#333}
+.layer-bar label.is-notes{padding-left:14px;margin-left:2px;border-left:1px solid rgba(0,0,0,.12)}
 
 .zoom-bar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:999px;padding:6px;display:flex;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.1)}
 .zoom-bar button{width:34px;height:34px;border-radius:999px;border:none;background:transparent;font-size:16px;line-height:1;cursor:pointer;color:#444;display:flex;align-items:center;justify-content:center}
@@ -178,6 +179,7 @@ function script(canvas, cardData, geometry, doc, opts = {}) {
   var notes = [].slice.call(document.querySelectorAll('.n8n-note'));
   var noteLinkEls = [].slice.call(document.querySelectorAll('.note-link'));
   var checkboxes = [].slice.call(document.querySelectorAll('input[data-layer]'));
+  var notesToggle = document.querySelector('input[data-notes]');
   var handleEls = [].slice.call(document.querySelectorAll('.handle'));
   var branchLabelEls = [].slice.call(document.querySelectorAll('.branch-label'));
 
@@ -420,8 +422,12 @@ function script(canvas, cardData, geometry, doc, opts = {}) {
     // A note's visibility depends only on its own layers (same rule as a
     // node — shown when any of its layers is active), independent of
     // whatever it is attached to.
+    // ...and on the Notes control, a second axis over the top of that:
+    // off hides every note whatever its layers say, on restores each note
+    // to what its own layers allow.
+    var notesOn = !notesToggle || notesToggle.checked;
     notes.forEach(function(n){
-      n.classList.toggle('hidden-by-layer', !nodeVisible(n, active));
+      n.classList.toggle('hidden-by-layer', !notesOn || !nodeVisible(n, active));
     });
 
     // A note's connector line -- drawn only to a target the note could not
@@ -434,11 +440,12 @@ function script(canvas, cardData, geometry, doc, opts = {}) {
     noteLinkEls.forEach(function(l){
       var id = l.dataset.target;
       var on = (id in visible) ? visible[id] : ((id in frameVisible) ? frameVisible[id] : true);
-      l.classList.toggle('hidden-by-layer', !on);
+      l.classList.toggle('hidden-by-layer', !notesOn || !on);
     });
   }
 
   checkboxes.forEach(function(cb){ cb.addEventListener('change', applyLayers); });
+  if (notesToggle) notesToggle.addEventListener('change', applyLayers);
 
   // --- Details card -----------------------------------------------------
   //

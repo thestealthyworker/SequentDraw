@@ -74,7 +74,17 @@ function layerBarMarkup(doc) {
       return `<label><input type="checkbox" checked data-layer="${esc(l)}"/>${esc(title)} (${count})</label>`;
     })
     .join('');
-  return `<div class="layer-bar">${items}</div>`;
+  // Sticky notes are not a layer -- each note carries its own `layers` and
+  // obeys them. This is a second axis over the top: a reader who wants the
+  // diagram without the commentary (for a screenshot, or to see what a note
+  // is sitting on) turns them all off at once, and a note whose own layer is
+  // off stays hidden regardless. Omitted when a map has no notes, so an
+  // empty control never appears.
+  const noteCount = (doc.notes || []).length;
+  const notesItem = noteCount
+    ? `<label class="is-notes"><input type="checkbox" checked data-notes="all"/>Notes (${noteCount})</label>`
+    : '';
+  return `<div class="layer-bar">${items}${notesItem}</div>`;
 }
 
 function svgDefs() {
