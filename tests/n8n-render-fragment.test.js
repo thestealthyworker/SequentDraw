@@ -79,7 +79,16 @@ test('fragment is otherwise equivalent to the full page\'s body content', async 
   const fragStyleEnd = frag.indexOf('</style>') + '</style>'.length;
   const fragBody = frag.slice(fragStyleEnd).trim();
 
-  assert.strictEqual(fragBody, fullBody);
+  // One deliberate difference: correction mode's save step offers a copy
+  // first in an artifact host, where a download may not reach a
+  // filesystem (docs/design/correction-mode.md, "In an artifact host").
+  // The flag that selects it is the only thing that may differ.
+  assert.strictEqual(
+    fragBody.replace('var FRAGMENT_MODE = true;', 'var FRAGMENT_MODE = false;'),
+    fullBody
+  );
+  assert.ok(fragBody.includes('var FRAGMENT_MODE = true;'), 'the fragment is in fragment mode');
+  assert.ok(fullBody.includes('var FRAGMENT_MODE = false;'), 'the full page is not');
 
   // And the <style> content matches too, apart from the one extra
   // #stage{background:...} rule the fragment appends.

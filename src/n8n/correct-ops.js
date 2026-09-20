@@ -194,6 +194,51 @@ function correctRequireEdge(doc, index) {
   return null;
 }
 
+// --- edge identity across a stack of operations ------------------------
+//
+// An operation addresses an edge by its position in `doc.edges` as the
+// stack stands when the operation is applied. The rendered SVG, though,
+// carries each edge's position in the ORIGINAL document and never changes
+// it -- nothing re-renders while corrections are being made. Once a
+// deletion has removed an earlier edge, those two numbers diverge, and an
+// operation built from the SVG's number would silently hit a different
+// edge: still in bounds, so no refusal, and a change list that confidently
+// describes the wrong connection.
+//
+// So the viewer keeps a track: for each edge of the source document,
+// where it sits now, or -1 once it is gone. trackEdges() advances that
+// track by one operation, using the same rule the operation itself uses
+// to decide what it removes.
+
+function edgesRemovedBy(doc, op) {
+  if (!op || typeof op.type !== 'string') return [];
+  if (op.type === 'delete-edge') {
+    return correctRequireEdge(doc, op.index) ? [] : [op.index];
+  }
+  if (op.type === 'delete-node') {
+    var removed = [];
+    correctEdges(doc).forEach(function(e, i){
+      if (e.from === op.node || e.to === op.node) removed.push(i);
+    });
+    return removed;
+  }
+  return [];
+}
+
+function trackEdges(doc, op, track) {
+  var removed = edgesRemovedBy(doc, op);
+  if (!removed.length) return track.slice();
+  var gone = Object.create(null);
+  removed.forEach(function(i){ gone[i] = true; });
+  return track.map(function(current){
+    if (current < 0) return -1;
+    if (gone[current]) return -1;
+    var shift = 0;
+    removed.forEach(function(i){ if (i < current) shift++; });
+    return current - shift;
+  });
+}
+
 // --- guard -------------------------------------------------------------
 
 function guard(doc, op) {
@@ -562,4 +607,88 @@ function describeNoteChange(doc, op) {
   return (op.type === 'delete-note' ? 'Deleted' : 'Edited') + ' a sticky note on ' + subject + '.';
 }
 
-module.exports = { guard: guard, applyOp: applyOp, describeOp: describeOp };
+// The viewer needs this whole module, and the browser cannot require() it.
+// Rather than keeping a second, hand-copied text of every function -- the
+// convention edge-visibility.js and frame-box.js use, which works for a
+// one-line body and would be 500 lines of duplication here --
+// render-correct.js emits each function's own `toString()` and each
+// constant as JSON. The viewer therefore runs THIS source, not a copy of
+// it, so there is no drift to test for: at worst the emitting is wrong,
+// and tests/n8n-correction-viewer.test.js checks the emitted text holds
+// every name below.
+var VIEWER_CONSTANTS = {
+  CORRECT_KINDS: CORRECT_KINDS,
+  CORRECT_LAYERS: CORRECT_LAYERS,
+  CORRECT_NOTE_COLORS: CORRECT_NOTE_COLORS,
+  CORRECT_NOTE_CONTENT_MAX: CORRECT_NOTE_CONTENT_MAX,
+  CORRECT_NOTES_MAX: CORRECT_NOTES_MAX,
+  CORRECT_NOTE_FIELDS: CORRECT_NOTE_FIELDS,
+};
+
+var VIEWER_FUNCTIONS = [
+  edgesRemovedBy,
+  trackEdges,
+  correctNodes,
+  correctEdges,
+  correctNotes,
+  correctGroups,
+  correctFind,
+  correctIdSet,
+  correctRefuse,
+  correctLabelOf,
+  correctGroupKey,
+  correctStrandedBy,
+  correctEdgesWithout,
+  correctStrandRefusal,
+  correctSuggestionsCiting,
+  correctNextNoteId,
+  correctHasField,
+  correctNoteFields,
+  correctLayerSet,
+  correctRequireNode,
+  correctRequireEdge,
+  guard,
+  guardReattachEdge,
+  guardDeleteEdge,
+  guardSetGroup,
+  guardSetLayers,
+  guardSetKind,
+  guardAddNote,
+  guardEditNote,
+  guardDeleteNote,
+  guardAcceptSuggestion,
+  guardDeleteNode,
+  correctWithNodes,
+  correctMapNode,
+  correctNodeWith,
+  applyOp,
+  correctWith,
+  applyReattachEdge,
+  applyDeleteEdge,
+  applySetKind,
+  applyAddNote,
+  applyEditNote,
+  applyDeleteNote,
+  applyAcceptSuggestion,
+  applyDeleteNode,
+  correctNoteSubject,
+  describeOp,
+  describeSetGroup,
+  describeReattachEdge,
+  describeDeleteEdge,
+  describeSetLayers,
+  describeSetKind,
+  describeAcceptSuggestion,
+  describeDeleteNode,
+  describeNoteChange,
+];
+
+module.exports = {
+  guard: guard,
+  applyOp: applyOp,
+  describeOp: describeOp,
+  edgesRemovedBy: edgesRemovedBy,
+  trackEdges: trackEdges,
+  VIEWER_CONSTANTS: VIEWER_CONSTANTS,
+  VIEWER_FUNCTIONS: VIEWER_FUNCTIONS,
+};

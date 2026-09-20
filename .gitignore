@@ -13,3 +13,4 @@ evals/results/
 
 # Isolated worktrees created for background agents; never part of the repo.
 .claude/worktrees/
+.playwright-mcp/

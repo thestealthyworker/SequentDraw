@@ -30,16 +30,33 @@ function overlaps(a, b) {
 // parse balanced JSON out of a string that may itself contain adversarial
 // content. Returns the literal's raw text (for JSON.parse) and the script
 // source with that literal excised, for the network-access scan below.
-function extractCardDataLiteral(scriptContent) {
-  const marker = 'var CARD_DATA = ';
+// Two embedded JSON literals carry authored text into the page as inert
+// data: CARD_DATA (the details cards) and SOURCE_DOC (the document
+// correction mode writes a corrected copy of -- docs/design/correction-mode.md).
+// Both can legitimately hold an http(s) URL, because a node `link`, a note
+// link or a description may be one. Each is cut out by its own exact
+// boundary and proved to be real JSON, so the network check below scans
+// everything else -- a much narrower exemption than "the script does not
+// count".
+function extractDataLiteral(scriptContent, marker, terminator) {
   const start = scriptContent.indexOf(marker);
-  if (start < 0) throw new Error('CARD_DATA literal not found in script');
+  if (start < 0) throw new Error(`${marker.trim()} literal not found in script`);
   const afterMarker = start + marker.length;
-  const end = scriptContent.indexOf(';\n  var nodeCardsById', afterMarker);
-  if (end < 0) throw new Error('CARD_DATA literal not terminated at the expected boundary');
+  const end = scriptContent.indexOf(terminator, afterMarker);
+  if (end < 0) throw new Error(`${marker.trim()} literal not terminated at the expected boundary`);
   return {
-    cardDataJson: scriptContent.slice(afterMarker, end),
-    scriptWithoutCardData: scriptContent.slice(0, afterMarker) + scriptContent.slice(end),
+    json: scriptContent.slice(afterMarker, end),
+    rest: scriptContent.slice(0, afterMarker) + scriptContent.slice(end),
+  };
+}
+
+function extractCardDataLiteral(scriptContent) {
+  const card = extractDataLiteral(scriptContent, 'var CARD_DATA = ', ';\n  var nodeCardsById');
+  const source = extractDataLiteral(card.rest, 'var SOURCE_DOC = ', ';\n  var FRAGMENT_MODE');
+  return {
+    cardDataJson: card.json,
+    sourceDocJson: source.json,
+    scriptWithoutCardData: source.rest,
   };
 }
 
@@ -187,8 +204,9 @@ describe('n8n layout on the Medusa fixture', () => {
     const scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
     assert.ok(scriptMatch, 'expected exactly one inline <script>');
     const scriptContent = scriptMatch[1];
-    const { cardDataJson, scriptWithoutCardData } = extractCardDataLiteral(scriptContent);
-    assert.doesNotThrow(() => JSON.parse(cardDataJson), 'the extracted literal must really be JSON, i.e. inert data');
+    const { cardDataJson, sourceDocJson, scriptWithoutCardData } = extractCardDataLiteral(scriptContent);
+    assert.doesNotThrow(() => JSON.parse(cardDataJson), 'the extracted card-data literal must really be JSON, i.e. inert data');
+    assert.doesNotThrow(() => JSON.parse(sourceDocJson), 'the extracted source-document literal must really be JSON, i.e. inert data');
 
     const violations = findNetworkAccessViolations(scriptWithoutCardData);
     assert.deepStrictEqual(violations.urls, [], 'the script (outside the embedded card-data literal) must contain no http(s) URL text');

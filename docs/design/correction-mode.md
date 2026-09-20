@@ -46,11 +46,14 @@ file. The viewer never re-lays-out anything.
 
 Two consequences the interface must be honest about:
 
-- **A pending correction is not previewed as geometry.** Changing a kind is previewed
-  (the ring and glyph change in place; the box size does not). Moving a group, changing
-  layers, reattaching or deleting a connection are shown as a badge on the affected
-  element and a line in the change list, not as a moved node or a redrawn line. A fake
-  preview would be a lie about the layout the user is going to get.
+- **No pending correction is previewed as geometry, and none is previewed at all.**
+  Every correction is shown as a badge on the affected element and a line in the change
+  list; the canvas itself keeps showing the map as it was rendered. A fake preview would
+  be a lie about the layout the user is going to get, and a half-preview — a new glyph on
+  a node still sitting in its old column — would be a smaller lie of the same kind.
+  Where the canvas is out of date in a way that matters, the card says so in words: an
+  edge whose end has been reattached names its current connection, and one that has been
+  deleted says it is no longer in the corrected map.
 - **Correction mode is a document editor with a map in front of it.** The reward for
   saving is a new render, and the panel prints the exact command that produces it.
 
@@ -70,9 +73,16 @@ literal (`SOURCE_DOC`), alongside `CANVAS`, `GEOMETRY` and `CARD_DATA`, escaped 
 same `safeJson()` and parsed back in the single viewer script.
 
 Cost, measured on `examples/medusa-return-flow.json` (40 nodes, 44 edges, 4 layers):
-document 23kb against a 149kb render, so **+15%**. Accepted: it makes the HTML file
-self-contained in the sense that matters — a map that arrives by email can be corrected
-and saved by whoever received it, with no access to the JSON it came from.
+the render goes from 152,693 to 212,519 bytes, **+39%**. The document itself is only
+23kb of that; the rest is the operations module and its wiring, which the browser
+cannot `require()`. The estimate while designing was +15%, which counted the document
+and forgot the code that reads it.
+
+Accepted at that price, because it makes the HTML self-contained in the sense that
+matters: a map that arrives by email can be corrected and saved by whoever received it,
+with no access to the JSON it came from. Nothing already on the canvas moved — node
+positions, frames, edge routes, handles, notes and note connectors are byte-identical
+across the rebaseline.
 
 `SOURCE_DOC` is the document as validated, byte-for-byte in meaning: a test asserts it
 round-trips (`JSON.parse(SOURCE_DOC)` deep-equals the input document) so the viewer can
@@ -120,7 +130,7 @@ special here (a node can be `business` only), but an empty `layers` array is ref
 ### 5. Change a node's kind
 
 On a node's card: **Kind** → one of `service`, `human`, `external`, `manual`,
-`artifact`, `logic`. Previewed in place, since only the ring and glyph change.
+`artifact`, `logic`.
 
 When the node carries a brand `icon` and the new kind is not `service`, the viewer
 clears the icon and says so in the change list ("cleared its icon `stripe`"). A person
@@ -154,6 +164,24 @@ Two refusals, each with the fix offered:
 - a suggested node **cites** it. `cites` entries must name declared, non-suggested
   nodes, so deleting a cited node breaks that suggestion. The viewer offers to decline
   the suggestion as well.
+
+### How an operation names an edge
+
+An operation carries the edge's position in `doc.edges` **as the stack stands when it is
+applied**. The rendered SVG carries a different number: the edge's position in the
+document it was rendered from, which never changes, because nothing re-renders while
+corrections are being made. After one deletion those two diverge.
+
+Taking the number straight off the DOM would therefore address a different edge — still
+in bounds, so no refusal, and a change list confidently describing the wrong connection.
+Caught in review before this shipped.
+
+So the viewer keeps a **track**: for each edge of the source document, where it sits now,
+or `-1` once it is gone. `trackEdges(doc, op, track)` in `correct-ops.js` advances it by
+one operation, using the same rule the operation uses to decide what it removes
+(`edgesRemovedBy`), and the track is rebuilt by replaying the stack whenever it changes.
+Every edge operation resolves its index through the track at the moment it is built, and
+an edge the track has retired offers no controls at all.
 
 ### Deliberately not in scope
 
@@ -273,25 +301,36 @@ small top-level functions: `applyOp(doc, op)` → the new document, `guard(doc, 
 `null` or a refusal with its offered fix, `describeOp(doc, op)` → the change-list line,
 plus the per-operation helpers those three dispatch to.
 
-It follows the convention `edge-visibility.js`, `handle-visibility.js` and
-`frame-box.js` already set for logic the viewer needs: the module is authored in plain
-ES5 `var`/`function` style, and `render-shell.js` inlines a verbatim copy of each
-function into the single `<script>`, because the browser cannot `require()` it.
-`tests/n8n-inlined-functions.test.js` compares each inlined copy with its module source
-with all whitespace stripped, so the two cannot drift: a renamed variable, a different
-operator or an added line fails the test. The new functions join that test rather than
-introducing a second mechanism.
+`edge-visibility.js`, `handle-visibility.js` and `frame-box.js` set the convention for
+logic the viewer needs: author it in plain ES5, hand-copy it into the `<script>`, and
+let `tests/n8n-inlined-functions.test.js` compare the two copies textually. That works
+for a one-line body. For 53 functions it would be 500 lines of duplication kept in step
+by hand, so correction mode does the same thing one step further on:
+`correct-ops.js` exports its functions and constants, and `render-correct.js` emits
+each function's own `toString()` and each constant as JSON.
 
-The rejected alternative was reading the module at require time and stripping its
-export line. It removes the duplication, but it puts file IO behind a renderer
-documented as pure, and it makes the shipped viewer depend on a file the npm `files`
-list has to keep in step. Verbatim copies with a parity test are what this codebase
-already trusts.
+The viewer therefore **runs the module's own source**, not a copy of it. There is no
+drift to test for: at worst the emitting is wrong, and
+`tests/n8n-correction-viewer.test.js` asserts every exported name reaches the script,
+that the script parses as a program, and that nothing Node-only (`require(...)`,
+`module.exports =`, `process.`) is in it.
 
-Because of that duplication cost, the split matters: `correct-ops.js` holds the
-decisions (what an operation changes, what refuses it, how it reads in the change
-list), and the viewer script holds the wiring the browser owns anyway — menus built
-from `SOURCE_DOC`, the operation stack, badges, the panel, the downloads.
+The rejected alternative was reading the module file at require time and stripping its
+export line: it puts file IO behind a renderer documented as pure, and makes the
+shipped viewer depend on a path the npm `files` list has to keep in step.
+
+The split: `correct-ops.js` holds the decisions (what an operation changes, what
+refuses it, how it reads in the change list). `render-correct.js` holds what the
+browser owns anyway — the stylesheet, the **Correct** button and panel markup, and the
+wiring: menus built from `SOURCE_DOC`, the operation stack, the badges, the change
+list and the downloads. `render-shell.js` splices both into its single `<script>` and
+stylesheet, and `render.js` puts the controls in the body. The split also keeps both
+files inside this repo's 800-line budget.
+
+One departure from the design as first written: a node's and an edge's controls live in
+the details card, but a **sticky note is edited in the panel**, because a note is not a
+card target in the viewer — cards attach to nodes and edges only. Clicking a note in
+correction mode opens its editor in the change-list panel instead.
 
 ## Security
 
@@ -342,6 +381,8 @@ corrections already have cases.
 2. **Two files on save.** The alternative is one download plus a copy button for the
    change list. Two files is chosen so the change list survives the click; say if one
    file is preferred.
-3. **+15% file size** for `SOURCE_DOC` on every render, including renders nobody will
-   correct. The alternative is a `--correct` flag on `render`, at the cost of a map that
-   turns out to need a correction not being correctable. Always-on is chosen.
+3. **+39% file size** on every render, including renders nobody will correct (152,693
+   → 212,519 bytes on the Medusa fixture). The alternative is a `--correct` flag on
+   `render`, at the cost of a map that turns out to need a correction not being
+   correctable, and of two kinds of map file in circulation. Always-on is chosen; say
+   if the size matters more than that.

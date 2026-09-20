@@ -3,6 +3,7 @@
 const { esc, layersOf, nodeMarkup, handleMarkup, frameMarkup, edgeMarkup } = require('./render-svg');
 const { noteMarkup } = require('./notes-render');
 const { css, script } = require('./render-shell');
+const { correctBarMarkup } = require('./render-correct');
 const { buildCardData } = require('./card-data');
 const {
   DOT_GRID_GAP,
@@ -154,7 +155,8 @@ ${layerBarMarkup(doc)}
 <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">&#43;</button>
 </div>
 <div id="details-card" class="details-card" hidden></div>
-<script>${script(canvas, cardData, geometry)}</script>`;
+${correctBarMarkup()}
+<script>${script(canvas, cardData, geometry, doc, { fragment })}</script>`;
 
   if (fragment) {
     return `<title>${title}</title>
