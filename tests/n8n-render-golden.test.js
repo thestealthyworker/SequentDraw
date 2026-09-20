@@ -39,7 +39,13 @@
 // the owner: one more label in the bar, one more branch in applyLayers.
 // Nothing on the canvas moved.
 //
+// Rebaselined for step 7c, export from the viewer: two buttons, the export
+// script, and the page's own stylesheet embedded a second time so the
+// exported SVG stands alone. Nothing on the canvas moved.
+//
 // Previous baselines:
+//   step 7a plus the Notes control:           213108 bytes /
+//     553188edae93887619655aa4cfed93b555a18475265820e41e640e796f94a34c
 //   step 7a, with the edge track:             212519 bytes /
 //     5679c07cdb0a27864f72ecdd9bef0b62923ea8e017d3e95369af4e6c3a197d53
 //   step 7a, before the edge-track fix:       208594 bytes /
@@ -76,8 +82,8 @@ const path = require('node:path');
 const { renderMap } = require('../src/n8n/index');
 
 const FIXTURE = path.join(__dirname, '..', 'examples', 'medusa-return-flow.json');
-const GOLDEN_LENGTH = 213108;
-const GOLDEN_SHA256 = '553188edae93887619655aa4cfed93b555a18475265820e41e640e796f94a34c';
+const GOLDEN_LENGTH = 231401;
+const GOLDEN_SHA256 = '04ba29eaeca0fd59d42444e260f91ee29a8400821f9b3b9db0b701fe2a113b3e';
 
 test('renderMap(Medusa) is byte-identical to the note-connector-routing baseline', async () => {
   const doc = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));

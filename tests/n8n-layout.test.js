@@ -94,9 +94,38 @@ const BANNED_NETWORK_APIS = ['fetch(', 'XMLHttpRequest', 'WebSocket(', 'EventSou
 
 function findNetworkAccessViolations(scriptSource) {
   const codeOnly = stripLineComments(scriptSource);
-  const urls = codeOnly.match(/https?:\/\//g) || [];
+  // A URL needs a host. A bare scheme with nothing after it cannot be
+  // fetched, and the viewer holds two of them as literals: the export
+  // sanitiser allows a link through only when it starts with "http://" or
+  // "https://" (render-export.js), which is the opposite of reaching out
+  // to the network. Anything with a host after the scheme is still caught.
+  const urls = (codeOnly.match(/https?:\/\/[^\s"'`)]+/g) || [])
+    .filter(u => !/^https?:\/\/$/.test(u))
+    // The SVG namespace, passed to createElementNS when the export builds
+    // its own elements. It is an identifier, never fetched -- the same
+    // exemption the markup half of this test already makes.
+    .filter(u => u !== 'http://www.w3.org/2000/svg');
   const apis = BANNED_NETWORK_APIS.filter(api => codeOnly.includes(api));
   return { urls, apis };
+}
+
+// `new Image(` is on the banned list because an <img> fetches whatever its
+// src names. The PNG export needs one -- it is how an SVG is rasterised --
+// and gives it a data: URL built in the page, which fetches nothing and
+// also keeps the canvas untainted so toBlob() works. The carve-out is
+// therefore paid for with a stronger, positive check: EVERY src the viewer
+// ever assigns must be a data: URL. A future change that points an image
+// at a host fails this, which a blanket ban would have caught too.
+function assertOnlyDataUrlImages(scriptSource, assertFn) {
+  const codeOnly = stripLineComments(scriptSource);
+  const imageUses = (codeOnly.match(/new Image\(/g) || []).length;
+  assertFn.ok(imageUses <= 1, `expected at most one new Image(, found ${imageUses}`);
+  const srcAssignments = codeOnly.match(/setAttribute\('src',\s*([^)]*)\)/g) || [];
+  assertFn.ok(srcAssignments.length >= 1, 'expected the export to set an image src');
+  srcAssignments.forEach(line => {
+    assertFn.match(line, /'data:image\/svg\+xml;base64,'/, `an image src must be a data: URL: ${line}`);
+  });
+  assertFn.ok(!/\.src\s*=/.test(codeOnly), 'no bare .src assignment');
 }
 
 describe('n8n layout on the Medusa fixture', () => {
@@ -210,7 +239,11 @@ describe('n8n layout on the Medusa fixture', () => {
 
     const violations = findNetworkAccessViolations(scriptWithoutCardData);
     assert.deepStrictEqual(violations.urls, [], 'the script (outside the embedded card-data literal) must contain no http(s) URL text');
-    assert.deepStrictEqual(violations.apis, [], `the script (outside the embedded card-data literal) must not use: ${violations.apis.join(', ')}`);
+    // The one carve-out, checked harder than the ban it replaces: see
+    // assertOnlyDataUrlImages above.
+    const apis = violations.apis.filter(api => api !== 'new Image(');
+    assertOnlyDataUrlImages(scriptWithoutCardData, assert);
+    assert.deepStrictEqual(apis, [], `the script (outside the embedded card-data literal) must not use: ${apis.join(', ')}`);
 
     const htmlOutsideScript = html.replace(scriptContent, '');
     const anchorHrefs = new Set([...html.matchAll(/<a\s[^>]*\bhref="([^"]*)"/g)].map(m => m[1]));
