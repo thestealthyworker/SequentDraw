@@ -14,3 +14,7 @@ evals/results/
 # Isolated worktrees created for background agents; never part of the repo.
 .claude/worktrees/
 .playwright-mcp/
+
+# Local review material: rendered maps and the tool write-up behind the README.
+# Regenerate with sequentdraw render; never part of a release.
+review-outputs/
