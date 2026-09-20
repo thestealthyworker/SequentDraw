@@ -188,6 +188,21 @@ Security: the SVG is as likely as the HTML to be opened by people who did not wr
 input. Every value is escaped for its context, there is no `<script>`, `<foreignObject>`
 or event attribute, and there are no `href` values at all.
 
+### The Notes control
+
+Requested by the owner (2026-09-20). Sticky notes are **not** a layer — each note
+carries its own `layers` and obeys them — so the bar carries one more control, set off
+from the layer chips by a divider: `Notes (n)`.
+
+It is a second axis over the top of the layer rule. Off hides every note and every note
+connector whatever the layers say; on restores each note to what its own layers allow, so
+turning notes back on never reveals a note whose layer is off. A map with no notes gets no
+control rather than an empty one.
+
+Why it earns a control of its own: a reader taking a screenshot, or trying to see what a
+note is sitting on top of, wants the diagram without the commentary — and on a reviewed
+map (`eval-build`, `grill-build`) the commentary can be a dozen notes.
+
 ### Layers
 
 Unchanged in meaning: layers are a visibility filter over one layout. The checkbox

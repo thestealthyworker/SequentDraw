@@ -449,3 +449,50 @@ describe('backward compatibility', () => {
     assert.ok(html.startsWith('<!DOCTYPE html>'));
   });
 });
+
+// ---------------------------------------------------------------------
+// The Notes control in the layer bar
+// ---------------------------------------------------------------------
+
+describe('the Notes control', () => {
+  test('appears once, counting the notes, marked as a separate axis', async () => {
+    const html = await renderMap(baseDoc({
+      notes: [
+        { id: 'note_a', content: 'One' },
+        { id: 'note_b', content: 'Two', layers: ['business'] },
+      ],
+    }));
+    assert.strictEqual((html.match(/data-notes="all"/g) || []).length, 1);
+    assert.match(html, /class="is-notes"><input type="checkbox" checked data-notes="all"\/>Notes \(2\)/);
+  });
+
+  test('is omitted from a map with no notes, rather than showing an empty control', async () => {
+    const html = await renderMap(baseDoc());
+    // The viewer script always looks the control up, so what must be absent
+    // is the control itself, not the string.
+    assert.ok(!html.includes('data-notes="all"'), 'no Notes control on a map without notes');
+    assert.ok(!html.includes('class="is-notes"'), 'and no label for one');
+    assert.match(html, /data-layer="base"/, 'the layer bar is still there');
+  });
+
+  test('the viewer hides every note and connector when it is off, whatever the layers say', async () => {
+    const html = await renderMap(baseDoc({ notes: [{ id: 'note_a', content: 'One' }] }));
+    const script = html.slice(html.indexOf('<script>'), html.lastIndexOf('</script>'));
+    // notesOn gates the note itself...
+    assert.match(script, /var notesOn = !notesToggle \|\| notesToggle\.checked;/);
+    assert.match(script, /n\.classList\.toggle\('hidden-by-layer', !notesOn \|\| !nodeVisible\(n, active\)\)/);
+    // ...and its connector line, which would otherwise be left pointing at
+    // a note that is no longer drawn.
+    assert.match(script, /l\.classList\.toggle\('hidden-by-layer', !notesOn \|\| !on\)/);
+    assert.match(script, /if \(notesToggle\) notesToggle\.addEventListener\('change', applyLayers\)/);
+  });
+
+  test('a note still obeys its own layers when the control is on', async () => {
+    // The control is a second axis over the top of the layer rule, not a
+    // replacement for it: turning notes back on must not reveal a note
+    // whose own layer is off.
+    const html = await renderMap(baseDoc({ notes: [{ id: 'note_a', content: 'One', layers: ['business'] }] }));
+    const script = html.slice(html.indexOf('<script>'), html.lastIndexOf('</script>'));
+    assert.match(script, /!notesOn \|\| !nodeVisible\(n, active\)/);
+  });
+});
