@@ -62,6 +62,8 @@ function correctCss() {
 .card-edit-buttons button{font:inherit;font-size:12px;padding:5px 9px;border-radius:8px;border:1px solid rgba(0,0,0,.12);background:#fff;cursor:pointer;color:#333}
 .card-edit-buttons button:hover{background:#f4f4f2}
 .card-edit-buttons button.is-danger{color:#a8332a;border-color:rgba(168,51,42,.35)}
+.correct-now{margin:0 0 6px;font-size:12px;color:#555}
+.correct-gone{margin:0;font-size:12px;color:#8a8a85;font-style:italic}
 .correct-refusal{margin-top:10px;padding:8px;border-radius:8px;background:#fdf2f0;border:1px solid rgba(168,51,42,.25);color:#7a2620}
 .correct-refusal button{margin-top:6px;font:inherit;font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid rgba(168,51,42,.35);background:#fff;color:#a8332a;cursor:pointer}
 
@@ -88,9 +90,32 @@ function correctScript() {
   var correctCountEl = document.getElementById('correct-count');
   var correcting = false;
   var correctSelectedNote = null;
+  // Where each edge of the source document sits now, or -1 once a
+  // correction has removed it. The SVG carries an edge's ORIGINAL index
+  // and never changes, so an operation built straight from the DOM would
+  // address a different edge after any deletion.
+  var correctEdgeTrack = correctEdges(SOURCE_DOC).map(function(_, i){ return i; });
 
   function correctDoc(){
     return correctStack.reduce(function(doc, op){ return applyOp(doc, op); }, SOURCE_DOC);
+  }
+
+  function correctRebuildTrack(){
+    var track = correctEdges(SOURCE_DOC).map(function(_, i){ return i; });
+    var doc = SOURCE_DOC;
+    correctStack.forEach(function(op){
+      track = trackEdges(doc, op, track);
+      doc = applyOp(doc, op);
+    });
+    correctEdgeTrack = track;
+  }
+
+  // The index an operation on this rendered edge must carry today, or -1
+  // when the edge is no longer in the corrected document.
+  function correctLiveEdgeIndex(renderedIndex){
+    if (typeof renderedIndex !== 'number' || renderedIndex < 0) return -1;
+    if (renderedIndex >= correctEdgeTrack.length) return -1;
+    return correctEdgeTrack[renderedIndex];
   }
 
   function correctChangeLines(){
@@ -108,7 +133,7 @@ function correctScript() {
     correctStack.forEach(function(op){
       if (op.node) ids['node:' + op.node] = true;
       if (op.note) ids['note:' + op.note] = true;
-      if (typeof op.index === 'number' && correctEdges(doc)[op.index]) {
+      if (typeof op.index === 'number' && op.index >= 0 && correctEdges(doc)[op.index]) {
         var e = correctEdges(doc)[op.index];
         ids['edge:' + e.from + '->' + e.to] = true;
       }
@@ -224,6 +249,11 @@ function correctScript() {
     }
     correctPanel.appendChild(actions);
 
+    // An editor open on a sticky note stays open when an unrelated
+    // correction rebuilds the panel; it closes only when the note goes or
+    // the reader closes it.
+    if (correctSelectedNote) correctAppendNoteEditor(correctSelectedNote);
+
     if (lines.length) {
       var next = document.createElement('p');
       next.className = 'correct-next';
@@ -235,6 +265,7 @@ function correctScript() {
   }
 
   function correctAfterChange(){
+    correctRebuildTrack();
     correctMarkBadges();
     correctRenderPanel();
     correctCountEl.hidden = correctStack.length === 0;
@@ -252,10 +283,22 @@ function correctScript() {
       correctAfterChange();
       return;
     }
+    // A refused operation changed nothing, but the control that triggered
+    // it is already showing the rejected choice. Rebuilding the editor
+    // puts every control back to what the document actually says, and the
+    // refusal is then shown on that fresh copy.
+    if (pinnedEl && host && host.parentNode === card) {
+      buildCard(pinnedEl);
+      host = card.querySelector('.card-edit') || card;
+    }
     correctShowRefusal(refusal, host);
   }
 
   function correctShowRefusal(refusal, host){
+    // One refusal at a time: retrying a reattach that keeps colliding
+    // should replace the message, not stack another copy under it.
+    var previous = host.querySelector ? host.querySelector('.correct-refusal') : null;
+    if (previous) previous.parentNode.removeChild(previous);
     var box = document.createElement('div');
     box.className = 'correct-refusal';
     var p = document.createElement('p');
@@ -367,24 +410,39 @@ function correctScript() {
     host.appendChild(box);
   }
 
-  function correctAppendEdgeEditor(host, edgeIndex){
-    var doc = correctDoc();
-    var edge = correctEdges(doc)[edgeIndex];
-    if (!edge) return;
+  function correctAppendEdgeEditor(host, renderedIndex){
     var box = document.createElement('div');
     box.className = 'card-edit';
+    var liveIndex = correctLiveEdgeIndex(renderedIndex);
+    var doc = correctDoc();
+    var edge = liveIndex < 0 ? null : correctEdges(doc)[liveIndex];
+    if (!edge) {
+      var gone = document.createElement('p');
+      gone.className = 'correct-gone';
+      gone.textContent = 'This connection is no longer in the corrected map.';
+      box.appendChild(gone);
+      host.appendChild(box);
+      return;
+    }
+
+    // The canvas still shows the connection as it was rendered, so where a
+    // correction has already moved an end, the card says what it is now.
+    var now = document.createElement('p');
+    now.className = 'correct-now';
+    now.textContent = correctLabelOf(doc, edge.from) + ' \u2192 ' + correctLabelOf(doc, edge.to);
+    box.appendChild(now);
 
     box.appendChild(correctSelect('From', correctNodeOptions(doc, edge.to), edge.from, function(id){
-      correctRun({ type: 'reattach-edge', index: edgeIndex, end: 'from', node: id }, box);
+      correctRun({ type: 'reattach-edge', index: correctLiveEdgeIndex(renderedIndex), end: 'from', node: id }, box);
     }));
     box.appendChild(correctSelect('To', correctNodeOptions(doc, edge.from), edge.to, function(id){
-      correctRun({ type: 'reattach-edge', index: edgeIndex, end: 'to', node: id }, box);
+      correctRun({ type: 'reattach-edge', index: correctLiveEdgeIndex(renderedIndex), end: 'to', node: id }, box);
     }));
 
     var buttons = document.createElement('div');
     buttons.className = 'card-edit-buttons';
     buttons.appendChild(correctButton('Delete connection', 'is-danger', function(){
-      correctRun({ type: 'delete-edge', index: edgeIndex }, box);
+      correctRun({ type: 'delete-edge', index: correctLiveEdgeIndex(renderedIndex) }, box);
     }));
     box.appendChild(buttons);
     host.appendChild(box);
@@ -413,10 +471,13 @@ function correctScript() {
 
   function correctOpenNoteEditor(noteId){
     correctSelectedNote = noteId;
+    correctRenderPanel();
+  }
+
+  function correctAppendNoteEditor(noteId){
     var doc = correctDoc();
     var note = correctFind(correctNotes(doc), noteId);
-    correctRenderPanel();
-    if (!note) return;
+    if (!note) { correctSelectedNote = null; return; }
     var box = document.createElement('div');
     box.className = 'card-edit';
     var label = document.createElement('label');
@@ -436,6 +497,10 @@ function correctScript() {
     buttons.appendChild(correctButton('Delete note', 'is-danger', function(){
       correctSelectedNote = null;
       correctRun({ type: 'delete-note', note: noteId }, box);
+    }));
+    buttons.appendChild(correctButton('Close', '', function(){
+      correctSelectedNote = null;
+      correctRenderPanel();
     }));
     box.appendChild(buttons);
     correctPanel.appendChild(box);

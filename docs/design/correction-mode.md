@@ -46,11 +46,14 @@ file. The viewer never re-lays-out anything.
 
 Two consequences the interface must be honest about:
 
-- **A pending correction is not previewed as geometry.** Changing a kind is previewed
-  (the ring and glyph change in place; the box size does not). Moving a group, changing
-  layers, reattaching or deleting a connection are shown as a badge on the affected
-  element and a line in the change list, not as a moved node or a redrawn line. A fake
-  preview would be a lie about the layout the user is going to get.
+- **No pending correction is previewed as geometry, and none is previewed at all.**
+  Every correction is shown as a badge on the affected element and a line in the change
+  list; the canvas itself keeps showing the map as it was rendered. A fake preview would
+  be a lie about the layout the user is going to get, and a half-preview — a new glyph on
+  a node still sitting in its old column — would be a smaller lie of the same kind.
+  Where the canvas is out of date in a way that matters, the card says so in words: an
+  edge whose end has been reattached names its current connection, and one that has been
+  deleted says it is no longer in the corrected map.
 - **Correction mode is a document editor with a map in front of it.** The reward for
   saving is a new render, and the panel prints the exact command that produces it.
 
@@ -70,7 +73,7 @@ literal (`SOURCE_DOC`), alongside `CANVAS`, `GEOMETRY` and `CARD_DATA`, escaped 
 same `safeJson()` and parsed back in the single viewer script.
 
 Cost, measured on `examples/medusa-return-flow.json` (40 nodes, 44 edges, 4 layers):
-the render goes from 152,693 to 208,594 bytes, **+37%**. The document itself is only
+the render goes from 152,693 to 212,519 bytes, **+39%**. The document itself is only
 23kb of that; the rest is the operations module and its wiring, which the browser
 cannot `require()`. The estimate while designing was +15%, which counted the document
 and forgot the code that reads it.
@@ -127,7 +130,7 @@ special here (a node can be `business` only), but an empty `layers` array is ref
 ### 5. Change a node's kind
 
 On a node's card: **Kind** → one of `service`, `human`, `external`, `manual`,
-`artifact`, `logic`. Previewed in place, since only the ring and glyph change.
+`artifact`, `logic`.
 
 When the node carries a brand `icon` and the new kind is not `service`, the viewer
 clears the icon and says so in the change list ("cleared its icon `stripe`"). A person
@@ -161,6 +164,24 @@ Two refusals, each with the fix offered:
 - a suggested node **cites** it. `cites` entries must name declared, non-suggested
   nodes, so deleting a cited node breaks that suggestion. The viewer offers to decline
   the suggestion as well.
+
+### How an operation names an edge
+
+An operation carries the edge's position in `doc.edges` **as the stack stands when it is
+applied**. The rendered SVG carries a different number: the edge's position in the
+document it was rendered from, which never changes, because nothing re-renders while
+corrections are being made. After one deletion those two diverge.
+
+Taking the number straight off the DOM would therefore address a different edge — still
+in bounds, so no refusal, and a change list confidently describing the wrong connection.
+Caught in review before this shipped.
+
+So the viewer keeps a **track**: for each edge of the source document, where it sits now,
+or `-1` once it is gone. `trackEdges(doc, op, track)` in `correct-ops.js` advances it by
+one operation, using the same rule the operation uses to decide what it removes
+(`edgesRemovedBy`), and the track is rebuilt by replaying the stack whenever it changes.
+Every edge operation resolves its index through the track at the moment it is built, and
+an edge the track has retired offers no controls at all.
 
 ### Deliberately not in scope
 
@@ -360,8 +381,8 @@ corrections already have cases.
 2. **Two files on save.** The alternative is one download plus a copy button for the
    change list. Two files is chosen so the change list survives the click; say if one
    file is preferred.
-3. **+37% file size** on every render, including renders nobody will correct (152,693
-   → 208,594 bytes on the Medusa fixture). The alternative is a `--correct` flag on
+3. **+39% file size** on every render, including renders nobody will correct (152,693
+   → 212,519 bytes on the Medusa fixture). The alternative is a `--correct` flag on
    `render`, at the cost of a map that turns out to need a correction not being
    correctable, and of two kinds of map file in circulation. Always-on is chosen; say
    if the size matters more than that.

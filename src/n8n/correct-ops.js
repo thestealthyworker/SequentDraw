@@ -194,6 +194,51 @@ function correctRequireEdge(doc, index) {
   return null;
 }
 
+// --- edge identity across a stack of operations ------------------------
+//
+// An operation addresses an edge by its position in `doc.edges` as the
+// stack stands when the operation is applied. The rendered SVG, though,
+// carries each edge's position in the ORIGINAL document and never changes
+// it -- nothing re-renders while corrections are being made. Once a
+// deletion has removed an earlier edge, those two numbers diverge, and an
+// operation built from the SVG's number would silently hit a different
+// edge: still in bounds, so no refusal, and a change list that confidently
+// describes the wrong connection.
+//
+// So the viewer keeps a track: for each edge of the source document,
+// where it sits now, or -1 once it is gone. trackEdges() advances that
+// track by one operation, using the same rule the operation itself uses
+// to decide what it removes.
+
+function edgesRemovedBy(doc, op) {
+  if (!op || typeof op.type !== 'string') return [];
+  if (op.type === 'delete-edge') {
+    return correctRequireEdge(doc, op.index) ? [] : [op.index];
+  }
+  if (op.type === 'delete-node') {
+    var removed = [];
+    correctEdges(doc).forEach(function(e, i){
+      if (e.from === op.node || e.to === op.node) removed.push(i);
+    });
+    return removed;
+  }
+  return [];
+}
+
+function trackEdges(doc, op, track) {
+  var removed = edgesRemovedBy(doc, op);
+  if (!removed.length) return track.slice();
+  var gone = Object.create(null);
+  removed.forEach(function(i){ gone[i] = true; });
+  return track.map(function(current){
+    if (current < 0) return -1;
+    if (gone[current]) return -1;
+    var shift = 0;
+    removed.forEach(function(i){ if (i < current) shift++; });
+    return current - shift;
+  });
+}
+
 // --- guard -------------------------------------------------------------
 
 function guard(doc, op) {
@@ -581,6 +626,8 @@ var VIEWER_CONSTANTS = {
 };
 
 var VIEWER_FUNCTIONS = [
+  edgesRemovedBy,
+  trackEdges,
   correctNodes,
   correctEdges,
   correctNotes,
@@ -640,6 +687,8 @@ module.exports = {
   guard: guard,
   applyOp: applyOp,
   describeOp: describeOp,
+  edgesRemovedBy: edgesRemovedBy,
+  trackEdges: trackEdges,
   VIEWER_CONSTANTS: VIEWER_CONSTANTS,
   VIEWER_FUNCTIONS: VIEWER_FUNCTIONS,
 };

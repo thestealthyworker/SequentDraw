@@ -10,7 +10,7 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
 
-const { applyOp, guard, describeOp } = require('../src/n8n/correct-ops');
+const { applyOp, guard, describeOp, edgesRemovedBy, trackEdges } = require('../src/n8n/correct-ops');
 const { validateDoc } = require('../src/n8n/validate');
 
 // A small business map with everything the operations touch: two groups,
@@ -492,6 +492,130 @@ describe('refusals that name something no longer in the map', () => {
   test('a note with no text, and an attachTo that is not a list', () => {
     assert.strictEqual(guard(baseDoc(), { type: 'add-note', content: '   ', color: 'yellow', layers: ['base'] }).code, 'empty-note');
     assert.strictEqual(guard(baseDoc(), { type: 'add-note', content: 'hi', attachTo: 'quote' }).code, 'invalid-attach');
+  });
+});
+
+describe('an edge keeps its identity while the stack grows', () => {
+  // The rendered SVG carries each edge's ORIGINAL index and never changes,
+  // because nothing re-renders while corrections are being made. An
+  // operation, though, addresses an edge by where it sits in the document
+  // as the stack stands. After one deletion the two diverge, and an
+  // operation built from the stale number silently hits a different edge:
+  // still in bounds, so no refusal, and a change list that confidently
+  // describes the wrong connection. Found in review of the viewer.
+  function track(doc) {
+    return doc.edges.map((_, i) => i);
+  }
+
+  function replay(doc, ops) {
+    let current = doc;
+    let positions = track(doc);
+    ops.forEach(op => {
+      positions = trackEdges(current, op, positions);
+      current = applyOp(current, op);
+    });
+    return { doc: current, positions };
+  }
+
+  test('a deletion shifts every later edge down by one', () => {
+    const { positions } = replay(ringDoc(), [{ type: 'delete-edge', index: 2 }]);
+    assert.deepStrictEqual(positions, [0, 1, -1, 2, 3, 4]);
+  });
+
+  // A ring of six steps, so a deletion never strands anything and the
+  // indices stay easy to reason about.
+  function ringDoc() {
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f'];
+    return {
+      title: 'Ring',
+      nodes: ids.map(id => ({ id, label: id.toUpperCase(), kind: 'service', layers: ['base'] })),
+      edges: ids.map((id, i) => ({ from: id, to: ids[(i + 1) % ids.length], type: 'solid' })),
+    };
+  }
+
+  test('the stale index would have hit the wrong edge; the tracked one does not', () => {
+    const doc = ringDoc();
+    const renderedIndex = 4; // e -> f, as the SVG numbered it
+    assert.deepStrictEqual(
+      { from: doc.edges[renderedIndex].from, to: doc.edges[renderedIndex].to },
+      { from: 'e', to: 'f' }
+    );
+
+    const { doc: after, positions } = replay(doc, [{ type: 'delete-edge', index: 1 }]);
+
+    // The stale number is still in range, which is exactly why the bug was
+    // silent: it addresses a different connection.
+    assert.deepStrictEqual(
+      { from: after.edges[renderedIndex].from, to: after.edges[renderedIndex].to },
+      { from: 'f', to: 'a' },
+      'the rendered index now points at the wrong edge'
+    );
+
+    // The tracked number still addresses the edge the reader clicked.
+    const live = positions[renderedIndex];
+    assert.strictEqual(live, 3);
+    assert.deepStrictEqual(
+      { from: after.edges[live].from, to: after.edges[live].to },
+      { from: 'e', to: 'f' }
+    );
+  });
+
+  test('deleting a node retires every edge it touched', () => {
+    const doc = baseDoc();
+    const { positions } = replay(doc, [{ type: 'delete-node', node: 's_xero' }]);
+    assert.strictEqual(positions[5], -1, 'invoice -> Xero is gone');
+    assert.deepStrictEqual(positions.slice(0, 5), [0, 1, 2, 3, 4], 'nothing else moved');
+  });
+
+  test('a retired edge stays retired through later operations', () => {
+    const doc = ringDoc();
+    // b -> c, then the edge the reader still sees as index 4 (e -> f),
+    // which by then sits at index 3.
+    const { positions } = replay(doc, [
+      { type: 'delete-edge', index: 1 },
+      { type: 'delete-edge', index: 3 },
+    ]);
+    assert.strictEqual(positions[1], -1, 'b -> c is gone');
+    assert.strictEqual(positions[4], -1, 'e -> f is gone');
+    assert.deepStrictEqual(positions, [0, -1, 1, 2, -1, 3]);
+  });
+
+  test('a reattachment moves no index', () => {
+    const { positions } = replay(ringDoc(), [{ type: 'reattach-edge', index: 4, end: 'to', node: 'c' }]);
+    assert.deepStrictEqual(positions, [0, 1, 2, 3, 4, 5]);
+  });
+
+  test('edgesRemovedBy reports exactly what an operation removes', () => {
+    const doc = baseDoc();
+    assert.deepStrictEqual(edgesRemovedBy(doc, { type: 'delete-edge', index: 3 }), [3]);
+    assert.deepStrictEqual(edgesRemovedBy(doc, { type: 'delete-node', node: 'invoice' }), [2, 3, 5]);
+    assert.deepStrictEqual(edgesRemovedBy(doc, { type: 'set-kind', node: 'form', kind: 'manual' }), []);
+    assert.deepStrictEqual(edgesRemovedBy(doc, { type: 'delete-edge', index: 99 }), [], 'an impossible deletion removes nothing');
+    assert.deepStrictEqual(edgesRemovedBy(doc, null), []);
+  });
+
+  test('the tracked index survives a long mixed sequence, checked edge by edge', () => {
+    const doc = ringDoc();
+    const ops = [
+      { type: 'set-kind', node: 'a', kind: 'manual' },
+      { type: 'delete-edge', index: 0 },
+      { type: 'set-layers', node: 'c', layers: ['base', 'business'] },
+      { type: 'delete-edge', index: 2 },
+      { type: 'reattach-edge', index: 0, end: 'to', node: 'e' },
+    ];
+    const { doc: after, positions } = replay(doc, ops);
+    doc.edges.forEach((original, renderedIndex) => {
+      const live = positions[renderedIndex];
+      if (live < 0) return;
+      const now = after.edges[live];
+      const reattached = renderedIndex === 1; // b -> c, whose "to" was moved
+      assert.deepStrictEqual(
+        { from: now.from, to: reattached ? original.to : now.to },
+        { from: original.from, to: original.to },
+        `rendered edge ${renderedIndex} must still resolve to the edge it was`
+      );
+    });
+    assert.deepStrictEqual(positions.filter(i => i < 0).length, 2, 'two edges were deleted');
   });
 });
 
