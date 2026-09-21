@@ -43,7 +43,15 @@
 // script, and the page's own stylesheet embedded a second time so the
 // exported SVG stands alone. Nothing on the canvas moved.
 //
+// Rebaselined for the status key (issue #56, CTO-M2-04). The Medusa map
+// has no open or suggested node, so it gains no key; what changed is the
+// viewer: the key's stylesheet rules, the recount in applyLayers, and the
+// export's exportKeyGroup(), which carries an on-screen key into an
+// exported file. +4,132 bytes. Nothing on the canvas moved.
+//
 // Previous baselines:
+//   step 7c, export from the viewer:          231401 bytes /
+//     04ba29eaeca0fd59d42444e260f91ee29a8400821f9b3b9db0b701fe2a113b3e
 //   step 7a plus the Notes control:           213108 bytes /
 //     553188edae93887619655aa4cfed93b555a18475265820e41e640e796f94a34c
 //   step 7a, with the edge track:             212519 bytes /
@@ -82,8 +90,8 @@ const path = require('node:path');
 const { renderMap } = require('../src/n8n/index');
 
 const FIXTURE = path.join(__dirname, '..', 'examples', 'medusa-return-flow.json');
-const GOLDEN_LENGTH = 231401;
-const GOLDEN_SHA256 = '04ba29eaeca0fd59d42444e260f91ee29a8400821f9b3b9db0b701fe2a113b3e';
+const GOLDEN_LENGTH = 235533;
+const GOLDEN_SHA256 = '8a23aa76ce5a65f93dbb5ed57df8bb102b952b44d241a2d7313be8572f58cc75';
 
 test('renderMap(Medusa) is byte-identical to the note-connector-routing baseline', async () => {
   const doc = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));

@@ -73,6 +73,48 @@ function statusBadge(n, box) {
   return '';
 }
 
+// The status key (docs/design/n8n-visual-style.md "Status key"). A map
+// that carries `open` or `suggested` nodes says on screen what those
+// styles mean, because the meaning is otherwise only in the details card
+// and a static figure has no card at all. One entry per status present,
+// in this order; nothing at all when every node is confirmed. Note
+// colours are deliberately not in the key: the schema gives a note's
+// colour no meaning, and a note that carries one ("Consider:",
+// "Repository:") says so in its own first line.
+const STATUS_KEY = [
+  { status: 'open', text: 'Open question' },
+  { status: 'suggested', text: 'Suggested, not yet in use' },
+];
+
+function statusKeyEntries(nodes) {
+  return STATUS_KEY.map(entry => ({
+    ...entry,
+    count: nodes.filter(n => n.status === entry.status).length,
+  })).filter(entry => entry.count > 0);
+}
+
+// A miniature of the node style for the key: the same border, fill, dash
+// and badge grammar as nodeVisualStyle()/statusBadge(), scaled to `size`
+// px, drawn with its top-left corner at (x, y). Returned as bare SVG
+// elements with explicit presentation attributes (no classes), so the
+// interactive key can wrap them in its own <svg>, the doc export can place
+// them straight onto the figure, and the viewer's image export can clone
+// them into a file that has no page around it.
+function statusSwatchMarkup(status, x, y, size) {
+  const style = nodeVisualStyle({ status });
+  const r = Math.round(size * 0.22);
+  const badgeR = Math.round(size * 0.24);
+  const bx = x + size - badgeR * 0.6;
+  const by = y + size - badgeR * 0.6;
+  const glyphSize = Math.round(badgeR * 1.4);
+  const glyphY = by + glyphSize * 0.36;
+  const rect = `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${r}" fill="${style.fill}" stroke="${style.color}" stroke-width="1.5"${style.dashed ? ' stroke-dasharray="3 2"' : ''}/>`;
+  if (status === 'open') {
+    return `${rect}<circle cx="${bx}" cy="${by}" r="${badgeR}" fill="#ffffff" stroke="${OPEN_BORDER}" stroke-width="1"/><text x="${bx}" y="${glyphY}" text-anchor="middle" font-size="${glyphSize}" font-weight="700" fill="${GLYPH_STROKE}">?</text>`;
+  }
+  return `${rect}<circle cx="${bx}" cy="${by}" r="${badgeR}" fill="${SUGGESTED_BORDER}"/><text x="${bx}" y="${glyphY}" text-anchor="middle" font-size="${glyphSize}" font-weight="700" fill="#ffffff">+</text>`;
+}
+
 function nodeMarkup(n, box, isEntry, ariaLabel) {
   const style = nodeVisualStyle(n);
   const rTL = isEntry ? ENTRY_RADIUS : NODE_RADIUS;
@@ -169,4 +211,6 @@ module.exports = {
   nodeIconMarkup,
   statusBadge,
   handleDot,
+  statusKeyEntries,
+  statusSwatchMarkup,
 };

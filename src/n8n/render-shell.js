@@ -93,6 +93,12 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#333}
 .zoom-bar button:hover{background:rgba(0,0,0,.06)}
 .zoom-bar button:active{background:rgba(0,0,0,.1)}
 
+.status-key{position:fixed;left:16px;bottom:72px;background:rgba(255,255,255,.92);border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:6px;font-size:12px;color:#555;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.key-item{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.key-swatch{flex:none;display:block}
+.key-count{color:#888}
+.export-key text{font-size:12px;fill:#555;font-family:Inter,system-ui,-apple-system,sans-serif}
+
 .details-card{position:fixed;left:0;top:0;max-width:300px;max-height:70vh;overflow:auto;background:#ffffff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:12px 14px;font-size:13px;line-height:1.5;color:#333;z-index:1000}
 .details-card[hidden]{display:none}
 .card-title{font-size:14px;font-weight:600;color:#222}
@@ -181,6 +187,8 @@ function script(canvas, cardData, geometry, doc, opts = {}) {
   var noteLinkEls = [].slice.call(document.querySelectorAll('.note-link'));
   var checkboxes = [].slice.call(document.querySelectorAll('input[data-layer]'));
   var notesToggle = document.querySelector('input[data-notes]');
+  var statusKey = document.querySelector('.status-key');
+  var keyItems = [].slice.call(document.querySelectorAll('.key-item'));
   var handleEls = [].slice.call(document.querySelectorAll('.handle'));
   var branchLabelEls = [].slice.call(document.querySelectorAll('.branch-label'));
 
@@ -443,6 +451,18 @@ function script(canvas, cardData, geometry, doc, opts = {}) {
       var on = (id in visible) ? visible[id] : ((id in frameVisible) ? frameVisible[id] : true);
       l.classList.toggle('hidden-by-layer', !notesOn || !on);
     });
+
+    // The status key counts what is on screen, so a layer toggle that
+    // hides every suggested node takes that key entry with it, and the
+    // whole key goes when nothing it explains is left. Counts are written
+    // through textContent only (see the details-card note below).
+    keyItems.forEach(function(item){
+      var status = item.dataset.status;
+      var count = nodes.filter(function(n){ return visible[n.dataset.id] && n.classList.contains('is-' + status); }).length;
+      item.querySelector('.key-count').textContent = '(' + count + ')';
+      item.classList.toggle('hidden-by-layer', count === 0);
+    });
+    if (statusKey) statusKey.classList.toggle('hidden-by-layer', keyItems.every(function(item){ return item.classList.contains('hidden-by-layer'); }));
   }
 
   checkboxes.forEach(function(cb){ cb.addEventListener('change', applyLayers); });

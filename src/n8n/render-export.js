@@ -15,6 +15,12 @@
 
 const EXPORT_PNG_SCALE = 2;
 const EXPORT_PNG_MAX_PX = 8000;
+// The status key's row in an exported file (docs/design/n8n-visual-style.md
+// "Status key"): a swatch the size of the on-screen one, centred in a row
+// added under the content only when an entry is on screen.
+const EXPORT_KEY_SWATCH = 20;
+const EXPORT_KEY_ROW = 32;
+const EXPORT_KEY_GAP = 20;
 
 function exportBarMarkup() {
   return `<div class="export-bar">
@@ -106,6 +112,44 @@ function exportScript(styleText) {
     });
   }
 
+  // The status key, as it stands on screen, drawn into the exported file's
+  // bottom-left corner: the file is going to someone with no details card
+  // to click, which is exactly the reader the key exists for. Each entry's
+  // swatch is a deep clone of the key's own inline <svg> content (plain
+  // rect/circle/text with explicit attributes, so it survives without the
+  // page), and the text is written through textContent. Returns null when
+  // no entry is on screen, and the caller then reserves no row.
+  var EXPORT_KEY_SWATCH = ${EXPORT_KEY_SWATCH};
+  var EXPORT_KEY_ROW = ${EXPORT_KEY_ROW};
+  var EXPORT_KEY_GAP = ${EXPORT_KEY_GAP};
+
+  function exportKeyGroup(x, y){
+    var items = [].slice.call(document.querySelectorAll('.key-item')).filter(function(item){
+      return !item.classList.contains('hidden-by-layer');
+    });
+    if (!items.length) return null;
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+    var group = document.createElementNS(SVG_NS, 'g');
+    group.setAttribute('class', 'export-key');
+    var cursor = x;
+    items.forEach(function(item){
+      var swatchSvg = item.querySelector('.key-swatch');
+      var size = parseFloat(swatchSvg.getAttribute('width')) || EXPORT_KEY_SWATCH;
+      var holder = document.createElementNS(SVG_NS, 'g');
+      holder.setAttribute('transform', 'translate(' + cursor + ' ' + y + ')');
+      [].slice.call(swatchSvg.childNodes).forEach(function(child){ holder.appendChild(child.cloneNode(true)); });
+      group.appendChild(holder);
+      var text = document.createElementNS(SVG_NS, 'text');
+      var label = item.querySelector('.key-text').textContent + ' ' + item.querySelector('.key-count').textContent;
+      text.textContent = label;
+      text.setAttribute('x', String(cursor + size + 6));
+      text.setAttribute('y', String(y + size - 4));
+      group.appendChild(text);
+      cursor += size + 6 + label.length * 12 * 0.52 + EXPORT_KEY_GAP;
+    });
+    return group;
+  }
+
   // A standalone copy of the live SVG: hidden elements dropped rather than
   // carried as display:none, the pan/zoom transform undone, the page's own
   // stylesheet embedded, and a white ground behind it so it does not land
@@ -124,6 +168,14 @@ function exportScript(styleText) {
     var box;
     try { box = exportVisibleBox(clone); } finally { document.body.removeChild(clone); }
     clone.removeAttribute('style');
+
+    // The key goes in a row of its own under the content, inside the
+    // crop margin, and the file grows by that row only when there is one.
+    var key = exportKeyGroup(box.x + 32, box.y + box.height - 32 + (EXPORT_KEY_ROW - EXPORT_KEY_SWATCH) / 2);
+    if (key) {
+      box.height += EXPORT_KEY_ROW;
+      clone.appendChild(key);
+    }
 
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     clone.setAttribute('viewBox', box.x + ' ' + box.y + ' ' + box.width + ' ' + box.height);
@@ -224,4 +276,13 @@ function exportScript(styleText) {
 `;
 }
 
-module.exports = { exportBarMarkup, exportCss, exportScript, EXPORT_PNG_SCALE, EXPORT_PNG_MAX_PX };
+module.exports = {
+  exportBarMarkup,
+  exportCss,
+  exportScript,
+  EXPORT_PNG_SCALE,
+  EXPORT_PNG_MAX_PX,
+  EXPORT_KEY_SWATCH,
+  EXPORT_KEY_ROW,
+  EXPORT_KEY_GAP,
+};

@@ -1,6 +1,15 @@
 // renderHtml(layout, doc) -> self-contained HTML string. Pure function, no IO.
 
-const { esc, layersOf, nodeMarkup, handleMarkup, frameMarkup, edgeMarkup } = require('./render-svg');
+const {
+  esc,
+  layersOf,
+  nodeMarkup,
+  handleMarkup,
+  frameMarkup,
+  edgeMarkup,
+  statusKeyEntries,
+  statusSwatchMarkup,
+} = require('./render-svg');
 const { noteMarkup } = require('./notes-render');
 const { css, script } = require('./render-shell');
 const { correctBarMarkup } = require('./render-correct');
@@ -88,6 +97,27 @@ function layerBarMarkup(doc) {
   return `<div class="layer-bar">${items}${notesItem}</div>`;
 }
 
+// The status key: what a dashed "?" node and a purple "+" node mean, said
+// without a click (docs/design/n8n-visual-style.md "Status key"). Rendered
+// only when the map has such nodes, so a plain map gains no chrome. The
+// counts are the whole document's; the viewer rewrites them as layers are
+// toggled (render-shell.js applyLayers) and hides an entry that reaches
+// zero.
+const KEY_SWATCH_SIZE = 18;
+
+function statusKeyMarkup(doc) {
+  const entries = statusKeyEntries(doc.nodes);
+  if (!entries.length) return '';
+  const view = KEY_SWATCH_SIZE + 2;
+  const items = entries
+    .map(entry => {
+      const swatch = statusSwatchMarkup(entry.status, 1, 1, KEY_SWATCH_SIZE);
+      return `<span class="key-item" data-status="${entry.status}"><svg class="key-swatch" viewBox="0 0 ${view} ${view}" width="${view}" height="${view}" aria-hidden="true">${swatch}</svg><span class="key-text">${esc(entry.text)}</span> <span class="key-count">(${entry.count})</span></span>`;
+    })
+    .join('');
+  return `<div class="status-key" role="group" aria-label="Key">${items}</div>\n`;
+}
+
 function svgDefs() {
   return `<defs>
 <marker id="n8n-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -165,7 +195,7 @@ ${layerBarMarkup(doc)}
 <button id="zoom-fit" type="button" title="Fit to view" aria-label="Fit to view">&#9678;</button>
 <button id="zoom-in" type="button" title="Zoom in" aria-label="Zoom in">&#43;</button>
 </div>
-<div id="details-card" class="details-card" hidden></div>
+${statusKeyMarkup(doc)}<div id="details-card" class="details-card" hidden></div>
 ${correctBarMarkup()}
 ${exportBarMarkup()}
 <script>${script(canvas, cardData, geometry, doc, { fragment })}</script>`;
@@ -190,4 +220,4 @@ ${body}
 </html>`;
 }
 
-module.exports = { renderHtml };
+module.exports = { renderHtml, statusKeyMarkup };

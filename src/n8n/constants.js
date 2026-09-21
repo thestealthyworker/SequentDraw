@@ -135,6 +135,9 @@ const CAPTION_WRAP_PAD = 80;
 const DOC_MARGIN = 32; // crop margin around the content, per the doc-export spec
 const DOC_TITLE_FONT_SIZE = 18;
 const DOC_TITLE_BLOCK_HEIGHT = 40; // vertical room reserved above the content for the title
+// Vertical room for the status key row under the content, reserved only
+// when the figure has open or suggested nodes to explain (render-doc.js).
+const DOC_KEY_BLOCK_HEIGHT = 24;
 
 const EDGE_TEXT_FONT_SIZE = 11;
 // Edge text wraps onto further lines instead of being cut short, for the
@@ -230,6 +233,7 @@ module.exports = {
   DOC_MARGIN,
   DOC_TITLE_FONT_SIZE,
   DOC_TITLE_BLOCK_HEIGHT,
+  DOC_KEY_BLOCK_HEIGHT,
   EDGE_TEXT_FONT_SIZE,
   EDGE_TEXT_WRAP_WIDTH,
   EDGE_TEXT_LINE_HEIGHT,
