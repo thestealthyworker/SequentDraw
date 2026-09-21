@@ -92,13 +92,77 @@ describe('eval-results-guard', () => {
     assert.strictEqual(short.fatal.length, 1);
   });
 
-  test('in a must-not-fire case a timeout or any other error stays fatal', () => {
-    const r = findProblems({ cases: [{ name: 'c', graders: graders(0), arms: { with: [run(30, 'timed out after 600s'), run(1, "You've hit your session limit")] } }] });
-    assert.strictEqual(r.fatal.length, 2);
+  test('in a must-not-fire case a timeout stays fatal', () => {
+    const r = findProblems({ cases: [{ name: 'c', graders: graders(0), arms: { with: [run(30, 'timed out after 600s')] } }] });
+    assert.strictEqual(r.fatal.length, 1);
   });
 
   test('a run that never took a turn is fatal anywhere', () => {
     const r = findProblems({ cases: [{ name: 'c', graders: graders(undefined), arms: { with: [run(0, 'Reached maximum number of turns (8)')] } }] });
     assert.strictEqual(r.fatal.length, 1);
+  });
+
+  // Issue #68. A plan limit used to land in `fatal` beside a real defect,
+  // so the job reported a failure indistinguishable from a regression: on
+  // PR #67 eight of nine failing cases were that error and nothing else.
+  // It is still not a pass -- a PR cannot merge on evidence that does not
+  // exist -- but it must not be read as evidence of a defect either.
+  test('a plan limit is inconclusive, not fatal, in an ordinary case', () => {
+    const r = findProblems({
+      cases: [{ name: 'c', graders: graders(undefined), arms: { with: [run(1, "exit 1: You've hit your session limit · resets 4:20am (UTC)")] } }],
+    });
+    assert.deepStrictEqual(r.fatal, []);
+    assert.strictEqual(r.inconclusive.length, 1);
+  });
+
+  test('a plan limit is inconclusive in a must-not-fire case too', () => {
+    // This is where it matters most: the skill never ran, so every
+    // "must not trigger" grader passes for the wrong reason.
+    const r = findProblems({
+      cases: [{ name: 'c', graders: graders(0), arms: { with: [run(1, "You've hit your session limit")] } }],
+    });
+    assert.deepStrictEqual(r.fatal, []);
+    assert.strictEqual(r.inconclusive.length, 1);
+  });
+
+  test('every account and infrastructure error is inconclusive', () => {
+    for (const message of [
+      "You've hit your session limit · resets 4:20am (UTC)",
+      'You have hit your usage limit',
+      'rate_limit exceeded',
+      'HTTP 429 returned',
+      'quota exhausted',
+      'invalid bearer token',
+      'Your credit balance is too low',
+      'API overloaded, try again',
+    ]) {
+      const r = findProblems({ cases: [{ name: 'c', graders: graders(undefined), arms: { with: [run(1, message)] } }] });
+      assert.deepStrictEqual(r.fatal, [], message);
+      assert.strictEqual(r.inconclusive.length, 1, message);
+    }
+  });
+
+  test('a real defect stays fatal even when a plan limit is in the same run', () => {
+    // The two must not be conflated in either direction: a suite that hit
+    // the limit AND found a genuine problem still reports the problem.
+    const r = findProblems({
+      cases: [
+        { name: 'limited', graders: graders(undefined), arms: { with: [run(1, "You've hit your session limit")] } },
+        { name: 'broken', graders: graders(undefined), arms: { with: [run(4, 'the skill wrote an invalid document')] } },
+      ],
+    });
+    assert.strictEqual(r.fatal.length, 1);
+    assert.match(r.fatal[0], /broken/);
+    assert.strictEqual(r.inconclusive.length, 1);
+  });
+
+  test('a run that did its work and stopped at its own limit is still tolerated', () => {
+    // The case-limit branches are checked BEFORE the inconclusive ones, so
+    // wording that happens to mention a limit cannot demote a real run.
+    const r = findProblems({
+      cases: [{ name: 'c', graders: graders(undefined), arms: { with: [run(9, 'exit 1: Reached maximum number of turns (8)')] } }],
+    });
+    assert.strictEqual(r.tolerated.length, 1);
+    assert.deepStrictEqual(r.inconclusive, []);
   });
 });

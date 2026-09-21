@@ -190,9 +190,33 @@ jobs:
       # number of turns (N)" with turns >= N is tolerated: the other skill
       # fired and used every turn, which is a full real run. A results file
       # with zero cases also fails.
+      #
+      # Exit 2 is the guard's third outcome, INCONCLUSIVE: the runs never
+      # started, for an account or infrastructure reason (issue #68). The job
+      # still fails -- a PR cannot merge on evidence that does not exist --
+      # but it says so in terms nobody can mistake for a regression, because
+      # the reflex "the evals are flaky, merge anyway" is the one thing worse
+      # than a red job.
       - name: Fail on errored eval runs
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.select.outputs.filter != 'none' }}
-        run: node scripts/eval-results-guard.js results.json
+        run: |
+          set +e
+          node scripts/eval-results-guard.js results.json
+          status=$?
+          set -e
+          if [ "$status" -eq 2 ]; then
+            {
+              echo "## Skill evals: INCONCLUSIVE"
+              echo
+              echo "The suite did not get to judge this change: one or more runs never"
+              echo "started for an account or infrastructure reason (a plan limit, a rate"
+              echo "limit, a rejected credential)."
+              echo
+              echo "**This is not a regression and not a product failure.** Re-run this job"
+              echo "once the limit resets, and read the verdict from that run."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
 
       # A failing output grader reports only "pattern not found in trace",
       # which says nothing about why. The transcripts live outside the
