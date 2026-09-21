@@ -13,11 +13,36 @@
 // (`.code === 'scan-timeout'`); the caller (scanRepo(), in index.js) is
 // what cleans up any acquired temp clone, in a `finally` around this
 // call, so a timeout never leaks one.
+//
+// terminate() is for the TIMEOUT path only. On success the worker is
+// unreferenced and left to exit on its own, because killing a thread that
+// has just posted its result can tear down a native handle it is still
+// finishing with. Node asserts rather than unwinding when that happens:
+//
+//   Assertion failed: init_done_ && "close before init"   node_zlib.cc:402
+//   FATAL ERROR: v8::HandleScope::CreateHandle() Cannot create a handle
+//   without a HandleScope
+//
+// in Worker::Run() -> Realm::RunCleanup(). That is a fatal error in the
+// whole process, AFTER a scan that succeeded -- so `sequentdraw scan` could
+// print its result and then die. It was found in CI (a scan-pipeline test
+// crashed the runner, on both Node 20 and 22) rather than by anyone using
+// it, because the race only widens under load.
+//
+// unref() is what makes leaving it alone safe: an unreferenced worker
+// cannot hold the process open, so a thread that never gets round to
+// exiting costs nothing. GRACE_MS later it is terminated anyway, on an
+// unref'd timer, so nothing lingers indefinitely either.
 
 const path = require('node:path');
 const { Worker } = require('node:worker_threads');
 
 const DEFAULT_SCAN_TIMEOUT_MS = 60000;
+// How long a worker that has delivered its result is left to exit by
+// itself before it is terminated anyway. Long enough for an ordinary
+// teardown, short enough that a stuck thread is not left running for the
+// life of a long process.
+const GRACE_MS = 5000;
 const DEFAULT_WORKER_PATH = path.join(__dirname, 'scan-worker.js');
 
 class ScanTimeoutError extends Error {
@@ -26,6 +51,20 @@ class ScanTimeoutError extends Error {
     this.name = 'ScanTimeoutError';
     this.code = 'scan-timeout';
   }
+}
+
+// Let a worker that has delivered its result finish on its own terms.
+// unref() first, so it cannot hold the process open however long it takes;
+// then a terminate on an unref'd timer, so a thread that never exits is
+// still reclaimed without anyone waiting for it.
+function releaseWorker(worker) {
+  if (typeof worker.unref === 'function') worker.unref();
+  const sweep = setTimeout(() => {
+    worker.terminate().catch(() => {});
+  }, GRACE_MS);
+  if (typeof sweep.unref === 'function') sweep.unref();
+  // Once the worker exits by itself there is nothing left to sweep.
+  worker.once('exit', () => clearTimeout(sweep));
 }
 
 // `workerPath` is injectable (defaults to the real scan-worker.js)
@@ -62,7 +101,7 @@ function scanWithTimeout(repoPath, meta, providerOptions, timeoutMs = DEFAULT_SC
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      worker.terminate().catch(() => {});
+      releaseWorker(worker);
       if (msg && msg.ok) resolve(msg.bundle);
       else reject(new Error((msg && msg.message) || 'git-map: scan worker failed with no message.'));
     });

@@ -12,6 +12,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 
 const { scanWithTimeout, ScanTimeoutError, DEFAULT_SCAN_TIMEOUT_MS } = require('../src/scan/scan-timeout');
 const { scanRepo } = require('../src/scan/index');
@@ -110,5 +111,44 @@ describe('scanRepo: the deadline applies end to end, with cleanup', () => {
     const bundle = await scanRepo(COMPOSE_FIXTURE, { inProcess: true });
     assert.strictEqual(bundle.repo.source, 'local');
     assert.ok(bundle.evidence.some(e => e.kind === 'compose-service'));
+  });
+});
+
+describe('a worker is not killed the moment it answers', () => {
+  // Terminating a thread that has just posted its result can tear down a
+  // native handle it is still finishing with. Node asserts rather than
+  // unwinding when that happens:
+  //
+  //   Assertion failed: init_done_ && "close before init"  node_zlib.cc:402
+  //   FATAL ERROR: v8::HandleScope::CreateHandle() ...
+  //
+  // in Worker::Run() -> Realm::RunCleanup(). That is a fatal error in the
+  // whole process AFTER a successful scan. It was found in CI, on both Node
+  // 20 and 22, because the race only widens under load.
+  const LINGERING_WORKER = path.resolve(__dirname, 'fixtures', 'lingering-scan-worker.js');
+
+  test('a worker that answers and then lingers still resolves, and is not terminated to do it', async () => {
+    const bundle = await scanWithTimeout('/unused', {}, {}, 30000, LINGERING_WORKER);
+    assert.deepStrictEqual(bundle, { evidence: [], repo: { source: 'local' } });
+  });
+
+  test('a lingering worker cannot hold the process open', async () => {
+    // The real assertion is that this child EXITS. An unreferenced worker
+    // does not keep the event loop alive, so the process ends as soon as
+    // its own work is done -- without waiting out the grace period, and
+    // without terminate() being what ends it.
+    const script = `
+      const { scanWithTimeout } = require(${JSON.stringify(path.resolve(__dirname, '..', 'src', 'scan', 'scan-timeout.js'))});
+      scanWithTimeout('/unused', {}, {}, 30000, ${JSON.stringify(LINGERING_WORKER)})
+        .then(() => console.log('resolved'))
+        .catch(err => { console.error(err.message); process.exitCode = 1; });
+    `;
+    const started = Date.now();
+    const result = spawnSync(process.execPath, ['-e', script], { encoding: 'utf8', timeout: 20000 });
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.match(result.stdout, /resolved/);
+    // Comfortably under GRACE_MS (5s) plus startup: the process is not
+    // waiting for the sweep, it is simply free to leave.
+    assert.ok(Date.now() - started < 15000, `took ${Date.now() - started}ms`);
   });
 });
