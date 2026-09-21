@@ -508,3 +508,87 @@ test('a check --repos file of literally null is refused, not treated as absent',
     assert.match(result.stderr, /--repos: the file must be a JSON object/);
   });
 });
+
+// A second hole of the same class, found by fuzzing the invariant above
+// after the first fix. This module scanned markdown across the WHOLE note
+// while the renderer parses LINE BY LINE (markdown.js parseBlocks), so an
+// unclosed link target on one line swallowed the next line's complete link
+// inside its own match — and the bare-URL scan then skipped that URL as
+// "already inside a markdown span". The renderer published a live link the
+// checker saw as nothing at all.
+const MARKDOWN_SHAPES = [
+  '[a](unclosed\n[b](https://github.com/evil/repo)',
+  '[a](https://github.com/X/Y\n[b](https://github.com/evil/repo)',
+  '[a](\n[b](https://github.com/evil/repo)',
+  '# [a](x\n- [b](https://github.com/evil/repo)',
+  '[a](https://github.com/evil/repo)x)',
+  '[[a]](https://github.com/evil/repo)',
+  '`[a](https://github.com/evil/repo)`',
+  'text [a](https://github.com/evil/repo) more [b](https://github.com/other/one)',
+];
+
+// Hostile URL spellings, including every shape the browser resolves
+// differently from a naive string split.
+const HOSTILE_URLS = [
+  'https://github.com/E%2FR/x',
+  'https://github.com/E/%2E%2E',
+  'https://github.com/E/R%252Fz',
+  'https://github.com/%45/%52',
+  'https://GITHUB.COM/E/R',
+  'https://github.COM./E/R',
+  'https://github.com.evil.com/E/R',
+  'https://evil.com@github.com/E/R',
+  'https://github.com@evil.com/E/R',
+  'https://github.com//E/R',
+  'https://github.com/./E/R',
+  'https://github.com/E/R/../../X/Y',
+  'https://github.com/E/R​',
+  'https://github.com/Ｅ/Ｒ',
+  '//github.com/E/R',
+  'https:/github.com/E/R',
+  'https://user:pw@github.com/E/R',
+  'https://[::1]/E/R',
+];
+
+test('the invariant holds across hostile URL spellings and markdown shapes', () => {
+  const contents = [
+    ...MARKDOWN_SHAPES,
+    ...HOSTILE_URLS.flatMap(url => [`[t](${url})`, `see ${url} here`]),
+  ];
+
+  for (const content of contents) {
+    const { links, unparsable } = readLinks(content);
+    for (const href of renderedHrefs(content)) {
+      if (repoPathOf(href) == null) continue; // not a repository link at all
+      assert.ok(
+        links.length > 0 || unparsable.length > 0,
+        `the renderer publishes ${href} but the checker sees nothing, for content: ${JSON.stringify(content)}`,
+      );
+    }
+  }
+});
+
+test('an unclosed link target cannot hide the next line\'s link', () => {
+  const errors = checkRepoNotes(
+    mapWith([note({ content: '[a](unclosed\n[b](https://github.com/evil/repo)' })]),
+    verified([USABLE]),
+  );
+  assert.strictEqual(errors.length, 1);
+  assert.strictEqual(errors[0].code, 'repo-unverified');
+  assert.match(errors[0].message, /evil\/repo/);
+});
+
+test('the checker reads a repository the way GitHub serves it', () => {
+  // What the browser fetches is the only definition that counts. A link
+  // ending .git is the git endpoint for that same repository, so it reads
+  // as the repository; a percent escape decodes before it is matched.
+  const cases = [
+    ['https://github.com/E/R%2e%67it', 'E/R'],
+    ['https://github.com/evil%2Dorg/repo', 'evil-org/repo'],
+    ['https://github.com/E/R/blob/main/x', 'E/R'],
+    ['https://GITHUB.COM./E/R', 'E/R'],
+  ];
+  for (const [url, expected] of cases) {
+    assert.deepStrictEqual(readLinks(`[x](${url})`).links, [expected], url);
+  }
+});

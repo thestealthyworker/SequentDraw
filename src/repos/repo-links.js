@@ -25,8 +25,23 @@
 // an href. tests/repos-check-repos.test.js pins that as an invariant rather
 // than as a list of cases, because two expressions that must agree are
 // exactly what produced the original bug.
+//
+// A second hole of the same class was found the same way, after the first
+// fix: this module scanned markdown across the WHOLE note while the renderer
+// parses LINE BY LINE (markdown.js parseBlocks). An unclosed link target on
+// one line swallowed the next line's complete link inside its own match, so
+//
+//     [a](unclosed
+//     [b](https://github.com/evil/repo)
+//
+// published a live link that the checker saw as nothing at all. The lesson
+// is the one the first fix should have drawn: do not approximate the
+// renderer, ASK it. The markdown side of the extraction below is now the
+// renderer's own parseBlocks output, so the two cannot drift by
+// construction, and bare URLs are scanned per line on top of that.
 
 const { parseRepoId, repoKey } = require('./repo-id');
+const { parseBlocks } = require('../n8n/markdown');
 
 // Everything github.com is reachable as. `www.` and a trailing dot (the
 // fully-qualified form) are the same host to a browser.
@@ -82,29 +97,53 @@ function repoPathOf(rawUrl) {
  *               segments but do not name a legal repository -- reported by
  *               the caller rather than dropped
  */
+// Every URL a reader could act on, from the two places one can appear.
+//
+// The first source is the renderer itself: parseBlocks returns the runs it
+// would draw, and a run's `href` is exactly what becomes <a href>. Nothing
+// is inferred, so nothing can disagree. Those hrefs are HTML-escaped
+// (markdown.js escapes before parsing), and safeHref already refuses a URL
+// carrying a quote or an angle bracket, so `&amp;` in a query string is the
+// only entity that can survive.
+//
+// The second is a bare URL in running text. The renderer does NOT auto-link
+// those, so scanning for them can only make the checker see more than the
+// reader can click, never less. They are scanned per line, and skipped
+// inside a `[text](url)` span on that same line, so one unparsable target
+// is not also read as a truncated second link.
+function candidateUrls(content) {
+  const urls = [];
+
+  parseBlocks(content).forEach(block => {
+    block.runs.forEach(run => {
+      if (run.href) urls.push(run.href.replace(/&amp;/g, '&'));
+    });
+  });
+
+  content.split('\n').forEach(line => {
+    const spans = [];
+    for (const match of line.matchAll(MARKDOWN_LINK_RE)) {
+      // An unparsable target is still reported, so a link the renderer
+      // refused is not silently dropped by this module either.
+      urls.push(match[1].trim());
+      spans.push([match.index, match.index + match[0].length]);
+    }
+    for (const match of line.matchAll(BARE_URL_RE)) {
+      const inside = spans.some(([from, to]) => match.index >= from && match.index < to);
+      if (!inside) urls.push(match[0]);
+    }
+  });
+
+  return urls;
+}
+
 function repoLinksIn(content) {
   const links = [];
   const unparsable = [];
   if (typeof content !== 'string') return { links, unparsable };
 
   const seen = new Set();
-  const candidates = [];
-  // Markdown targets first, with their spans, so a bare-URL match that is
-  // really just the inside of one of those targets is not counted twice.
-  // Without this, `[x](https://github.com/owner/re po)` reports both the
-  // whole unparsable target AND a truncated `owner/re` read off the same
-  // text, which would also double-count toward the three-per-note cap.
-  const spans = [];
-  for (const match of content.matchAll(MARKDOWN_LINK_RE)) {
-    candidates.push(match[1].trim());
-    spans.push([match.index, match.index + match[0].length]);
-  }
-  for (const match of content.matchAll(BARE_URL_RE)) {
-    const inside = spans.some(([from, to]) => match.index >= from && match.index < to);
-    if (!inside) candidates.push(match[0]);
-  }
-
-  for (const raw of candidates) {
+  for (const raw of candidateUrls(content)) {
     const parts = repoPathOf(raw);
     if (parts == null) continue;
 
