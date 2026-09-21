@@ -17,6 +17,7 @@ const {
   verifyRepos,
   classify,
   REASON_ORDER,
+  REASON_TEXT,
   MIN_STARS,
   MAX_STALE_MONTHS,
 } = require('../src/repos/licences');
@@ -454,4 +455,107 @@ test('the dispatcher exposes licences', () => {
   const { COMMANDS, TOP_USAGE } = require('../src/cli/index');
   assert.strictEqual(COMMANDS.licences, licencesCmd);
   assert.match(TOP_USAGE, /licences <owner\/repo>/);
+});
+
+// ------------------------------------------- what a hostile response can do
+
+test('a 200 whose body is not a repository document does not end the run', () => {
+  // classify() dereferenced it, the TypeError escaped verifyRepos, and the
+  // CLI exited 1 WITHOUT writing the file -- losing the verdicts for every
+  // repository already verified. Reachable from any intermediary that
+  // answers 200 with something that is not the API's response.
+  return (async () => {
+    for (const body of [null, '"hello"', '123', '[]']) {
+      const base = 'https://api.github.com/repos/owner/repo';
+      const fetchImpl = recordedFetch({
+        [base]: () => new Response(body, { headers: { 'content-type': 'application/json' } }),
+        [`${base}/license`]: () => jsonResponse(licenceJson('MIT')),
+        ...tableFor('other/repo'),
+      });
+
+      const out = await verifyRepos(['owner/repo', 'other/repo'], { fetchImpl, nowIso: NOW });
+      assert.strictEqual(out.repos.length, 2, `body ${body} ended the run`);
+      assert.strictEqual(out.repos[0].usable, false);
+      assert.strictEqual(
+        out.repos[1].usable,
+        true,
+        `body ${body} lost the verdict for the next repository`,
+      );
+    }
+  })();
+});
+
+test('a rejected credential says so, instead of claiming the repository does not exist', () => {
+  // A 401 reported as not-found tells a user their ten public MIT
+  // repositories do not exist, when the fix is to renew the token or unset
+  // it -- 60 requests an hour unauthenticated covers --max 15.
+  return (async () => {
+    const base = 'https://api.github.com/repos/owner/repo';
+    const fetchImpl = recordedFetch({
+      [base]: () => jsonResponse({ message: 'Bad credentials' }, { status: 401 }),
+    });
+    const out = await verifyRepos(['owner/repo'], { fetchImpl, nowIso: NOW, token: 'stale' });
+    assert.strictEqual(out.repos[0].reason, 'auth-failed');
+    assert.match(REASON_TEXT['auth-failed'], /credential/);
+  })();
+});
+
+test('a secondary rate limit is reported as a rate limit, not as not-found', async () => {
+  // GitHub signals it with a 403 plus retry-after and quota still on the
+  // clock, so the "remaining is 0" test alone misses it.
+  const base = 'https://api.github.com/repos/owner/repo';
+  const fetchImpl = recordedFetch({
+    [base]: () =>
+      jsonResponse(
+        { message: 'You have exceeded a secondary rate limit' },
+        { status: 403, headers: { 'retry-after': '60', 'x-ratelimit-remaining': '4321' } },
+      ),
+  });
+  const out = await verifyRepos(['owner/repo'], { fetchImpl, nowIso: NOW });
+  assert.strictEqual(out.repos[0].reason, 'rate-limited');
+  assert.strictEqual(fetchImpl.calls.length, 1, 'and it is still not retried');
+});
+
+test('a 403 that is neither rate limit nor a missing repository is an auth failure', async () => {
+  const base = 'https://api.github.com/repos/owner/repo';
+  const fetchImpl = recordedFetch({
+    [base]: () => jsonResponse({ message: 'SAML enforcement' }, { status: 403 }),
+  });
+  const out = await verifyRepos(['owner/repo'], { fetchImpl, nowIso: NOW });
+  assert.strictEqual(out.repos[0].reason, 'auth-failed');
+});
+
+test('the wall clock bounds the run, not just the decision to start one', async () => {
+  // Checking the deadline only before starting each repository let --max 15
+  // with two 10s timeouts each run for 300s against a 120s cap.
+  const seen = [];
+  const fetchImpl = async (url, options) => {
+    seen.push(options.signal);
+    return jsonResponse(url.endsWith('/license') ? licenceJson('MIT') : repoJson());
+  };
+  await verifyRepos(['a/one'], { fetchImpl, nowIso: NOW, timeoutMs: 60000, wallClockMs: 1000 });
+  assert.ok(seen.length > 0);
+  // The signal handed to fetch must carry the SMALLER of the two, so a
+  // single slow request cannot outlive the run's own cap.
+  assert.ok(seen.every(signal => signal instanceof AbortSignal));
+});
+
+test('--token-env naming an inherited property sends no token', async () => {
+  // process.env has Object.prototype on its chain, so env["constructor"]
+  // used to put the Object constructor's source in an Authorization header.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sequentdraw-licences-'));
+  const outPath = path.join(dir, 'repos.json');
+  const fetchImpl = recordedFetch(tableFor('owner/repo'));
+
+  const code = await licencesCmd.run(
+    ['owner/repo', '--out', outPath, '--token-env', 'constructor'],
+    { stdout: { write() {} }, stderr: { write() {} } },
+    { env: {}, fetchImpl, nowIso: NOW },
+  );
+
+  assert.strictEqual(code, 0);
+  fetchImpl.calls.forEach(call => {
+    assert.strictEqual(call.options.headers.authorization, undefined);
+  });
+  fs.rmSync(dir, { recursive: true, force: true });
 });

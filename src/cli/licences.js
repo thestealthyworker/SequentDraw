@@ -148,7 +148,10 @@ async function run(args, io = {}, deps = {}) {
   let verified;
   try {
     verified = await verifyRepos(parsed.repos, {
-      token: env[parsed.tokenEnv] || null,
+      // Own properties only: process.env inherits Object.prototype, so a
+      // --token-env of "constructor" would otherwise send the Object
+      // constructor's source as a bearer token.
+      token: Object.prototype.hasOwnProperty.call(env, parsed.tokenEnv) ? env[parsed.tokenEnv] || null : null,
       max: parsed.max,
       fetchImpl: deps.fetchImpl,
       nowIso: deps.nowIso,

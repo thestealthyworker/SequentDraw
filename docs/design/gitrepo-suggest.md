@@ -118,8 +118,25 @@ can say *why* a candidate was dropped rather than silently producing fewer.
 ```
 
 `reason` is one of `licence-not-mit`, `licence-unknown`, `archived`, `stale`, `is-fork`,
-`too-few-stars`, `not-found`, `rate-limited`, `network-error`. Exit code is 0 when the
-file is written, whatever the verdicts; the verdicts are the point, not an error.
+`too-few-stars`, `not-found`, `moved`, `auth-failed`, `rate-limited`, `network-error`,
+`invalid-id`. Exit code is 0 when the file is written, whatever the verdicts; the
+verdicts are the point, not an error.
+
+Three of those were added during implementation, each because collapsing it into an
+existing reason would have told the user something untrue:
+
+- **`moved`** — GitHub answered with a redirect. The engine does not follow it, because
+  resolving it silently would verify a licence for a name the caller never typed. The
+  caller verifies the new name instead.
+- **`auth-failed`** — the credential was rejected (401), or a 403 that is neither a
+  primary nor a secondary rate limit (SAML enforcement, an IP allow-list, a token
+  without the scope). Reported as `not-found` this would tell a user that ten public
+  MIT repositories do not exist, when the fix is to renew the token or unset it.
+- **`invalid-id`** — not a bare `owner/repo`. Unreachable through the CLI, which refuses
+  these before any request; reachable through the module.
+
+A **secondary** rate limit answers 403 with quota still on the clock and a `retry-after`
+header, so `rate-limited` tests for that as well as for exhausted quota.
 
 ## 3. Attaching candidates: the note shape
 

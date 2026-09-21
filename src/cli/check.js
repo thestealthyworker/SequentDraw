@@ -256,8 +256,14 @@ async function run(args, io = {}) {
     bundle = bundleResult.value;
   }
 
+  // Whether --repos was SUPPLIED is tracked by the path, never by the
+  // parsed value: a file containing literally `null` parses to null, and a
+  // truthiness guard here would read that as "the flag was not passed" and
+  // skip the whole check. A model that writes `null` into its verified file
+  // would then produce a transcript that looks like verification passed.
   let verifiedRepos = null;
-  if (parsed.reposPath != null) {
+  const reposSupplied = parsed.reposPath != null;
+  if (reposSupplied) {
     const reposResult = readJson(parsed.reposPath, stderr);
     if (reposResult.error) return 1;
     verifiedRepos = reposResult.value;
@@ -287,7 +293,7 @@ async function run(args, io = {}) {
   // reason evidence is: a link to a repository that was never verified is a
   // claim about the outside world, and a map making one should not go on to
   // be told about its gaps as though it were sound.
-  if (verifiedRepos != null) {
+  if (reposSupplied) {
     const repoErrors = checkRepoNotes(normalized, verifiedRepos);
     if (repoErrors.length > 0) {
       writeLines(stderr, repoErrors);

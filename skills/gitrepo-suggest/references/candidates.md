@@ -68,11 +68,13 @@ these hold:
 
 Anything else is written to the file with a reason, one of
 `licence-not-mit`, `licence-unknown`, `archived`, `stale`, `is-fork`,
-`too-few-stars`, `not-found`, `moved`, `rate-limited`, `network-error`,
-`invalid-id`.
+`too-few-stars`, `not-found`, `moved`, `auth-failed`, `rate-limited`,
+`network-error`, `invalid-id`.
 
-`rate-limited` and `network-error` mean *not verified*, not *rejected*. Say
-you could not check it, and do not attach it.
+`rate-limited`, `auth-failed` and `network-error` mean *not verified*, not
+*rejected*. Say you could not check it, and do not attach it. `auth-failed`
+means the token was refused, so say that rather than reporting the
+repositories as missing.
 
 ## The refusals, and the fix for each
 

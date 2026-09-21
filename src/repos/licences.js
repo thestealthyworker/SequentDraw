@@ -66,6 +66,7 @@ const REASON_TEXT = {
   'is-fork': 'this is a fork; recommend the upstream instead',
   'too-few-stars': `fewer than ${MIN_STARS} stars`,
   'not-found': 'no such repository, or it is private',
+  'auth-failed': 'GitHub rejected the credential; check the token, or unset it and rely on the unauthenticated limit',
   moved: 'the repository has moved; verify its new name instead',
   'rate-limited': 'the GitHub rate limit is exhausted',
   'network-error': 'the request could not be completed',
@@ -126,7 +127,10 @@ async function readCapped(response, maxBytes) {
     throw new Error(`response is larger than ${maxBytes} bytes`);
   }
 
-  // A body may be absent (204, or a stub in a test); fall back to text().
+  // A body may be absent (204, or a stub in a test). There is no stream to
+  // cap while reading here, so the size is checked after the fact -- which
+  // is why the content-length check above runs first, and why this branch
+  // is unreachable with a real body-bearing response from undici.
   if (!response.body || typeof response.body.getReader !== 'function') {
     const text = await response.text();
     if (Buffer.byteLength(text) > maxBytes) {
@@ -158,10 +162,16 @@ function rateLimitReset(response) {
   return new Date(seconds * 1000).toISOString();
 }
 
+// A primary rate limit answers 403 with no quota remaining. A SECONDARY
+// rate limit answers 403 with quota still on the clock and a `retry-after`
+// header instead -- it is still a rate limit, and reporting it as "no such
+// repository" would send the caller looking for a problem that is not
+// there.
 function isRateLimited(response) {
   if (response.status === 429) return true;
   if (response.status !== 403) return false;
-  return response.headers.get('x-ratelimit-remaining') === '0';
+  if (response.headers.get('x-ratelimit-remaining') === '0') return true;
+  return response.headers.get('retry-after') != null;
 }
 
 // One request. Returns { json } on 200, or { status } / { reason } for the
@@ -192,10 +202,18 @@ async function getJson(url, { fetchImpl, token, timeoutMs }) {
   if (isRateLimited(response)) {
     return { reason: 'rate-limited', resetAt: rateLimitReset(response) };
   }
-  if (response.status === 403 || response.status === 401) {
-    // Not a rate limit: a private repository, or a token without the scope.
-    // Either way we have no answer about this repository.
-    return { reason: 'not-found' };
+  if (response.status === 401) {
+    // The credential itself was rejected: expired, revoked or malformed.
+    // Reporting this as "no such repository" would tell the user their ten
+    // public MIT repositories do not exist, when the fix is to renew the
+    // token or unset it (60 requests an hour unauthenticated covers --max).
+    return { reason: 'auth-failed' };
+  }
+  if (response.status === 403) {
+    // A 403 that is neither a primary nor a secondary rate limit: SAML
+    // enforcement, an IP allow-list, or a token without the scope. We have
+    // no answer about this repository, and it is not the repository's fault.
+    return { reason: 'auth-failed' };
   }
   if (!response.ok) {
     return { reason: 'network-error', status: response.status };
@@ -228,6 +246,15 @@ async function verifyOne(id, options) {
     const out = { id: parsed.id, url, usable: false, reason: repoResult.reason };
     if (repoResult.resetAt) out.resetAt = repoResult.resetAt;
     return out;
+  }
+
+  // A 200 carrying `null`, a string or a number is not a repository
+  // document. Without this guard classify() dereferences it, the TypeError
+  // escapes the whole run, and the verdicts for every repository verified
+  // so far are lost with it -- reachable from any intermediary that answers
+  // 200 with something that is not the API's response.
+  if (!repoResult.json || typeof repoResult.json !== 'object' || Array.isArray(repoResult.json)) {
+    return { id: parsed.id, url, usable: false, reason: 'network-error' };
   }
 
   let licenceJson = null;
@@ -305,7 +332,11 @@ async function verifyRepos(ids, options = {}) {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    if (Date.now() > deadline) {
+    // The remaining wall clock caps each request too, not just the decision
+    // to start one. Gating only the start lets --max 15 repositories with
+    // two 10s timeouts each run for 300s against a 120s cap.
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
       repos.push({
         id: parsed ? parsed.id : String(id).slice(0, 120),
         usable: false,
@@ -313,7 +344,12 @@ async function verifyRepos(ids, options = {}) {
       });
       continue;
     }
-    repos.push(await verifyOne(id, requestOptions));
+    repos.push(
+      await verifyOne(id, {
+        ...requestOptions,
+        timeoutMs: Math.min(requestOptions.timeoutMs, remaining),
+      }),
+    );
   }
 
   return { checkedAt: nowIso, repos };

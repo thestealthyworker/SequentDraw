@@ -14,38 +14,16 @@
 // --repos is optional, and without it a map carrying repository notes is not
 // refused: check cannot know a note is a recommendation. The skill is what
 // always passes it, and its eval asserts that it does.
+//
+// Link extraction lives in ./repo-links.js, and the comment at the top of
+// that file is the one to read before touching any of this: a link the
+// renderer publishes but the checker cannot classify is the bug class this
+// whole module exists to prevent.
 
 const { parseRepoId, repoKey } = require('./repo-id');
+const { repoLinksIn } = require('./repo-links');
 
 const MAX_REPOS_PER_NOTE = 3;
-
-// Any github.com link in a note's markdown, whether it is a bare URL or the
-// target of a [text](url) link. Only the first two path segments matter: a
-// link to a file inside a repository still names that repository.
-const GITHUB_LINK_RE = /https?:\/\/(?:www\.)?github\.com\/([^\s)\]"'<>]+)/gi;
-
-/**
- * Every distinct repository a note's content links to, in the order they
- * first appear. A link with a path that is not a legal owner/repo (a search
- * URL, a user profile, an organisation page) is not a repository link and is
- * ignored -- a note may reasonably link to github.com itself.
- */
-function repoLinksIn(content) {
-  if (typeof content !== 'string') return [];
-  const found = [];
-  const seen = new Set();
-  for (const match of content.matchAll(GITHUB_LINK_RE)) {
-    const segments = match[1].split('/').filter(Boolean);
-    if (segments.length < 2) continue;
-    const parsed = parseRepoId(`${segments[0]}/${segments[1]}`);
-    if (!parsed) continue;
-    const key = repoKey(parsed.id);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    found.push(parsed.id);
-  }
-  return found;
-}
 
 function isPlainObject(value) {
   return value != null && typeof value === 'object' && !Array.isArray(value);
@@ -55,7 +33,7 @@ function isPlainObject(value) {
  * Validate the file `--repos` names. Returns { index } (a lookup from
  * lower-cased id to entry) or { errors } carrying one invalid-repos-file
  * error. The index is a null-prototype object: repository ids come from a
- * file on disk, and "__proto__" is a legal GitHub owner name.
+ * file on disk, and "__proto__" is a legal GitHub repository name.
  */
 function readVerified(value) {
   const invalid = message => ({
@@ -69,13 +47,16 @@ function readVerified(value) {
   for (let i = 0; i < value.repos.length; i++) {
     const entry = value.repos[i];
     if (!isPlainObject(entry)) return invalid(`repos[${i}] must be an object.`);
-    if (typeof entry.id !== 'string' || !parseRepoId(entry.id)) {
+    const parsed = typeof entry.id === 'string' ? parseRepoId(entry.id) : null;
+    if (!parsed) {
       return invalid(`repos[${i}].id must be a bare "owner/repo" identifier.`);
     }
     if (typeof entry.usable !== 'boolean') {
       return invalid(`repos[${i}].usable must be true or false.`);
     }
-    index[repoKey(entry.id)] = entry;
+    // Indexed by the PARSED id, so a hand-written " owner/repo " or
+    // "owner/repo.git" lands under the key a link can actually produce.
+    index[repoKey(parsed.id)] = entry;
   }
   return { index };
 }
@@ -92,7 +73,15 @@ function checkRepoNotes(doc, verified) {
   if (read.errors) return read.errors;
   const index = read.index;
 
-  const errors = [];
+  // Collected per note and flushed in note order at the end, so the errors
+  // come back in document order whatever order the rules ran in.
+  const perNote = new Map();
+  const push = (i, error) => {
+    const list = perNote.get(i) || [];
+    list.push(error);
+    perNote.set(i, list);
+  };
+
   const notes = Array.isArray(doc.notes) ? doc.notes : [];
 
   // One repository note per node, counted across the whole document: three
@@ -100,14 +89,26 @@ function checkRepoNotes(doc, verified) {
   const notesPerTarget = new Map();
 
   notes.forEach((note, i) => {
-    const links = repoLinksIn(note && note.content);
-    if (links.length === 0) return;
+    const { links, unparsable } = repoLinksIn(note && note.content);
+    if (links.length === 0 && unparsable.length === 0) return;
     const at = `/notes/${i}`;
 
-    if (links.length > MAX_REPOS_PER_NOTE) {
-      errors.push({
+    // A github.com link naming two path segments that are not a legal
+    // repository cannot be verified, and is refused rather than ignored.
+    // Silently dropping it is how an unverified link reaches the reader.
+    unparsable.forEach(raw => {
+      push(i, {
         path: `${at}/content`,
-        message: `a repository note links to ${links.length} repositories; at most ${MAX_REPOS_PER_NOTE} are allowed on one node.`,
+        message: `"${raw.slice(0, 120)}" points at github.com but does not name a repository that can be verified; remove it or write it as https://github.com/<owner>/<repo>.`,
+        code: 'repo-unverified',
+      });
+    });
+
+    const total = links.length + unparsable.length;
+    if (total > MAX_REPOS_PER_NOTE) {
+      push(i, {
+        path: `${at}/content`,
+        message: `a repository note links to ${total} repositories; at most ${MAX_REPOS_PER_NOTE} are allowed on one node.`,
         code: 'repo-too-many',
       });
     }
@@ -115,7 +116,7 @@ function checkRepoNotes(doc, verified) {
     links.forEach(id => {
       const entry = index[repoKey(id)];
       if (!entry) {
-        errors.push({
+        push(i, {
           path: `${at}/content`,
           message: `"${id}" was not verified in this run; run "sequentdraw licences ${id} --out <file>" and pass that file to --repos, or remove the link.`,
           code: 'repo-unverified',
@@ -124,7 +125,7 @@ function checkRepoNotes(doc, verified) {
       }
       if (entry.usable !== true) {
         const why = typeof entry.reason === 'string' ? ` (${entry.reason})` : '';
-        errors.push({
+        push(i, {
           path: `${at}/content`,
           message: `"${id}" is marked unusable in --repos${why}; it must not be recommended.`,
           code: 'repo-not-usable',
@@ -145,7 +146,7 @@ function checkRepoNotes(doc, verified) {
     // Reported against the second and any later note, because the first one
     // is the one to keep.
     indexes.slice(1).forEach(i => {
-      errors.push({
+      push(i, {
         path: `/notes/${i}/attachTo`,
         message: `"${target}" already carries a repository note (/notes/${indexes[0]}); put every candidate for one node in one note.`,
         code: 'repo-notes-per-node',
@@ -153,7 +154,7 @@ function checkRepoNotes(doc, verified) {
     });
   }
 
-  return errors;
+  return [...perNote.keys()].sort((a, b) => a - b).flatMap(i => perNote.get(i));
 }
 
 module.exports = { checkRepoNotes, repoLinksIn, readVerified, MAX_REPOS_PER_NOTE };
