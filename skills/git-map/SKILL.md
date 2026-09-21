@@ -73,7 +73,9 @@ publish private artifact + keep local copy
   trial documents to learn the schema.
 
 Use one session or temp folder outside any repository for everything, for
-example `$TMPDIR/sequentdraw-<repo-name>/`, written out as a real path.
+example `/tmp/sequentdraw-<repo-name>/`, written out as a literal path
+(never `$TMPDIR`: a variable in an argument is refused under a narrow
+grant).
 
 ## Steps
 
