@@ -50,6 +50,23 @@ Key values were re-checked against source after the research pass: the 16px grid
 | `status: open` | 2px dashed border, muted fill, "?" badge at bottom-right (after n8n's placeholder node) |
 | `status: suggested` | 2px border in the secondary purple plus a badge. Must stay distinct from `open`. |
 
+### Status key
+
+Raised at the M2 gate (issue #56): the `open` and `suggested` styles are visible at a
+glance, but their meaning was only in the details card, so a client shown a map cold
+could take a purple Xero for something the business already uses.
+
+| Aspect | Rule |
+|---|---|
+| Where | Interactive view: a small key at the bottom-left, above the Correct button, clear of the layer bar and the zoom bar. Documentation export: one row under the content, in a block of its own, so it never meets the title or the content on a narrow figure. Export from the viewer: the same row, added under the content of the exported SVG or PNG, since that file goes to someone with no card to click. |
+| What | One entry per status present: a miniature of the node style (the same border, fill, dash and badge as the node) beside its meaning, "Open question" or "Suggested, not yet in use", with a count. |
+| When | Only when the map has at least one such node. A map of confirmed facts gains no chrome, and its documentation export is exactly as tall as before. |
+| Layers | The counts follow the layer toggles: an entry counts the nodes on screen and leaves when that reaches zero; the key leaves with its last entry. The exported file carries only the entries on screen at the time. |
+| Notes | Not in the key. The schema gives a note's colour no meaning, and a note that carries one ("Consider:", "Repository:") says so in its own first line. |
+
+All three outputs share one swatch builder (`statusSwatchMarkup` in `render-svg.js`), so
+the key can never drift from the node style it explains.
+
 ### Handles and edges
 
 | Element | Value |

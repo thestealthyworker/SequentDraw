@@ -20,7 +20,7 @@
 // see notes-render.js's header comment, which applies here identically)
 // before it reaches markup. There is no href anywhere in this file.
 
-const { esc, nodeVisualStyle, nodeIconMarkup, statusBadge } = require('./render-svg');
+const { esc, nodeVisualStyle, nodeIconMarkup, statusBadge, statusKeyEntries, statusSwatchMarkup } = require('./render-svg');
 const { roundedRectPath, wrapLabel, truncateLine } = require('./geometry');
 const { wrapCaption } = require('./captions');
 const { metricsFor } = require('./markdown');
@@ -222,7 +222,39 @@ ${connectors}
 </g>`;
 }
 
+// --- status key ------------------------------------------------------------
+//
+// The static figure has no details card, so it is the one output where the
+// meaning of a dashed "?" node or a purple "+" node is otherwise nowhere at
+// all. One row along the bottom-left of the figure, present only when the
+// filtered document has such nodes (render-doc.js reserves the row's
+// height only then). Same swatch grammar as the interactive key. Text
+// width is estimated the way truncateLine() does (0.52em per character),
+// which only decides the gap to the next entry.
+
+const DOC_KEY_SWATCH = 16;
+const DOC_KEY_FONT_SIZE = 11;
+const DOC_KEY_TEXT_GAP = 6; // swatch -> text
+const DOC_KEY_ENTRY_GAP = 20; // between entries
+const DOC_KEY_AVG_CHAR = 0.52;
+
+function docStatusKeyMarkup(nodes, x, y) {
+  const entries = statusKeyEntries(nodes);
+  if (!entries.length) return '';
+  let cursor = x;
+  const parts = entries.map(entry => {
+    const swatch = statusSwatchMarkup(entry.status, cursor, y, DOC_KEY_SWATCH);
+    const textX = cursor + DOC_KEY_SWATCH + DOC_KEY_TEXT_GAP;
+    const text = `${entry.text} (${entry.count})`;
+    const textY = y + DOC_KEY_SWATCH - 3;
+    cursor = textX + text.length * DOC_KEY_FONT_SIZE * DOC_KEY_AVG_CHAR + DOC_KEY_ENTRY_GAP;
+    return `${swatch}<text x="${textX}" y="${textY}" font-size="${DOC_KEY_FONT_SIZE}" fill="#5b5b57">${esc(text)}</text>`;
+  });
+  return `<g>${parts.join('')}</g>`;
+}
+
 module.exports = {
+  docStatusKeyMarkup,
   docNodeMarkup,
   docHandleMarkup,
   docFrameMarkup,

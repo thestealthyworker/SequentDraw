@@ -10,14 +10,30 @@
 // the SVG string, per the spec's `renderSvg(doc, { layers })` interface.
 
 const { esc } = require('./render-svg');
-const { docNodeMarkup, docHandleMarkup, docFrameMarkup, docEdgeMarkup, docEdgeTextMarkup, docNoteMarkup } = require('./render-svg-doc');
+const {
+  docNodeMarkup,
+  docHandleMarkup,
+  docFrameMarkup,
+  docEdgeMarkup,
+  docEdgeTextMarkup,
+  docNoteMarkup,
+  docStatusKeyMarkup,
+} = require('./render-svg-doc');
 const { validateDoc } = require('./validate');
 const { layoutValidated } = require('./layout');
 const { filterDocForLayers } = require('./doc-filter');
 const { captionReserveExtra } = require('./captions');
 const { placeEdgeTexts } = require('./edge-text');
 const { labelBoxesOf, frameTitleBoxesOf } = require('./obstacles');
-const { LABEL_RESERVE, DOC_MARGIN, DOC_TITLE_FONT_SIZE, DOC_TITLE_BLOCK_HEIGHT, SYSTEM_FONT_STACK, EDGE_STROKE } = require('./constants');
+const {
+  LABEL_RESERVE,
+  DOC_MARGIN,
+  DOC_TITLE_FONT_SIZE,
+  DOC_TITLE_BLOCK_HEIGHT,
+  DOC_KEY_BLOCK_HEIGHT,
+  SYSTEM_FONT_STACK,
+  EDGE_STROKE,
+} = require('./constants');
 
 function svgDefs() {
   // Same arrowhead grammar as the interactive view's #n8n-arrow (see
@@ -92,10 +108,17 @@ async function buildDocSvg(doc, opts = {}) {
     bounds.maxY = 0;
   }
 
+  // The status key sits in a row of its own under the content, so it can
+  // never meet the title or the content on a narrow figure. The row is
+  // reserved only when the filtered document has open or suggested nodes
+  // to explain; a figure of confirmed facts is exactly as tall as before.
+  const keySvg = docStatusKeyMarkup(filtered.nodes, bounds.minX, bounds.maxY + DOC_MARGIN);
+  const keyBlock = keySvg ? DOC_KEY_BLOCK_HEIGHT : 0;
+
   const x = bounds.minX - DOC_MARGIN;
   const y = bounds.minY - DOC_MARGIN - DOC_TITLE_BLOCK_HEIGHT;
   const width = bounds.maxX - bounds.minX + DOC_MARGIN * 2;
-  const height = bounds.maxY - bounds.minY + DOC_MARGIN * 2 + DOC_TITLE_BLOCK_HEIGHT;
+  const height = bounds.maxY - bounds.minY + DOC_MARGIN * 2 + DOC_TITLE_BLOCK_HEIGHT + keyBlock;
   const titleY = y + DOC_MARGIN * 0.6 + DOC_TITLE_FONT_SIZE;
 
   const titleText = filtered.title || 'SequentDraw map';
@@ -110,6 +133,7 @@ ${svgDefs()}
 <g>${nodesSvg}</g>
 <g>${notesSvg}</g>
 <g>${edgeTextSvg}</g>
+${keySvg}
 </svg>
 `;
 
