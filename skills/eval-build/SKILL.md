@@ -54,7 +54,9 @@ instead (`\u0027` only if one is unavoidable). A file is passed by path.
 `touch`, `echo`/`cat` redirects, `tee` or `node -e` to create a file, and
 **never** anything chained before or after the command. The CLI creates
 the output folder and writes every file itself. Use one session or temp
-folder outside any repository, for example `$TMPDIR/sequentdraw-review/`.
+folder outside any repository, for example `/tmp/sequentdraw-review/`,
+written out as a literal path (never `$TMPDIR`: a variable in an argument
+is refused under a narrow grant).
 
 ## Steps
 

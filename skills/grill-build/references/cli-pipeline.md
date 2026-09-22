@@ -14,9 +14,14 @@ directory for this skill: /some/path/skills/<skill>", so the command is
 `node /some/path/bin/sequentdraw`. Do not go looking for it. If that path
 contains a space, put it in double quotes: `node "/some path/bin/sequentdraw"`.
 
-- **Never put a variable in the command's program path**: not
-  `${CLAUDE_PLUGIN_ROOT}`, not `$CLAUDE_PLUGIN_ROOT`. A narrow grant cannot
-  see through the expansion and refuses the command, even `--version`.
+- **Never put a variable anywhere in the command**: not
+  `${CLAUDE_PLUGIN_ROOT}`, not `$CLAUDE_PLUGIN_ROOT`, and not `$TMPDIR` in
+  an output path. A narrow grant cannot see through the expansion and
+  refuses the command, even `--version`. This applies to every argument,
+  not only the program path: an unquoted `$TMPDIR` can word-split into
+  several arguments, so the grant cannot tell what the command would
+  actually run. Write the folder out as a literal absolute path instead --
+  `/tmp/sequentdraw-<short-name>/` on macOS and Linux.
 - **Never** go through `bash scripts/sequentdraw.sh`, and never start with
   `cd ... &&`. Both are refused under a narrow grant.
 - **A refused command means that command form was refused, not that the
@@ -119,9 +124,12 @@ The JSON is one single-quoted shell string, so:
 
 ## Where the files go
 
-A session or temp folder outside any repository, for example
-`$TMPDIR/sequentdraw-<short-name>/`. Keep every JSON file and the HTML in
-that one folder and print their paths. Each save writes a new file name
+A session or temp folder outside any repository, written out as a literal
+absolute path -- for example `/tmp/sequentdraw-<short-name>/`. **Not
+`$TMPDIR/...`**: a variable in an argument is refused under a narrow grant
+exactly as one in the program path is, and an unquoted one can word-split
+into several arguments. Keep every JSON file and the HTML in that one
+folder and print their paths. Each save writes a new file name
 (`review.json`, then `review-2.json` after a correction), since
 `--emit-open` never overwrites the map it reads. Write into a repository
 only when the user asks.

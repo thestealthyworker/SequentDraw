@@ -69,7 +69,9 @@ uses. In short:
   every file and creates the folder itself.
 
 Use one session or temp folder outside any repository for everything, for
-example `$TMPDIR/sequentdraw-<short-name>/`.
+example `/tmp/sequentdraw-<short-name>/`, written out as a literal path
+(never `$TMPDIR`: a variable in an argument is refused under a narrow
+grant).
 
 ## Steps
 
