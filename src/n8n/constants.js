@@ -15,6 +15,14 @@ const LABEL_RESERVE = 48;
 const LABEL_FIRST_BASELINE_OFFSET = 18; // node bottom -> first label line baseline
 const LABEL_LINE_HEIGHT = 16; // label line 1 baseline -> line 2 baseline
 const SUBLABEL_GAP = 14; // last label baseline -> sublabel baseline
+// The sublabel wraps rather than truncating (issue #54, src/n8n/sublabel.js).
+// Three lines because validate.js caps a sublabel at 3 words / 60 characters
+// and three lines of this width hold 63, so the ellipsis is unreachable for
+// schema-legal input rather than merely rarer.
+const SUBLABEL_FONT_SIZE = 13;
+const SUBLABEL_LINE_HEIGHT = 15;
+const SUBLABEL_LINES_MAX = 3;
+const SUBLABEL_WRAP_PAD = 64; // sublabels may run wider than the node box
 
 const RANK_GAP = 128; // horizontal gap between ELK ranks (flow direction RIGHT)
 const NODE_GAP = 96; // gap between nodes within a rank (perpendicular to flow)
@@ -178,6 +186,10 @@ module.exports = {
   LABEL_FIRST_BASELINE_OFFSET,
   LABEL_LINE_HEIGHT,
   SUBLABEL_GAP,
+  SUBLABEL_FONT_SIZE,
+  SUBLABEL_LINE_HEIGHT,
+  SUBLABEL_LINES_MAX,
+  SUBLABEL_WRAP_PAD,
   RANK_GAP,
   NODE_GAP,
   HANDLE_RADIUS,

@@ -4,6 +4,7 @@
 
 const { validateDoc } = require('./validate');
 const { layoutFlat } = require('./layout-flat');
+const { sublabelReserveExtra } = require('./sublabel');
 const {
   snap,
   GRID,
@@ -323,7 +324,18 @@ function settleNotesAndEdges(validated, handles, nodeBoxes, frameBoxes, labelRes
 // caller grow the reserved label strip to also fit caption text; omitting
 // it reproduces the interactive layout's exact LABEL_RESERVE everywhere.
 async function layoutValidated(validated, opts = {}) {
-  const labelReserve = opts.labelReserve == null ? LABEL_RESERVE : opts.labelReserve;
+  // A sublabel that wraps onto a second or third line needs the strip below
+  // its node to grow with it, or it runs into whatever is routed underneath
+  // (issue #54). The documentation export already does this for captions
+  // and passes its own labelReserve, so an explicit opts.labelReserve still
+  // wins; this only supplies the default the interactive view needs.
+  //
+  // On a map whose sublabels all fit on one line the extra is 0, so no
+  // existing layout moves.
+  const labelReserve =
+    opts.labelReserve == null
+      ? LABEL_RESERVE + sublabelReserveExtra(validated.nodes)
+      : opts.labelReserve;
 
   const { nodeBoxes } = await layoutFlat(validated, { labelReserve });
   resolveOverlaps(nodeBoxes, labelReserve);
