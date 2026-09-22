@@ -127,7 +127,22 @@ jobs:
         # https://registry.npmjs.org/@anthropic-ai/claude-code/2.1.272.
         run: npm i -g @anthropic-ai/claude-code@2.1.272
 
+      # continue-on-error, because the GUARD is the gate, not this step.
+      # `claude plugin eval` exits non-zero whenever cases scored under the
+      # threshold -- including when every one of them died on a plan limit
+      # and scored zero without running. Failing the job here skipped the
+      # guard entirely, so the INCONCLUSIVE outcome added in #70 could never
+      # be reached in exactly the case it was written for: on PR #72, 43
+      # runs errored, every one of them on the session limit, and the job
+      # still reported a plain red failure.
+      #
+      # Nothing is loosened by this. The guard below runs on the results and
+      # fails the job itself, and a run that produced no results.json at all
+      # (a bad argument, a sandbox that would not start) reaches it as "zero
+      # cases", which is fatal there.
       - name: Run skill evals
+        continue-on-error: true
+        id: evals
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.select.outputs.filter != 'none' }}
         # --allow-tools "Bash(node:*)": narrow operator grant so the
         # output-correctness cases can actually invoke the sequentdraw CLI --
@@ -198,12 +213,20 @@ jobs:
       # the reflex "the evals are flaky, merge anyway" is the one thing worse
       # than a red job.
       - name: Fail on errored eval runs
-        if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.select.outputs.filter != 'none' }}
+        if: ${{ always() && env.CLAUDE_CODE_OAUTH_TOKEN != '' && steps.select.outputs.filter != 'none' }}
         run: |
           set +e
           node scripts/eval-results-guard.js results.json
           status=$?
           set -e
+          # The eval step is allowed to fail (see above); the guard decides.
+          # But a guard that is happy while the eval command itself failed
+          # for a reason the results cannot show must not turn that into a
+          # pass, so its outcome is carried through here.
+          if [ "$status" -eq 0 ] && [ "${{ steps.evals.outcome }}" = "failure" ]; then
+            echo "::error::every eval run is evidence, but the eval command itself failed; treating that as a failure."
+            exit 1
+          fi
           if [ "$status" -eq 2 ]; then
             {
               echo "## Skill evals: INCONCLUSIVE"

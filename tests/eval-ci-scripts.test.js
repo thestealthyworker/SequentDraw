@@ -166,3 +166,41 @@ describe('eval-results-guard', () => {
     assert.deepStrictEqual(r.inconclusive, []);
   });
 });
+
+// The guard is only worth having if it actually runs. `claude plugin eval`
+// exits non-zero whenever cases scored under the threshold -- including
+// when every one of them died on a plan limit and scored zero without
+// running -- so failing the job on that step skipped the guard entirely,
+// and the INCONCLUSIVE outcome could never be reached in the case it was
+// written for. On PR #72, 43 runs errored, every one on the session limit,
+// and the job still reported a plain red failure.
+describe('the eval workflow lets the guard be the gate', () => {
+  const { parse } = require('yaml');
+  const workflow = parse(
+    fs.readFileSync(path.resolve(__dirname, '..', '.github', 'workflows', 'skill-evals.yml'), 'utf8'),
+  );
+  const steps = workflow.jobs['skill-evals'].steps;
+  const evalStep = steps.find(s => s.name === 'Run skill evals');
+  const guardStep = steps.find(s => s.name === 'Fail on errored eval runs');
+
+  test('the eval step does not fail the job by itself', () => {
+    assert.strictEqual(evalStep['continue-on-error'], true);
+    assert.strictEqual(evalStep.id, 'evals');
+  });
+
+  test('the guard runs even when the eval step failed', () => {
+    assert.match(guardStep.if, /always\(\)/);
+  });
+
+  test('the guard still fails the job when the eval command failed for its own reasons', () => {
+    // Otherwise continue-on-error would turn a genuine regression -- cases
+    // that ran and scored badly, with no run-level error for the guard to
+    // see -- into a green job.
+    assert.match(guardStep.run, /steps\.evals\.outcome/);
+    assert.match(guardStep.run, /exit 1/);
+  });
+
+  test('the guard step runs after the eval step', () => {
+    assert.ok(steps.indexOf(guardStep) > steps.indexOf(evalStep));
+  });
+});
