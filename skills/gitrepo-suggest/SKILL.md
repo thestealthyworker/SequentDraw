@@ -40,6 +40,13 @@ refusal, and you should not try: fix the note instead.
    If a search returns nothing that plausibly fits, say so for that node and
    move on. A bad suggestion costs the user more than no suggestion.
 
+   **If you cannot search at all** -- no GitHub tooling, or the host refuses
+   it -- say so and stop. Do not fall back on your own memory of which
+   projects are popular and permissively licensed: that is a claim about the
+   outside world with no verification behind it, which is the one thing this
+   skill exists to prevent. The same applies when verification in step 4
+   cannot reach GitHub: report it and attach nothing.
+
 4. **Verify every candidate.** Read `references/cli-pipeline.md` before the
    first CLI call: it says how `<sequentdraw>` resolves and which command
    shapes a narrowly granted host accepts. Then, in one call for all the
@@ -91,7 +98,9 @@ refusal, and you should not try: fix the note instead.
 
 - **Never recommends a repository it did not verify in this run.** Not from
   memory, not because it is famous, not because the user asked for it by
-  name. Verify it first; if it fails, say why.
+  name. Verify it first; if it fails, say why. This holds hardest when
+  verification is impossible: "I could not reach GitHub, so I have attached
+  nothing" is the right answer, and a list of plausible projects is not.
 - **Never states a licence from memory.** The `spdx_id` GitHub's licence API
   returned is the only source. If the engine could not establish one, the
   answer is "I could not verify its licence", never a guess.
