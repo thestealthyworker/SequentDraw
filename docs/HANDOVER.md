@@ -282,11 +282,13 @@ plugin scaffold arrives with the first of them, `git-map`.
    reports and the gate process (see `CLAUDE.md`). They are internal checks, not part
    of the product. The work is not complete until this is merged.
 
-**Milestone gates.** The CTO agent (`sequentdraw-cto`, on Fable) reviews `main` at
-three points, and only there, each after the lead developer has merged the milestone:
-**M1** once extraction Mode A and `git-map` are in; **M2** once the suggestion agent
-is in (`business-map` with suggestions, `eval-build`, `grill-build`); and **M3** when
-the build order is complete. The procedure is in `CLAUDE.md`.
+**Milestone gates.** `main` is judged at three points, each after the lead developer
+has merged the milestone: **M1** once extraction Mode A and `git-map` are in; **M2**
+once the suggestion agent is in (`business-map` with suggestions, `eval-build`,
+`grill-build`); and **M3** when the build order is complete. M1 and M2 were judged by
+the CTO agent (`sequentdraw-cto`, on Fable). M3 is an overall review and test pass by
+the lead developer (Opus 5.5), per the owner's decision of 2026-09-24. The procedure
+is in `CLAUDE.md`.
 
 The original plan had M3 re-test against the unrecovered prototype files (`check.js`,
 `layout.js`, `stampedid-workflow.json`). The owner released that on 2026-09-24: the
