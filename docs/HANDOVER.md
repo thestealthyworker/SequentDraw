@@ -201,7 +201,7 @@ a map describes. That request is this suggestion agent. Settled:
   the suggestions. The engine supplies the catalogue and the constraints, and
   validates each suggestion: a rationale is present and cites nodes that exist in the
   graph, the pick is from the catalogue, and there are at most five per map. This
-  keeps the HTTP API usable over `curl` without an embedded model.
+  keeps the engine usable from the CLI, or any future adapter, without an embedded model.
 
 ## Recommended build order
 
@@ -261,7 +261,12 @@ plugin scaffold arrives with the first of them, `git-map`.
     references to steps 8, 8a and 9 keep meaning what they meant. Designed in
     `docs/design/gitrepo-suggest.md`; shipped as `sequentdraw licences`,
     `check --repos` and the `gitrepo-suggest` skill.
-8. Tours last.
+8. Tours, then the MCP server, then `skills install`. **The HTTP API is deferred**
+   (owner, 2026-09-24): every caller designed for is served by skills, the CLI or MCP,
+   and "anything else" was a guess about a future caller. It is also the only surface
+   that would be a network service, with the input limits, auth and rate limiting that
+   brings. The engine is pure functions behind thin adapters, so an HTTP adapter can land
+   whenever a real caller needs one without anything built now having to change.
 8a. **Before the first npm publish:** vendor the stack-analyser detection rules SequentDraw
     uses into `src/scan/rules/`, keeping the MIT notice, and drop the dependency. npm
     ignores a dependency's `overrides`, so downstream installs would otherwise inherit its
@@ -281,10 +286,13 @@ plugin scaffold arrives with the first of them, `git-map`.
 three points, and only there, each after the lead developer has merged the milestone:
 **M1** once extraction Mode A and `git-map` are in; **M2** once the suggestion agent
 is in (`business-map` with suggestions, `eval-build`, `grill-build`); and **M3** when
-the build order is complete. M3 includes re-testing
-against the prototype fixtures. The owner has set aside the unrecovered prototype
-files (`check.js`, `layout.js`, `stampedid-workflow.json`) until then. The procedure is
-in `CLAUDE.md`.
+the build order is complete. The procedure is in `CLAUDE.md`.
+
+The original plan had M3 re-test against the unrecovered prototype files (`check.js`,
+`layout.js`, `stampedid-workflow.json`). The owner released that on 2026-09-24: the
+lead developer re-tests the product end to end itself, against the repository's own
+fixtures and examples, which have since grown to cover everything those files did —
+`check.js`'s measurements are the automated layout tests from step 4.
 
 The "two known defects" in the old build order (edges crossing containers, label overlaps)
 are re-measured against the n8n renderer rather than fixed in the legacy one.

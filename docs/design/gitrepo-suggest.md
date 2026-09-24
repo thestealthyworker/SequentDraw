@@ -35,7 +35,7 @@ sequentdraw check <map.json> --merge <patch.json> --repos <verified.json>
 
 `check --repos` refuses any note whose text links to a GitHub repository that is not in
 the verified file, or that the verified file marks as anything but usable. A model
-cannot talk its way past it, and the CLI and HTTP surfaces get the same refusal.
+cannot talk its way past it, and every surface -- the CLI, the MCP server -- gets the same refusal.
 
 ## 1. Which nodes get candidates
 
