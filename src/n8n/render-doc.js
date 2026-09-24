@@ -23,6 +23,7 @@ const { validateDoc } = require('./validate');
 const { layoutValidated } = require('./layout');
 const { filterDocForLayers } = require('./doc-filter');
 const { captionReserveExtra } = require('./captions');
+const { sublabelReserveExtra } = require('./sublabel');
 const { placeEdgeTexts } = require('./edge-text');
 const { labelBoxesOf, frameTitleBoxesOf } = require('./obstacles');
 const {
@@ -61,7 +62,11 @@ async function buildDocSvg(doc, opts = {}) {
   // The reserved label strip grows to fit captions: a single "tallest
   // caption in play" number, applied uniformly (see captions.js and
   // doc-layout parameterisation in layout.js/obstacles.js/notes.js).
-  const labelReserve = LABEL_RESERVE + captionReserveExtra(filtered.nodes);
+  // A wrapped sublabel pushes the caption down by its extra lines, so both
+  // extras are needed; each is the maximum over the nodes, so their sum
+  // covers the tallest node either way.
+  const labelReserve =
+    LABEL_RESERVE + sublabelReserveExtra(filtered.nodes) + captionReserveExtra(filtered.nodes);
   const layout = await layoutValidated(filtered, { labelReserve });
   const { nodeBoxes, frameBoxes, noteBoxes, handles, edges, entryIds } = layout;
   const entrySet = new Set(entryIds);

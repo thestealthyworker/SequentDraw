@@ -202,3 +202,41 @@ describe('the rendered canvas', () => {
     assert.strictEqual(LABEL_RESERVE, 48);
   });
 });
+
+// The documentation export follows the same rule. It is the one output
+// with no hover card at all, so a sublabel cut there loses its meaning for
+// good -- the canvas at least keeps the full text in the details card.
+describe('the documentation export', () => {
+  const { renderSvg } = require('../src/n8n/index');
+  const doc = () => ({
+    title: 'Sublabel wrapping',
+    nodes: [
+      {
+        id: 'a',
+        label: 'Quote sent',
+        kind: 'service',
+        sublabel: 'chases unanswered quotes',
+        description: 'Sends the reminder and records the reply.',
+      },
+      { id: 'b', label: 'Paid', kind: 'artifact' },
+    ],
+    edges: [{ from: 'a', to: 'b', type: 'solid' }],
+  });
+
+  test('a long sublabel is wrapped in full, not cut', async () => {
+    const svg = await renderSvg(doc());
+    const block = svg.match(/<text text-anchor="middle" font-size="13"[^>]*>([\s\S]*?)<\/text>/);
+    assert.ok(block, 'no sublabel in the figure');
+    assert.match(block[1], />chases unanswered</);
+    assert.match(block[1], />quotes</);
+    assert.ok(!svg.includes('…'), 'something in the figure was cut');
+  });
+
+  test('the caption starts below the last sublabel line, not over it', async () => {
+    const svg = await renderSvg(doc());
+    const sub = svg.match(/<text text-anchor="middle" font-size="13"[^>]*>([\s\S]*?)<\/text>/)[1];
+    const subYs = [...sub.matchAll(/y="([\d.]+)"/g)].map(m => Number(m[1]));
+    const capY = Number(svg.match(/font-size="12"[^>]*><tspan[^>]*y="([\d.]+)"/)[1]);
+    assert.ok(capY > subYs[subYs.length - 1], `caption at ${capY}, last sublabel line at ${subYs[subYs.length - 1]}`);
+  });
+});
