@@ -40,7 +40,13 @@ function buildGeometryData(layout) {
   });
   return {
     nodeBoxes,
-    labelReserve: LABEL_RESERVE,
+    // The reserve layout ACTUALLY used, not the LABEL_RESERVE constant. They
+    // differed once sublabels began to wrap (#54): layout grows the strip by
+    // sublabelReserveExtra(), and a viewer recomputing frames with the bare
+    // constant cut every frame 15px short after the first layer toggle --
+    // straight through a wrapped sublabel's second line. Layout returns the
+    // number it used, so the two cannot disagree again.
+    labelReserve: layout.labelReserve == null ? LABEL_RESERVE : layout.labelReserve,
     padding: GROUP_PADDING,
     grid: GRID,
     frameLabelOffsetX: FRAME_LABEL_OFFSET_X,
