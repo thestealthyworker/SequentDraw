@@ -19,14 +19,30 @@ name: gitrepo-suggest-output-verifies-before-attaching
 # teaches nothing except to ignore it.
 #
 # What this case does prove, and what the skill is most likely to get
-# wrong: that it attempts verification through the engine BEFORE attaching
-# anything, and that when it cannot verify it says so plainly with a reason
-# instead of attaching unverified candidates anyway. That is the failure
+# wrong: that when it cannot search or verify it says so plainly with a
+# reason instead of attaching unverified candidates anyway. That is the failure
 # mode with consequences -- recommending an AGPL-3.0 dependency to a small
 # business -- and an offline sandbox exercises it perfectly.
 #
 # The `check --repos` refusal itself is pinned at the engine level, where it
 # belongs, by tests/repos-check-repos.test.js.
+#
+# A second grader went the same way for the same reason.
+# `verified-before-attaching` looked for the line `sequentdraw licences`
+# prints. On run 35992774539 the skill tried `gh search repos` three times
+# and `curl` twice, was denied every time, concluded it could not search,
+# and stopped -- so it never called `licences`. That is the RIGHT
+# behaviour: with no candidates there is nothing to verify. An earlier run
+# passed that grader only because the model probed `licences` with a
+# repository it had never found, which is the behaviour we least want to
+# reward. So the grader was measuring luck, and it is gone too.
+#
+# Two graders remain, and both are reachable in an offline sandbox: the
+# skill fires, and the judge confirms it said plainly that it could not
+# search or verify and attached nothing -- rather than falling back on the
+# model's own memory of which projects are popular and permissively
+# licensed. That is the guarantee with consequences, and it is exactly what
+# an offline run tests best.
 #
 # The script only runs when the suite is invoked with --scaffold.
 context:
