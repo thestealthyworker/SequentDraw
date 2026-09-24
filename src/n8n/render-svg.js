@@ -26,9 +26,11 @@ const {
   LABEL_FIRST_BASELINE_OFFSET,
   LABEL_LINE_HEIGHT,
   SUBLABEL_GAP,
+  SUBLABEL_LINE_HEIGHT,
   LABEL_LINES_MAX,
 } = require('./constants');
-const { roundedRectPath, wrapLabel, truncateLine } = require('./geometry');
+const { roundedRectPath, wrapLabel } = require('./geometry');
+const { wrapSublabel } = require('./sublabel');
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -129,7 +131,10 @@ function nodeMarkup(n, box, isEntry, ariaLabel) {
     .map((line, i) => `<tspan x="${cx}" y="${labelStartY + i * LABEL_LINE_HEIGHT}">${esc(line)}</tspan>`)
     .join('');
   const sublabelY = labelStartY + (labelLines.length - 1) * LABEL_LINE_HEIGHT + SUBLABEL_GAP;
-  const sublabelText = n.sublabel ? truncateLine(n.sublabel, box.w + 64, 13) : '';
+  // Wrapped, never cut: see src/n8n/sublabel.js. The first line sits exactly
+  // where the single truncated line used to, so nothing moves on a map whose
+  // sublabels already fitted.
+  const sublabelLines = wrapSublabel(n.sublabel);
 
   const title = n.status === 'open' ? `<title>${esc(n.prompt || n.label)}</title>` : '';
 
@@ -138,7 +143,7 @@ ${title}<path class="node-shape" d="${path}" fill="${style.fill}" stroke="${styl
 ${nodeIconMarkup(n, cx, cy)}
 ${statusBadge(n, box)}
 <text class="node-label">${labelTspans}</text>
-${sublabelText ? `<text class="node-sublabel" x="${cx}" y="${sublabelY}" text-anchor="middle">${esc(sublabelText)}</text>` : ''}
+${sublabelLines.length ? `<text class="node-sublabel" text-anchor="middle">${sublabelLines.map((line, i) => `<tspan x="${cx}" y="${sublabelY + i * SUBLABEL_LINE_HEIGHT}">${esc(line)}</tspan>`).join('')}</text>` : ''}
 </g>`;
 }
 
