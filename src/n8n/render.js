@@ -30,6 +30,27 @@ const {
 // whichever members are currently visible (frame-box.js), and nothing
 // else -- no free text, so no escaping concerns beyond what safeJson()
 // already does uniformly for every embedded literal.
+// The node the viewer opens on when the whole map will not fit at a readable
+// size (issue #24): the leftmost entry node, since that is where the reader
+// starts, and failing any entry the leftmost node of all. Ties go to the
+// topmost, so the choice is deterministic for a given layout. Returned as a
+// bare box because GEOMETRY is numeric-only by contract (see the comment at
+// its declaration in render-shell.js).
+function openAnchorBox(layout) {
+  const boxes = layout.nodeBoxes || {};
+  const pick = ids => {
+    let best = null;
+    ids.forEach(id => {
+      const b = boxes[id];
+      if (!b) return;
+      if (!best || b.x < best.x || (b.x === best.x && b.y < best.y)) best = b;
+    });
+    return best;
+  };
+  const box = pick(layout.entryIds || []) || pick(Object.keys(boxes));
+  return box ? { x: box.x, y: box.y, w: box.w, h: box.h } : null;
+}
+
 function buildGeometryData(layout) {
   // Object.create(null): a node id is author-controlled and ID_RE allows
   // "__proto__" as a legal id. Keying a plain {} by it would silently
@@ -51,6 +72,7 @@ function buildGeometryData(layout) {
     grid: GRID,
     frameLabelOffsetX: FRAME_LABEL_OFFSET_X,
     frameLabelOffsetY: FRAME_LABEL_OFFSET_Y,
+    openAnchor: openAnchorBox(layout),
   };
 }
 

@@ -155,15 +155,39 @@ function script(canvas, cardData, geometry, doc, opts = {}) {
     viewport.setAttribute('transform', 'translate(' + state.x + ' ' + state.y + ') scale(' + state.scale + ')');
   }
 
-  function fit(){
-    var rect = stage.getBoundingClientRect();
+  function fitScale(rect){
     var pad = 32;
     var sx = (rect.width - pad * 2) / CANVAS.width;
     var sy = (rect.height - pad * 2) / CANVAS.height;
-    var scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.min(sx, sy)));
+    return Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.min(sx, sy)));
+  }
+
+  function fit(){
+    var rect = stage.getBoundingClientRect();
+    var scale = fitScale(rect);
     state.scale = scale;
     state.x = rect.width / 2 - (CANVAS.x + CANVAS.width / 2) * scale;
     state.y = rect.height / 2 - (CANVAS.y + CANVAS.height / 2) * scale;
+    apply();
+  }
+
+  // How the map opens (issue #24). A 40-node map fitted into a laptop
+  // window renders its 16px labels at about 5px -- icons and no words, on the
+  // one glance that decides whether a founder keeps reading. So when fitting
+  // the whole map would leave labels below READABLE_SCALE, the map opens at
+  // that scale instead, on its entry node, with the node's left edge a little
+  // in from the left of the window. A map small enough to fit readably still
+  // opens fitted, exactly as before. The Fit button is unchanged: the
+  // overview is one click away, it is just no longer the first impression.
+  var READABLE_SCALE = 10 / 16;   // 16px labels render at 10px or larger
+  var OPEN_LEFT_PAD = 96;         // room for a label wider than its node
+  function openView(){
+    var rect = stage.getBoundingClientRect();
+    var anchor = GEOMETRY.openAnchor;
+    if (!anchor || fitScale(rect) >= READABLE_SCALE) { fit(); return; }
+    state.scale = READABLE_SCALE;
+    state.x = OPEN_LEFT_PAD - anchor.x * READABLE_SCALE;
+    state.y = rect.height / 2 - (anchor.y + anchor.h / 2) * READABLE_SCALE;
     apply();
   }
 
@@ -795,7 +819,7 @@ ${correctOpsSource()}
 ${correctScript()}
 ${exportScript(css())}
 
-  fit();
+  openView();
   applyLayers();
   applyDeepLink();
 })();
