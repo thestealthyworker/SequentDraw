@@ -191,7 +191,7 @@ test('render --merge: usage errors', () => {
 
 test('every skill ships the same references/cli-pipeline.md', () => {
   const skills = fs.readdirSync(SKILLS_DIR, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name).sort();
-  assert.deepStrictEqual(skills, ['business-map', 'doc-map', 'eval-build', 'git-map', 'grill-build']);
+  assert.deepStrictEqual(skills, ['business-map', 'doc-map', 'eval-build', 'git-map', 'gitrepo-suggest', 'grill-build']);
   const copies = skills.map(name => fs.readFileSync(path.join(SKILLS_DIR, name, 'references', 'cli-pipeline.md'), 'utf8'));
   copies.forEach((copy, i) => assert.strictEqual(copy, copies[0], `skills/${skills[i]}/references/cli-pipeline.md differs from skills/${skills[0]}'s`));
 });

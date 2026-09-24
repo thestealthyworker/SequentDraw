@@ -13,10 +13,11 @@ SequentDraw skills (this plugin):
 - eval-build: balanced review of an EXISTING map (or map it first): what works, what is missing, what is fragile, drawn in the map; also "suggest integrations for this map".
 - grill-build: harsh critique of an existing map ONLY when asked to grill, stress-test, tear apart or be brutal; alternatives drawn beside what they replace.
 - doc-map: export an EXISTING SequentDraw map as a static SVG figure for docs/slides; never invents structure.
+- gitrepo-suggest: open-source GitHub projects for an EXISTING map's weak nodes; verifies every licence through the GitHub API (MIT, active, not a fork) and attaches only what it verified.
 
-Not SequentDraw's job: building or deploying n8n workflows; general Mermaid or chart requests; tool advice with no map; grilling a plan with no build or map; exporting a map that does not exist yet (run git-map or business-map first, then doc-map).
+Not SequentDraw's job: building or deploying n8n workflows; general Mermaid or chart requests; tool advice with no map; grilling a plan with no build or map; exporting a map that does not exist yet (run git-map or business-map first).
 
-Rule: every skill that produces a map or figure publishes a private Claude artifact plus a local copy outside the repo, and writes into the repo only if the user asks.`;
+Rule: every skill that produces a map or figure publishes a private Claude artifact plus a local copy outside the repo, and writes into the repo only on request.`;
 
 process.stdout.write(
   JSON.stringify({

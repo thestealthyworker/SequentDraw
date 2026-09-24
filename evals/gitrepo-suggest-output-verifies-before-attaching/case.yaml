@@ -1,0 +1,33 @@
+schema_version: "1.1"
+name: gitrepo-suggest-output-verifies-before-attaching
+# Every eval run starts in an EMPTY workspace, so the map this prompt names
+# is not reachable without a scaffold. The sibling doc-map output case
+# records what that costs: the agent searches the filesystem for a file that
+# was never there, is denied outside its sandbox, and burns its whole turn
+# budget without reaching the CLI at all.
+#
+# WHAT THIS CASE CAN AND CANNOT PROVE. The eval sandbox has no network and
+# no `gh`: the Bash grant is `Bash(node:*)`, and an allowlist policy refuses
+# to widen network access, so `gh search repos` is denied and every request
+# to api.github.com fails. Measured on run 35565484431 -- `ERR fetch failed`
+# from `sequentdraw licences`, and four denied `gh search repos` calls.
+#
+# So the FIND and ATTACH halves of this skill cannot run here, and a grader
+# asserting `check --repos` fired can never pass: with nothing verified
+# there is, correctly, nothing to attach and nothing to check. That grader
+# was removed rather than left to fail, because a grader that cannot pass
+# teaches nothing except to ignore it.
+#
+# What this case does prove, and what the skill is most likely to get
+# wrong: that it attempts verification through the engine BEFORE attaching
+# anything, and that when it cannot verify it says so plainly with a reason
+# instead of attaching unverified candidates anyway. That is the failure
+# mode with consequences -- recommending an AGPL-3.0 dependency to a small
+# business -- and an offline sandbox exercises it perfectly.
+#
+# The `check --repos` refusal itself is pinned at the engine level, where it
+# belongs, by tests/repos-check-repos.test.js.
+#
+# The script only runs when the suite is invoked with --scaffold.
+context:
+  scaffold_script: fixture.sh

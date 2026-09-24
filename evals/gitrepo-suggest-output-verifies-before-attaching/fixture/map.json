@@ -1,0 +1,16 @@
+{
+  "title": "Invoice chasing",
+  "nodes": [
+    { "id": "customer", "label": "Customer", "kind": "external", "description": "Buys one clean." },
+    { "id": "invoice", "label": "Send the invoice", "kind": "manual", "description": "Typed out by hand after every job." },
+    { "id": "q_chaser", "label": "Who chases an unpaid invoice?", "kind": "logic", "status": "open", "description": "Nobody in this map does this today." },
+    { "id": "payment", "label": "Payment arrives", "kind": "artifact", "description": "Bank transfer into the business account." },
+    { "id": "owner", "label": "Owner", "kind": "human", "description": "Runs the business." }
+  ],
+  "edges": [
+    { "from": "customer", "to": "invoice", "type": "solid" },
+    { "from": "invoice", "to": "q_chaser", "type": "dashed", "condition": "not paid in 14 days" },
+    { "from": "invoice", "to": "payment", "type": "solid" },
+    { "from": "payment", "to": "owner", "type": "solid" }
+  ]
+}

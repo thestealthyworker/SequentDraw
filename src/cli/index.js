@@ -12,6 +12,7 @@ const renderCmd = require('./render');
 const validateCmd = require('./validate');
 const scanCmd = require('./scan');
 const checkCmd = require('./check');
+const licencesCmd = require('./licences');
 
 const COMMANDS = {
   render: renderCmd,
@@ -19,6 +20,7 @@ const COMMANDS = {
   scan: scanCmd,
   check: checkCmd,
   catalogue: require('./catalogue'),
+  licences: licencesCmd,
 };
 
 const TOP_USAGE = `Usage: sequentdraw <command> [options]
@@ -30,14 +32,18 @@ Commands:
   validate <in.json|->                 Validate a workflow JSON document.
   scan <path|url> --out <bundle.json>  Scan a repository into an evidence
                                         bundle.
-  check <map.json|-> [--merge <patch|->] [--evidence <f>] [--emit-open <out.json>]
+  check <map.json|-> [--merge <patch|->] [--evidence <f>] [--emit-open <out.json>] [--repos <f>]
                                         Check a map: structure, scan-sourced
                                         claims against an evidence bundle,
-                                        and completeness.
+                                        completeness, and repository notes
+                                        against verified licences.
+  licences <owner/repo> ... --out <f>  Verify candidate repositories through
+                                        the GitHub API (MIT only, active,
+                                        not a fork).
 
 "-" as the input document reads it from stdin, and so does "-" as a --merge
-patch when the input is a file. Output paths, --evidence and --emit-open are
-always real files.
+patch when the input is a file. Output paths, --evidence, --repos and
+--emit-open are always real files.
 
 Run "sequentdraw <command> --help" for command-specific options.
 `;

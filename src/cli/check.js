@@ -26,6 +26,13 @@
 // copy that would breach a validation cap, or an unwritable path. Same
 // guarantee as render (src/cli/render.js:3-5).
 //
+// --repos cross-checks every repository a note links to against a file
+// written by `sequentdraw licences` (src/repos/repo-notes.js): the link must
+// name a repository verified in that run and marked usable, at most three per
+// note, at most one such note per node. It is optional, and without it a map
+// carrying repository notes is not refused -- check cannot know a note is a
+// recommendation. The `gitrepo-suggest` skill is what always passes it.
+//
 // --merge applies a small patch (src/n8n/merge.js) to the map before any
 // check runs, so a skill adds or removes nodes, edges and notes on an existing
 // map without re-typing it. The merged document is what is checked and what
@@ -37,9 +44,10 @@ const { validateDoc, ValidationError } = require('../n8n/validate');
 const { checkEvidence } = require('../scan');
 const { checkCompleteness, buildOpenDocument } = require('../gaps/completeness');
 const { readDocument, STDIN_PATH } = require('./read-document');
+const { checkRepoNotes } = require('../repos/repo-notes');
 const { applyPatch } = require('../n8n/merge');
 
-const USAGE = 'Usage: sequentdraw check <map.json|-> [--merge <patch.json|->] [--evidence <bundle.json>] [--emit-open <out.json>]';
+const USAGE = 'Usage: sequentdraw check <map.json|-> [--merge <patch.json|->] [--evidence <bundle.json>] [--repos <verified.json>] [--emit-open <out.json>]';
 
 const HELP = `${USAGE}
 
@@ -77,6 +85,11 @@ Options:
   --evidence <file>   The evidence bundle produced by "sequentdraw scan".
                        Optional: without it the evidence cross-reference is
                        skipped. Always a real file: "-" is not accepted here.
+  --repos <file>      The verdicts produced by "sequentdraw licences". Every
+                       GitHub repository a note links to must appear there
+                       marked "usable": true, at most three per note and at
+                       most one such note per node. Optional, and always a
+                       real file.
   --emit-open <file>  Write a COPY of the map with one open question node per
                        completeness gap, then exit 0. The input is never
                        modified in place, and the copy passes "check". Always
@@ -95,6 +108,7 @@ function flagValue(args, i) {
 function parseArgs(args) {
   const positional = [];
   let evidencePath = null;
+  let reposPath = null;
   let emitOpenPath = null;
   let mergePath = null;
   for (let i = 0; i < args.length; i++) {
@@ -107,6 +121,14 @@ function parseArgs(args) {
     } else if (arg.startsWith('--evidence=')) {
       evidencePath = arg.slice('--evidence='.length);
       if (!evidencePath) return null;
+    } else if (arg === '--repos') {
+      const value = flagValue(args, i);
+      if (value == null) return null;
+      reposPath = value;
+      i++;
+    } else if (arg.startsWith('--repos=')) {
+      reposPath = arg.slice('--repos='.length);
+      if (!reposPath) return null;
     } else if (arg === '--merge') {
       const value = flagValue(args, i);
       if (value == null) return null;
@@ -130,7 +152,7 @@ function parseArgs(args) {
     }
   }
   if (positional.length !== 1) return null;
-  return { mapPath: positional[0], evidencePath, emitOpenPath, mergePath };
+  return { mapPath: positional[0], evidencePath, reposPath, emitOpenPath, mergePath };
 }
 
 function readJson(filePath, stderr) {
@@ -177,6 +199,10 @@ async function run(args, io = {}) {
   }
   if (parsed.evidencePath === STDIN_PATH) {
     stderr.write(`${USAGE}\n--evidence must be a real file; "-" (stdin) is only valid for the map document.\n`);
+    return 1;
+  }
+  if (parsed.reposPath === STDIN_PATH) {
+    stderr.write(`${USAGE}\n--repos must be a real file; "-" (stdin) is only valid for the map document.\n`);
     return 1;
   }
   if (parsed.emitOpenPath === STDIN_PATH) {
@@ -230,6 +256,19 @@ async function run(args, io = {}) {
     bundle = bundleResult.value;
   }
 
+  // Whether --repos was SUPPLIED is tracked by the path, never by the
+  // parsed value: a file containing literally `null` parses to null, and a
+  // truthiness guard here would read that as "the flag was not passed" and
+  // skip the whole check. A model that writes `null` into its verified file
+  // would then produce a transcript that looks like verification passed.
+  let verifiedRepos = null;
+  const reposSupplied = parsed.reposPath != null;
+  if (reposSupplied) {
+    const reposResult = readJson(parsed.reposPath, stderr);
+    if (reposResult.error) return 1;
+    verifiedRepos = reposResult.value;
+  }
+
   let normalized;
   try {
     normalized = validateDoc(doc);
@@ -246,6 +285,18 @@ async function run(args, io = {}) {
     const evidenceErrors = checkEvidence(normalized, bundle);
     if (evidenceErrors.length > 0) {
       writeLines(stderr, evidenceErrors);
+      return 1;
+    }
+  }
+
+  // Repository notes are checked before the completeness rules, for the same
+  // reason evidence is: a link to a repository that was never verified is a
+  // claim about the outside world, and a map making one should not go on to
+  // be told about its gaps as though it were sound.
+  if (reposSupplied) {
+    const repoErrors = checkRepoNotes(normalized, verifiedRepos);
+    if (repoErrors.length > 0) {
+      writeLines(stderr, repoErrors);
       return 1;
     }
   }

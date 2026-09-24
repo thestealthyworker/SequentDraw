@@ -50,7 +50,7 @@ const fragment = await renderMap(workflowJson, { fragment: true }); // no <!DOCT
 /plugin install sequentdraw@sequentdraw
 ```
 
-This installs five skills and a `SessionStart` hook that gives Claude a short
+This installs six skills and a `SessionStart` hook that gives Claude a short
 routing note on which skill applies:
 
 | Skill | What it does |
@@ -60,12 +60,13 @@ routing note on which skill applies:
 | `/sequentdraw:eval-build` | A balanced review of an existing map: what works, what is missing, what is fragile, drawn into the map. |
 | `/sequentdraw:grill-build` | A harsh critique of an existing map, only when you ask to grill or stress-test it, with alternatives drawn beside what they replace. |
 | `/sequentdraw:doc-map` | Exports an existing map as a static SVG figure for docs and slides. See [`docs/design/n8n-visual-style.md`](docs/design/n8n-visual-style.md)'s "Documentation export". |
+| `/sequentdraw:gitrepo-suggest` | Finds open-source GitHub projects for an existing map's weak nodes, verifies each licence through the GitHub API, and attaches only what it verified. See [`docs/design/gitrepo-suggest.md`](docs/design/gitrepo-suggest.md). |
 
 Every skill that produces a map or figure publishes it as a private Claude artifact
 and keeps a local copy outside the repo, writing into the repo only when asked.
 
 The same `skills/` directory is Codex-usable too: `.agents/skills/<skill>` mirrors
-`skills/<skill>` for all five (as a symlink, or a synced copy via
+`skills/<skill>` for all six (as a symlink, or a synced copy via
 `npm run sync-agent-skills` on a platform where symlinks are unavailable).
 
 ## CLI
@@ -74,8 +75,9 @@ The same `skills/` directory is Codex-usable too: `.agents/skills/<skill>` mirro
 npx sequentdraw render <in.json|-> <out.html|out.svg> [--layers a,b] [--fragment] [--merge <patch.json|->]
 npx sequentdraw validate <in.json|->
 npx sequentdraw scan <path|github-url> --out <bundle.json> [--timeout <ms>]
-npx sequentdraw check <map.json|-> [--merge <patch.json|->] [--evidence <bundle.json>] [--emit-open <out.json>]
+npx sequentdraw check <map.json|-> [--merge <patch.json|->] [--evidence <bundle.json>] [--repos <verified.json>] [--emit-open <out.json>]
 npx sequentdraw catalogue [--category <name>] [--json]
+npx sequentdraw licences <owner/repo> [...] --out <verified.json> [--token-env <NAME>] [--max <n>]
 ```
 
 - `-` as the input document reads it from stdin, so a map built in

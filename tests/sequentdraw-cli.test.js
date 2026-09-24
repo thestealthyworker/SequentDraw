@@ -960,7 +960,7 @@ test('check --merge: usage errors', () => {
 test('check --help documents --evidence as optional and --emit-open', () => {
   const result = runCli(['check', '--help']);
   assert.strictEqual(result.status, 0);
-  assert.match(result.stdout, /\[--evidence <bundle\.json>\] \[--emit-open <out\.json>\]/);
+  assert.match(result.stdout, /\[--evidence <bundle\.json>\] \[--repos <verified\.json>\] \[--emit-open <out\.json>\]/);
   assert.match(result.stdout, /Optional: without it the evidence cross-reference is/);
 });
 
