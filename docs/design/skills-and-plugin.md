@@ -3,7 +3,7 @@
 Status: **proposed** · 2026-09-15 · skill set defined by the owner
 
 SequentDraw is meant to be driven by AI tools: Claude Code, Codex and other agents
-call it through skills, an MCP server, a CLI or an HTTP API. This document settles
+call it through skills, an MCP server or a CLI (an HTTP API is deferred; see `docs/HANDOVER.md` step 8). This document settles
 which skills exist, how they get triggered, how one skill set serves several agents,
 and how we prove each skill works.
 
@@ -197,7 +197,7 @@ SequentDraw/
 ├── skills/<skill>/            # the single source of truth for every agent
 ├── evals/<skill>/<case>/      # prompt.md + graders/*.md
 ├── AGENTS.md                  # always-on context for Codex, Cursor and others
-├── src/                       # engine: pure core + CLI, HTTP and MCP adapters
+├── src/                       # engine: pure core + CLI and MCP adapters
 └── bin/sequentdraw
 ```
 
@@ -206,7 +206,7 @@ SequentDraw/
 | Claude Code | Plugin install from the marketplace | Skills + bundled MCP server |
 | Codex | Skills copied or linked into `.agents/skills` or `~/.agents/skills`; MCP in `config.toml` | Same `SKILL.md`, same MCP server |
 | Cursor, Gemini CLI, Copilot | MCP config; Copilot also reads `.github/skills` | MCP server; skills where the host supports the spec |
-| Anything else | `curl` against the HTTP API | HTTP API |
+| Anything else | The CLI (`sequentdraw render …`); an HTTP API is deferred until a real caller needs one | CLI |
 
 A later `npx sequentdraw skills install --agent codex|cursor|copilot` copies `skills/`
 into each host's location, so nobody maintains per-agent copies.
@@ -301,4 +301,4 @@ as the engine feature they drive:
 | 7 — suggestion agent | the `business-map` suggestion step, `eval-build` and `grill-build` (shipped) |
 | 7a — correction mode (after M2, `docs/design/correction-mode.md`) | none. Every skill from `git-map` on already accepts conversational corrections and re-validates before rendering |
 | 7b — GitHub search with licence verification | `gitrepo-suggest` |
-| 8 — tours, then the MCP server and HTTP API, then `skills install` | none |
+| 8 — tours, then the MCP server, then `skills install` (HTTP API deferred) | none |

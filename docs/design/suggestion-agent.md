@@ -105,8 +105,9 @@ Decisions already made by the owner, written up here and not reopened:
    proposes the suggestions. The engine supplies the catalogue and the constraints, and
    it checks that each suggestion has a rationale, that the rationale cites nodes that
    exist in the graph, that the pick is from the catalogue, and that there are at most
-   five per map. This keeps the HTTP API usable over `curl` without an embedded model
-   (`docs/HANDOVER.md:199-203`).
+   five per map. This keeps the engine usable without an embedded model, from the CLI or any
+   future adapter (an HTTP API was planned here and is now deferred; see
+   `docs/HANDOVER.md` step 8).
 4. **Three to five suggestions per map, five at most** (`docs/HANDOVER.md:176-178`).
 5. **The rationale is grounded in the map.** "Most pipelines have a queue" is not a
    rationale. "Three long-running steps run synchronously" is

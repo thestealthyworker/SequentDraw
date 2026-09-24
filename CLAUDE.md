@@ -40,7 +40,7 @@ lead developer has merged the milestone.
 |---|---|---|
 | M1 | `git-map` (extraction Mode A, plugin scaffold, skill eval CI) | `git-map` end to end: install the plugin, map a real repository, open the map |
 | M2 | The suggestion agent (`business-map` with suggestions, `eval-build`, `grill-build`) | Those three skills end to end on realistic business scenarios |
-| M3 | The whole build order | The final product across Claude Code, Codex, CLI and HTTP, including a re-test against the prototype fixtures |
+| M3 | The whole build order | The final product across Claude Code, Codex, the CLI and the MCP server, re-tested end to end by the lead developer against the repository's own fixtures and examples |
 
 Procedure:
 
