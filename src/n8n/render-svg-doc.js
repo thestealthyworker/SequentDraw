@@ -21,7 +21,8 @@
 // before it reaches markup. There is no href anywhere in this file.
 
 const { esc, nodeVisualStyle, nodeIconMarkup, statusBadge, statusKeyEntries, statusSwatchMarkup } = require('./render-svg');
-const { roundedRectPath, wrapLabel, truncateLine } = require('./geometry');
+const { roundedRectPath, wrapLabel } = require('./geometry');
+const { wrapSublabel } = require('./sublabel');
 const { wrapCaption } = require('./captions');
 const { metricsFor } = require('./markdown');
 const {
@@ -36,6 +37,7 @@ const {
   LABEL_FIRST_BASELINE_OFFSET,
   LABEL_LINE_HEIGHT,
   SUBLABEL_GAP,
+  SUBLABEL_LINE_HEIGHT,
   LABEL_LINES_MAX,
   CAPTION_FONT_SIZE,
   CAPTION_LINE_HEIGHT,
@@ -75,12 +77,20 @@ function docNodeMarkup(n, box, isEntry) {
     .map((line, i) => `<tspan x="${cx}" y="${labelStartY + i * LABEL_LINE_HEIGHT}">${esc(line)}</tspan>`)
     .join('');
   const sublabelY = labelStartY + (labelLines.length - 1) * LABEL_LINE_HEIGHT + SUBLABEL_GAP;
-  const sublabelText = n.sublabel ? truncateLine(n.sublabel, box.w + 64, 13) : '';
+  // Wrapped, never cut -- the same rule as the canvas (src/n8n/sublabel.js).
+  // This figure is the one output with no hover card at all, so a sublabel
+  // cut to "chases unanswered quot…" here loses its meaning for good.
+  const sublabelLines = wrapSublabel(n.sublabel);
+  const sublabelTspans = sublabelLines
+    .map((line, i) => `<tspan x="${cx}" y="${sublabelY + i * SUBLABEL_LINE_HEIGHT}">${esc(line)}</tspan>`)
+    .join('');
 
   // Caption: under the label/sublabel, wrapped to at most 2 lines at
   // 12px, ending in "…" if longer — see captions.js. Starts below the
-  // sublabel when there is one, otherwise below the label itself.
-  const captionBase = n.sublabel ? sublabelY : labelStartY + (labelLines.length - 1) * LABEL_LINE_HEIGHT;
+  // LAST sublabel line when there is one, otherwise below the label itself.
+  const captionBase = sublabelLines.length
+    ? sublabelY + (sublabelLines.length - 1) * SUBLABEL_LINE_HEIGHT
+    : labelStartY + (labelLines.length - 1) * LABEL_LINE_HEIGHT;
   const captionLines = wrapCaption(n.description);
   const captionFirstY = captionBase + CAPTION_GAP + CAPTION_FONT_SIZE;
   const captionTspans = captionLines
@@ -95,7 +105,7 @@ function docNodeMarkup(n, box, isEntry) {
 ${nodeIconMarkup(n, cx, cy)}
 ${statusBadge(n, box)}
 <text text-anchor="middle" font-size="16" font-weight="500" fill="#1a1a18">${labelTspans}</text>
-${sublabelText ? `<text x="${cx}" y="${sublabelY}" text-anchor="middle" font-size="13" fill="#77776f">${esc(sublabelText)}</text>` : ''}
+${sublabelLines.length ? `<text text-anchor="middle" font-size="13" fill="#77776f">${sublabelTspans}</text>` : ''}
 ${captionLines.length ? `<text text-anchor="middle" font-size="${CAPTION_FONT_SIZE}" fill="${CAPTION_COLOR}">${captionTspans}</text>` : ''}
 </g>`;
 }
