@@ -42,13 +42,40 @@ Key values were re-checked against source after the research pass: the 16px grid
 | SequentDraw concept | n8n-style rendering |
 |---|---|
 | Any node | 96×96 rounded square, 20px radius, 1.5px hairline border (black at ~10% alpha), white fill |
-| Icon | Centred. Brand icon at 48px; the kind glyph at the same visual weight when no brand resolves. |
+| Icon | Centred. Brand icon at 48px. A node that names a product with no brand mark shows that product's **monogram** (see below). Otherwise the kind glyph, at the same visual weight. |
 | `label` | Below the node, 16px, weight 500, centred, max 2 lines |
 | `sublabel` | Under the label, 13px, weight 400, tinted grey, 1 line |
 | Entry node (no inbound edges) | Trigger "D" shape: left side rounded to 36px, right side 20px |
 | `kind: external` | Dashed border. Keeps the spec rule that the boundary marks where control ends. |
 | `status: open` | 2px dashed border, muted fill, "?" badge at bottom-right (after n8n's placeholder node) |
 | `status: suggested` | 2px border in the secondary purple plus a badge. Must stay distinct from `open`. |
+
+### Monograms for unbranded products
+
+*Added for issue #55.* A suggestion carries its catalogue `integration`, so the map
+knows it is Pipedrive or Postmark. But Simple Icons has no mark for 25 of the 76
+catalogue entries — measured against simple-icons 15.22; Microsoft, LinkedIn and others
+withdrew theirs. Those nodes used to fall back to the generic service glyph, the same
+box any unnamed service gets, and a client read them as less real than the suggestions
+beside them that carried a logo.
+
+A node with an `integration` and no brand mark now shows the product's initials: up to
+two, from the first two words of its catalogue name.
+
+| Product | Monogram |
+|---|---|
+| Pipedrive | `P` |
+| Microsoft Teams | `MT` |
+| Acuity Scheduling | `AS` |
+
+Set in SequentDraw's own type, weight 600, in the glyph grey (`#555555`), 30px for one
+letter and 24px for two so both sit at the weight of a 40px glyph. It is a letter in our
+style, never the brand's logo or palette, so it borrows nothing that is anyone's mark.
+
+Two products can share an initial (Pipedrive and Postmark are both `P`). That is left
+alone deliberately: the label under each node names it, and a two-letter rule for
+single-word names (`Pd`, `Pm`) would be arbitrary and less recognisable than the one
+letter it replaces. A brand mark, when Simple Icons has one, always wins over a monogram.
 
 ### Status key
 
