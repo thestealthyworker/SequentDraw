@@ -30,6 +30,11 @@ contains a space, put it in double quotes: `node "/some path/bin/sequentdraw"`.
   allowed. Never probe with them. If a CLI call is refused, retry it once in
   exactly the shapes below with the literal absolute path before concluding
   anything.
+- **If the CLI still cannot run, say so, and claim nothing it would have
+  said.** Report that the engine did not run. Never state what `check`,
+  `scan` or `render` would have found or produced, from the map's contents
+  or from anything else: an engine result that was never computed is not a
+  fact, and presenting it as one is worse than saying it is missing.
 - Look for files with the host's file tools (Read, and Glob inside the
   working directory), never with shell commands.
 - Only when no base directory is known (Codex, or any other host without a

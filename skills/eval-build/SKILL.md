@@ -79,6 +79,15 @@ is refused under a narrow grant).
    On such a map every finding is your own judgement, and the summary says
    so.
 
+   **If `check` did not run** -- the CLI was refused, or is unavailable in
+   this host -- you do not know what it would have reported. Say only that
+   the engine did not run. Make **no** claim about whether its gap rules
+   apply to this map or what they would have found, even when the map's
+   layers seem to settle it: seeing a `business` layer, or its absence, is
+   not the same as knowing what the rules report, and a claim about what
+   the engine checks that was never checked is exactly the line between
+   engine fact and your judgement that this summary exists to hold.
+
 3. **Read the map** with the host's file-reading tool and review it:
 
    - **What works**: the parts that hold up, named by node.
@@ -153,7 +162,9 @@ is refused under a narrow grant).
      answers;
    - what the review could not establish: on a map without a `business`
      layer, that the findings are this review's judgement because the
-     engine's gap rules do not apply to it.
+     engine's gap rules do not apply to it;
+   - if `check` did not run, that the engine did not run -- and nothing
+     about what it would have found.
 
 8. **Accepts, declines and answers are corrections.** Apply them as
    `references/suggestions.md` describes (accept: drop `status`,
