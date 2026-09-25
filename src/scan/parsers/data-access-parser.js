@@ -1,7 +1,7 @@
 // Data-access parser: finds the store operations a source file actually
 // performs, so an edge can be drawn in the direction work really flows.
 //
-// Why this exists (CTO-M1-02): edges used to follow docker-compose
+// Why this exists (#27): edges used to follow docker-compose
 // `depends_on`, which means "starts after", not "work flows this way".
 // The two coincide only when a service WRITES. On the real voting app
 // that made `worker -> redis` and `result -> db` point backwards, turned

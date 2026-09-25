@@ -1,5 +1,5 @@
-// Reading order of a business map's happy path (docs/reviews/m2/round-1.md,
-// CTO-M2-01). A layered layout ranks a node one column after the nodes that
+// Reading order of a business map's happy path (the M2 review, fixed in #53).
+// A layered layout ranks a node one column after the nodes that
 // point at it, so the money leg reads left to right only when the spine is
 // continuous: every step carries an edge from the step before it. The
 // interview writes it that way (skills/business-map/references/interview.md,
@@ -81,7 +81,7 @@ describe('a business map reads left to right when its spine is continuous', () =
   });
 
   test('participation edges alone do not carry the flow: the missing spine edge is what breaks it', async () => {
-    // The defect CTO-M2-01 recorded. Kept as a test so the reason the
+    // The defect #53 recorded. Kept as a test so the reason the
     // interview rule exists stays demonstrable: with `invoice -> paid`
     // missing, the payment step is reached only through the customer, who
     // is where the map starts, and it lands in the map's first columns.

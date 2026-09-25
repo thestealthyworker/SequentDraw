@@ -2,7 +2,7 @@
 // `renderMap()` on the Medusa fixture so any drift has to be a decision
 // somebody made deliberately.
 //
-// Rebaselined for CTO-M1-04 (sticky notes landing far from the
+// Rebaselined for #28 (sticky notes landing far from the
 // nodes they annotate). That finding was raised against this very output,
 // so fixing it necessarily changed it: attached notes are now placed
 // beside what they name, a note whose targets are too far apart to sit
@@ -10,7 +10,7 @@
 // edge routing against each other. Node positions, frames, edge routes,
 // handles and the viewer script are otherwise untouched by that work.
 //
-// Rebaselined again for CTO-M1-04's second round (a note connector drawn
+// Rebaselined again for #35, #28's second round (a note connector drawn
 // straight through an unrelated node). That finding, too, was raised against this
 // very output, so fixing it necessarily changed it: a connector is now an
 // obstacle-routed <path> instead of a straight <line>, so the Medusa
@@ -43,7 +43,7 @@
 // script, and the page's own stylesheet embedded a second time so the
 // exported SVG stands alone. Nothing on the canvas moved.
 //
-// Rebaselined for the status key (issue #56, CTO-M2-04). The Medusa map
+// Rebaselined for the status key (issue #56, #69). The Medusa map
 // has no open or suggested node, so it gains no key; what changed is the
 // viewer: the key's stylesheet rules, the recount in applyLayers, and the
 // export's exportKeyGroup(), which carries an on-screen key into an
@@ -84,7 +84,7 @@
 //     48bd65285b79f5ccaa70100d664f2093448d5e108300e8eaa9dbbad06b0c4149
 //   main@aa2bce7, before correction mode:     152693 bytes /
 //     cdb130cbcda1a386f6bb506e437627fb4bcf3a39579ef1a1ba304aea45a19442
-//   main@aee7b42, after CTO-M1-04:            152669 bytes /
+//   main@aee7b42, after #28:                  152669 bytes /
 //     6aa7fc9955fe255b14b5e926e76180263f4f921f0ba85a4cf8c0376dd0a09454
 //   main@111a2f4, before the doc-export work: 151287 bytes /
 //     9f1c3c4d7e1c41a28f43ff96b43229c05de53bbf771ae49bf6545daf2b4da9d6
@@ -103,7 +103,7 @@
 //
 // If this test fails unexpectedly, the interactive output changed — that
 // is exactly the regression it guards against. Rebaseline it only with a
-// reason recorded above, the way CTO-M1-04 is.
+// reason recorded above, the way #28 is.
 
 const { test } = require('node:test');
 const assert = require('node:assert');

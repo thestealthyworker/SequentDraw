@@ -90,8 +90,8 @@ function factConnects(entry, fromIds, toIds) {
 
   // Both of these are relational by construction: they name two
   // endpoints. `data-access` ("this component performs this operation
-  // against this store") is the fact CTO-M1-02's direction inference
-  // rests on, so an edge may cite it -- under exactly the same
+  // against this store") is the fact the direction inference fixed in
+  // #27 rests on, so an edge may cite it -- under exactly the same
   // requirement as depends-on, that its two named endpoints are the
   // edge's two endpoints. Orientation is not checked here: this function
   // answers "is these two things connected", and the map's arrow

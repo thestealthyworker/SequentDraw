@@ -13,7 +13,7 @@
 //     (also emitted for `links:`, same shape)
 //   build-context    { path, line, from: serviceName, to: directory }
 //
-// `role: 'deployment'` is not decoration (CTO-M1-02). `depends_on` states
+// `role: 'deployment'` is not decoration (#27). `depends_on` states
 // a STARTUP order -- "start after" -- and says nothing about which way
 // work flows; the two coincide only when a service happens to write to
 // its dependency. Tagging the fact at the point it is read is what lets

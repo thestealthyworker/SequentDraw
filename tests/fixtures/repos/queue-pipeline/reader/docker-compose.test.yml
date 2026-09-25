@@ -1,7 +1,7 @@
 # A CI-only compose file. Every relationship below is FALSE for the real
 # application: the producer never touches the database and the reader
 # never touches redis. Scanning this file is what leaked false facts into
-# the example-voting-app bundle (CTO-M1-05).
+# the example-voting-app bundle (#27).
 services:
   sut:
     image: example/queue-pipeline-tests

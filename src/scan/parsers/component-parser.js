@@ -2,7 +2,7 @@
 // of -- its executables, its library entry point, the plugin it ships,
 // the skills it ships.
 //
-// Why this exists (CTO-M1-01, second half): once the fixture repos were
+// Why this exists (#27, second half): once the fixture repos were
 // excluded, a scan of SequentDraw's own checkout described SequentDraw
 // only as six package.json dependencies and three CI jobs. Nothing named
 // the render core, the CLI, the plugin or the skills -- the things the

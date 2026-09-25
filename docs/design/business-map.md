@@ -125,7 +125,7 @@ The reference fixture `examples/medusa-return-flow.json` keeps its `manual` step
 off a map written that way loses its happy path, which is what `base` exists to keep.
 Listed under open questions.
 
-### How the edges go — added 2026-09-19 after CTO-M2-01
+### How the edges go — added 2026-09-19 after the M2 review (#53)
 
 The happy path is a **chain of steps**: every step carries a solid edge from the step
 before it, trigger through to the money. Actors and artifacts hang off that chain
@@ -522,7 +522,7 @@ hand before each release, as Codex triggering already is
    PR, measured against a real scan before it merges. Owner's call whether it is worth
    the churn at all.
 
-   **Update, 2026-09-17: M1 has closed** (`docs/reviews/m1/round-2.md`, merged at
+   **Update, 2026-09-17: M1 has closed** (the M1 round 2 review, merged at
    `4bd3c85`), so the gate is no longer the reason to hold this. It is now an ordinary
    candidate, still requiring the skill, the grader and the pipeline to change together
    and to be measured against a real scan.

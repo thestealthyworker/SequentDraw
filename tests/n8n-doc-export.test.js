@@ -188,7 +188,7 @@ describe('doc-export: captions', () => {
     assert.ok(!lines[0].endsWith('…'));
   });
 
-  // CTO-M1-03: a long description wraps onto further lines instead of
+  // #28: a long description wraps onto further lines instead of
   // being cut off. The figure exists for slides and PDFs where nobody can
   // hover, so every word has to survive into the caption.
   test('wrapCaption: long description -> wraps onto as many lines as it needs, losing nothing', () => {

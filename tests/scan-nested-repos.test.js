@@ -7,7 +7,7 @@
 // same commit gives 16. The walk descended INTO each worktree and dutifully
 // excluded that copy's own `tests/` and `evals/`, never the worktree itself.
 // `check --evidence` passed the result, because every duplicate cited real
-// evidence: the same class of defect as CTO-M1-01 (fixtures mapped as the
+// evidence: the same class of defect as #27 (fixtures mapped as the
 // product) -- real evidence, wrong subject.
 //
 // The boundary is a `.git` entry inside a candidate directory: a DIRECTORY

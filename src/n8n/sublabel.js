@@ -2,7 +2,7 @@
 //
 // The sublabel is the one line meant to say what a node does. It used to be
 // put through truncateLine() and cut with an ellipsis at every zoom level,
-// so the CTO's M2 review read "chases unanswered quot…" and "invoice and
+// so the M2 review read "chases unanswered quot…" and "invoice and
 // reconcilia…" on the canvas while the details card held the full text.
 // Truncated beside a brand icon it reads as noise, and on a suggested node
 // it is the only on-canvas explanation of the suggestion.

@@ -32,7 +32,7 @@ const MEDUSA = JSON.parse(
 );
 
 describe('wrapSublabel', () => {
-  // The exact strings the CTO reported, reconstructed from the ellipsised
+  // The exact strings the M2 review reported (#74), reconstructed from the ellipsised
   // text in the issue. Before the fix these came back as
   // "chases unanswered quot…" and "invoice and reconcilia…".
   const REPORTED = ['chases unanswered quotes', 'invoice and reconciliation', 'Customer confirms booking'];

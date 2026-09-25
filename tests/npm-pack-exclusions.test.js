@@ -1,9 +1,8 @@
 // package.json's "files" whitelist controls what `npm publish` ships. Per
-// CLAUDE.md's "internal CTO tooling never ships" rule, the published
-// package must exclude .claude/, CLAUDE.md, docs/reviews/, tests/, evals/,
-// scripts/ and examples/reference/, while still shipping bin/, src/,
-// schema/, skills/, hooks/, .claude-plugin/, README.md, LICENSE and
-// CREDITS.md. `npm pack --dry-run --json` reports exactly what would be
+// CLAUDE.md, the published package must exclude .claude/, CLAUDE.md,
+// tests/, evals/, scripts/ and examples/reference/, while still shipping
+// bin/, src/, schema/, skills/, hooks/, .claude-plugin/, README.md, LICENSE
+// and CREDITS.md. `npm pack --dry-run --json` reports exactly what would be
 // published without touching the registry or writing a tarball, so this
 // test runs it for real rather than re-implementing npm's own "files"
 // resolution.
@@ -21,13 +20,13 @@ function packedFiles() {
   return pkg.files.map(f => f.path);
 }
 
-const EXCLUDED_PREFIXES = ['.claude/', 'docs/reviews/', 'tests/', 'evals/', 'scripts/', 'examples/reference/'];
+const EXCLUDED_PREFIXES = ['.claude/', 'tests/', 'evals/', 'scripts/', 'examples/reference/'];
 const EXCLUDED_EXACT = ['CLAUDE.md'];
 
 const REQUIRED_PREFIXES = ['bin/', 'src/', 'schema/', 'skills/', 'hooks/', '.claude-plugin/'];
 const REQUIRED_EXACT = ['README.md', 'LICENSE', 'CREDITS.md'];
 
-test('npm pack excludes internal CTO tooling and dev-only directories', () => {
+test('npm pack excludes internal tooling and dev-only directories', () => {
   const files = packedFiles();
 
   EXCLUDED_PREFIXES.forEach(prefix => {

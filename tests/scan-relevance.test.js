@@ -1,4 +1,4 @@
-// CTO-M1-01: the scanner must map the repository, not the repository's
+// #27: the scanner must map the repository, not the repository's
 // own test fixtures.
 //
 // Before this policy existed, scanning the SequentDraw checkout produced
@@ -173,7 +173,7 @@ describe('component evidence', () => {
   });
 });
 
-// The literal CTO-M1-01 acceptance check, run against this very
+// The literal #27 acceptance check, run against this very
 // repository: scanning SequentDraw must describe SequentDraw.
 describe('scanning the SequentDraw checkout itself', () => {
   test('reports its own components and none of its fixture repos', async () => {
