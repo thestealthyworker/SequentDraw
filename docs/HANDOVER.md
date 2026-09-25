@@ -270,7 +270,9 @@ plugin scaffold arrives with the first of them, `git-map`.
 8a. **Before the first npm publish:** vendor the stack-analyser detection rules SequentDraw
     uses into `src/scan/rules/`, keeping the MIT notice, and drop the dependency. npm
     ignores a dependency's `overrides`, so downstream installs would otherwise inherit its
-    transitive advisories (see `docs/design/git-map.md`, "Supply chain").
+    transitive advisories (see `docs/design/git-map.md`, "Supply chain"). **Done:** eight
+    manifest parsers ported, 39 packages removed, `npm audit --omit=dev` clean with no
+    `overrides` at all. The six existing scan fixtures produce byte-identical bundles.
 8b. **Clear the tree, immediately before the M3 gate** (added by the owner, 2026-09-20).
     Every open pull request is merged or closed, and every open issue is fixed or
     explicitly deferred by the owner, so the final gate reviews a finished product

@@ -1,23 +1,21 @@
-// SafeProvider: SequentDraw's implementation of the three-method provider
-// interface @specfy/stack-analyser expects (see node_modules/@specfy/
-// stack-analyser/dist/provider/fs.js and dist/provider/base.d.ts):
+// SafeProvider: SequentDraw's one filesystem gateway for a scan. Its
+// three-method interface was first shaped to what @specfy/stack-analyser
+// expected; stack-analyser was removed in build step 8a and every parser,
+// bespoke or vendored (src/scan/rules/), now reads through it:
 //
 //   basePath: string
 //   listDir(path): Promise<{ name, type: 'dir'|'file', fp }[]>
 //   stat(path): Promise<{ size: number } | null>
 //   open(path): Promise<string | null>
 //
-// stack-analyser's own FSProvider has no limits and follows symlinks
-// implicitly (plain fs.readdir/fs.stat). This provider is the one and
-// only filesystem gateway the analyser is given: every guard below (size
-// caps, symlink confinement, secret redaction, control-character
-// stripping) applies regardless of what stack-analyser -- or any custom
-// parser reusing this provider -- asks for.
+// A plain fs.readdir/fs.stat provider has no limits and follows symlinks
+// implicitly. This one is the only filesystem gateway any parser is given:
+// every guard below (size caps, symlink confinement, secret redaction,
+// control-character stripping) applies regardless of what a parser asks
+// for.
 //
-// The `path` arguments stack-analyser passes are not relative: `analyser()`
-// calls `pl.recurse(provider, provider.basePath)`, and recurse builds
-// every subsequent path with `path.join(currentPath, entry.name)`
-// starting from that absolute basePath (see fs.js). So every path this
+// The `path` arguments callers pass are absolute: the walk in scan.js
+// starts from basePath and builds each path from listDir's `fp`. So every path this
 // provider receives is expected to already be an absolute path under
 // basePath; `_confine()` re-derives and re-checks that regardless of what
 // is passed, so a hostile or buggy caller passing '../../etc/passwd' (or
@@ -389,9 +387,9 @@ class SafeProvider {
         if (isMinifiedByName(entry.name)) continue;
       }
 
-      // Relevance filtering happens HERE, at the one gateway both our own
-      // walk and stack-analyser's traversal go through, so a skipped
-      // fixture tree costs nothing for either and neither can reach it.
+      // Relevance filtering happens HERE, at the one gateway every walk
+      // goes through, so a skipped fixture tree costs nothing and no
+      // parser can reach it.
       // Every skip is recorded as a finding -- the bundle reports what was
       // left out and why, following the yaml-rejected precedent, because
       // dropping repository content silently is a defect this engine has
@@ -511,9 +509,9 @@ class SafeProvider {
 
     // Every *.yml/*.yaml file is classified and parsed with the same
     // bounded settings BEFORE its content is ever handed back to a
-    // caller -- stack-analyser's own docker and githubActions rules
-    // parse repo-supplied YAML too, so this guard has to live here, not
-    // only inside src/scan/parsers/*, to cover every path that reaches
+    // caller -- the vendored workflow parser in src/scan/rules/ parses
+    // repo-supplied YAML too, so this guard has to live here, not only
+    // inside src/scan/parsers/*, to cover every path that reaches
     // this content. classifyYaml() is the single source of truth for
     // both the structural pre-check (lines, apparent entry count,
     // nesting depth -- never a real parse) and the actual bounded parse;

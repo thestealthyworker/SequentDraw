@@ -1,0 +1,4 @@
+{
+  "description": "no name, so the original parser skips this file entirely",
+  "require": { "monolog/monolog": "^3.0" }
+}

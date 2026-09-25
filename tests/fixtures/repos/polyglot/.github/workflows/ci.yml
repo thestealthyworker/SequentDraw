@@ -1,0 +1,20 @@
+name: ci
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: node:20
+    services:
+      postgres:
+        image: postgres:16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+      - uses: ruby/setup-ruby@v1
+      - run: echo done
+  deploy:
+    runs-on: ubuntu-latest
+    container:
+      image: hashicorp/terraform
+    steps:
+      - uses: hashicorp/setup-terraform@v3

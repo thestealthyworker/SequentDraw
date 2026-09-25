@@ -4,7 +4,7 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
 
-const { assembleEvidence, mapStackAnalyserDependencies, normalisePath, MAX_STRING_LENGTH } = require('../src/scan/evidence');
+const { assembleEvidence, mapDependencyTuples, normalisePath, MAX_STRING_LENGTH } = require('../src/scan/evidence');
 
 describe('assembleEvidence: ids and ordering', () => {
   test('assigns sequential ev<N> ids in a stable order by (path, line, kind, value)', () => {
@@ -60,58 +60,56 @@ describe('normalisePath', () => {
   });
 });
 
-describe('mapStackAnalyserDependencies', () => {
-  function tree(overrides) {
-    return Object.assign({ path: ['/'], dependencies: [], childs: [] }, overrides);
-  }
-
-  test('maps terraform.resource to iac-resource and docker to image', () => {
-    const node = tree({
-      path: ['/main.tf'],
-      dependencies: [
-        ['terraform.resource', 'aws_s3_bucket.data', null],
-        ['docker', 'postgres', '16'],
-      ],
-    });
-    const records = mapStackAnalyserDependencies(node);
-    assert.ok(records.some(r => r.kind === 'iac-resource' && r.value === 'aws_s3_bucket.data'));
-    assert.ok(records.some(r => r.kind === 'image' && r.value === 'postgres' && r.version === '16'));
+// mapDependencyTuples replaced mapStackAnalyserDependencies in step 8a. It
+// takes flat tuples from the vendored parsers rather than walking
+// stack-analyser's payload tree, so the "recurses into childs" case has no
+// equivalent; the kind mapping, the crosswalk lookup and the path carried
+// on every record do.
+describe('mapDependencyTuples', () => {
+  test('maps terraform.resource to iac-resource, docker to image, githubAction to ci-job', () => {
+    const records = mapDependencyTuples([
+      { path: 'main.tf', type: 'terraform.resource', name: 'aws_s3_bucket', version: 'unknown' },
+      { path: '.github/workflows/ci.yml', type: 'docker', name: 'postgres', version: '16' },
+      { path: '.github/workflows/ci.yml', type: 'githubAction', name: 'actions/checkout', version: 'v4' },
+    ]);
+    assert.deepStrictEqual(records.map(r => r.kind), ['iac-resource', 'image', 'ci-job']);
   });
 
-  test('skips npm and python dependency types entirely (covered by manifest-parser.js instead)', () => {
-    const node = tree({
-      dependencies: [
-        ['npm', 'express', '^4.0.0'],
-        ['python', 'fastapi', null],
-      ],
-    });
-    assert.deepStrictEqual(mapStackAnalyserDependencies(node), []);
+  test('every other ecosystem is a manifest-dependency', () => {
+    for (const type of ['golang', 'rust', 'ruby', 'php', 'deno', 'terraform']) {
+      const [record] = mapDependencyTuples([{ path: 'x', type, name: 'n', version: '1' }]);
+      assert.strictEqual(record.kind, 'manifest-dependency', type);
+    }
   });
 
-  test('recurses into childs', () => {
-    const node = tree({
-      childs: [tree({ path: ['/sub/go.mod'], dependencies: [['golang', 'github.com/gin-gonic/gin', 'v1.9.0']] })],
-    });
-    const records = mapStackAnalyserDependencies(node);
-    assert.strictEqual(records.length, 1);
-    assert.strictEqual(records[0].kind, 'manifest-dependency');
-    assert.strictEqual(records[0].value, 'github.com/gin-gonic/gin');
+  test('every record keeps the path of the manifest it came from', () => {
+    const [record] = mapDependencyTuples([
+      { path: 'services/api/go.mod', type: 'golang', name: 'github.com/gin-gonic/gin', version: 'v1.9.0' },
+    ]);
+    assert.strictEqual(record.path, 'services/api/go.mod');
+    assert.strictEqual(record.line, null);
+  });
+
+  test('a known package picks up its technology and icon from the crosswalk', () => {
+    const [record] = mapDependencyTuples([{ path: 'Gemfile', type: 'ruby', name: 'pg', version: '1.5' }]);
+    assert.strictEqual(record.tech, 'postgresql');
+    assert.strictEqual(record.icon, 'postgresql');
   });
 });
 
-describe('dedupe: own parsers win over stack-analyser for the same (path, kind, value)', () => {
-  test('a stack-analyser image record is dropped when compose-parser already produced the same fact', () => {
+describe('dedupe: a bespoke parser wins over a dependency manifest for the same (path, kind, value)', () => {
+  test('a manifest record is dropped when a bespoke parser already produced the same fact', () => {
     const ownRecord = { kind: 'image', path: 'docker-compose.yml', line: 8, value: 'postgres', version: '16' };
-    const stackAnalyserRecord = { kind: 'image', path: 'docker-compose.yml', line: null, value: 'postgres', version: '16', __source: 'stack-analyser' };
-    const evidence = assembleEvidence([ownRecord, stackAnalyserRecord]);
+    const manifestRecord = { kind: 'image', path: 'docker-compose.yml', line: null, value: 'postgres', version: '16', __source: 'dependency-manifests' };
+    const evidence = assembleEvidence([ownRecord, manifestRecord]);
     assert.strictEqual(evidence.length, 1);
     assert.strictEqual(evidence[0].line, 8); // ours (with a line number) wins
   });
 
-  test('a stack-analyser record for a different path/value is kept', () => {
+  test('a manifest record for a different path/value is kept', () => {
     const ownRecord = { kind: 'manifest-dependency', path: 'package.json', line: 1, value: 'express' };
-    const stackAnalyserRecord = { kind: 'manifest-dependency', path: 'go.mod', line: null, value: 'gin', __source: 'stack-analyser' };
-    const evidence = assembleEvidence([ownRecord, stackAnalyserRecord]);
+    const manifestRecord = { kind: 'manifest-dependency', path: 'go.mod', line: null, value: 'gin', __source: 'dependency-manifests' };
+    const evidence = assembleEvidence([ownRecord, manifestRecord]);
     assert.strictEqual(evidence.length, 2);
   });
 });

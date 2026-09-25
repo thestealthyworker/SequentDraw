@@ -1,19 +1,20 @@
-// The scan step: runs @specfy/stack-analyser (technology + dependency
-// detection) and SequentDraw's own small parsers (compose, workflow,
+// The scan step: runs SequentDraw's own small parsers (compose, workflow,
 // manifests, SDK imports, routes, env names, .NET project files, data
-// access) against an already-acquired local directory, through the
-// SafeProvider, and assembles the evidence bundle.
+// access) and the dependency-manifest parsers vendored from stack-analyser
+// (src/scan/rules/) against an already-acquired local directory, through
+// the SafeProvider, and assembles the evidence bundle.
 //
 // This module never touches the network and never executes anything in
-// the scanned repository: stack-analyser's rules are static regex/JSON
-// matchers, and every parser here is regex/JSON-parse over text handed
+// the scanned repository: every parser here is regex/JSON/TOML/YAML parse
+// over text handed
 // back by SafeProvider -- nothing here calls eval, require()s a path
 // inside the scanned repo, or shells out.
 
 const path = require('node:path');
 
 const { SafeProvider } = require('./safe-provider');
-const { assembleEvidence, mapStackAnalyserDependencies } = require('./evidence');
+const { assembleEvidence, mapDependencyTuples } = require('./evidence');
+const { readDependencyManifests } = require('./rules/dependency-manifests');
 const { parseCompose } = require('./parsers/compose-parser');
 const { parseWorkflow } = require('./parsers/workflow-parser');
 const { parsePackageJson, parseRequirementsTxt } = require('./parsers/manifest-parser');
@@ -36,28 +37,6 @@ const {
   productRootsFromCompose,
   normalise: normaliseRel,
 } = require('./exclusions');
-
-// stack-analyser is an ESM package (package.json "type": "module"), so it
-// is loaded with a dynamic import() from this CommonJS module. Its
-// logger (`consola`) is silenced by grabbing the shared `l` instance from
-// its own log module *before* the rest of the package (which imports the
-// same module and gets the same singleton) ever logs anything, and rule
-// registration ("autoload") is a required side-effecting import: without
-// it, `rules.list` is empty and the analyser finds nothing (see the
-// investigation in this PR's scan.js history / CREDITS.md).
-let stackAnalyserModulesPromise = null;
-function loadStackAnalyser() {
-  if (!stackAnalyserModulesPromise) {
-    stackAnalyserModulesPromise = (async () => {
-      const { l } = await import('@specfy/stack-analyser/dist/common/log.js');
-      l.level = -999; // consola: below the lowest real level, so nothing logs
-      await import('@specfy/stack-analyser/dist/autoload.js');
-      const { analyser } = await import('@specfy/stack-analyser');
-      return { analyser };
-    })();
-  }
-  return stackAnalyserModulesPromise;
-}
 
 const COMPOSE_FILE_RE = /(^|\/)docker-compose[^/]*\.ya?ml$/i;
 const COMPOSE_SPEC_FILE_RE = /(^|\/)compose[^/]*\.ya?ml$/i;
@@ -407,28 +386,22 @@ async function scanPath(repoPath, meta, providerOptions = {}) {
   const provider = new SafeProvider({ path: repoPath, ...providerOptions });
 
   // Ask the repository what it is before walking it, then install the
-  // resulting policy on the single filesystem gateway, so both our walk
-  // and stack-analyser's inherit it.
+  // resulting policy on the single filesystem gateway, so every parser
+  // inherits it.
   provider.relevance = await buildRelevancePolicy(provider);
 
-  // Our own walk runs FIRST, deliberately. Both this walk and
-  // stack-analyser's own internal traversal share one SafeProvider, and
-  // therefore one cumulative files-listed budget (provider.filesListed):
-  // whichever walk runs first gets first claim on it. Our own parsers are
-  // what find the real-env-file finding, docker-compose/workflow/env/SDK
-  // evidence -- the facts this engine treats as load-bearing -- so they
-  // must not be starved by stack-analyser's traversal order happening to
-  // dive into a huge, low-value subtree (node_modules-shaped noise, or a
-  // hostile repo's own flood of files) before reaching them. Running
-  // second, stack-analyser still contributes whatever manifest ecosystems
-  // we did not write a bespoke parser for, for whatever budget remains.
+  // One walk, one files-listed budget (provider.filesListed). Until step 8a
+  // stack-analyser ran a second traversal of its own after this one, over
+  // whatever budget remained; now every parser reads from this single list.
   const allFiles = await collectFiles(provider, provider.basePath, []);
   const { records: customRecords, dataOps } = await runCustomParsers(provider, allFiles);
 
-  const { analyser } = await loadStackAnalyser();
-  const payload = await analyser({ provider });
-  const tree = payload.toJson(provider.basePath);
-  const dependencyRecords = mapStackAnalyserDependencies(tree);
+  // Manifests for the ecosystems with no bespoke parser: Go, Rust, Ruby,
+  // PHP, Deno, Terraform and Actions `uses:` lines. Vendored from
+  // stack-analyser in build step 8a (src/scan/rules/); read from the same
+  // file list our own walk produced, so there is one traversal and one
+  // files-listed budget instead of two walks competing for it.
+  const dependencyRecords = mapDependencyTuples(await readDependencyManifests(provider, allFiles));
 
   const realEnvRecords = provider.findings
     .filter(f => f.kind === 'real-env-file')
@@ -457,7 +430,6 @@ module.exports = {
   scanPath,
   collectFiles,
   runCustomParsers,
-  loadStackAnalyser,
   buildRelevancePolicy,
   dedupeComposeVariants,
   resolveDataAccess,

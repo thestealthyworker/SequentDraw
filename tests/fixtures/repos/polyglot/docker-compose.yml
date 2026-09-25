@@ -1,0 +1,13 @@
+services:
+  api:
+    build: ./services/api
+    depends_on: [db, cache]
+  db:
+    image: postgres:16
+  cache:
+    image: redis
+  queue:
+    image: rabbitmq:3-management
+    container_name: example-queue
+  dynamic:
+    image: ${REGISTRY}/tool:1.0

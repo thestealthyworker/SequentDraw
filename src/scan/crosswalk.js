@@ -12,8 +12,8 @@
 // never a nearby-looking one.
 //
 // Keys are matched case-insensitively against: npm/pip/etc package names,
-// docker image names (repo part only, tag stripped), and free-form
-// technology names surfaced by @specfy/stack-analyser's `tech` field.
+// docker image names (repo part only, tag stripped), and dependency names
+// read by the manifest parsers in src/scan/rules/.
 
 const CROSSWALK = new Map(
   Object.entries({
