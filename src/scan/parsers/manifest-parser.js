@@ -1,7 +1,7 @@
 // Package-manifest dependency parser: package.json (npm) and
-// requirements.txt (pip). stack-analyser already reads these for its own
-// technology detection, but does not give us a per-dependency line
-// number, so we parse them ourselves for `manifest-dependency` evidence
+// requirements.txt (pip). Parsed here rather than by the vendored
+// dependency-manifest parsers so each dependency carries a line number,
+// for `manifest-dependency` evidence
 // (design doc: "a manifest entry alone is weak evidence" -- it still
 // needs to be citable at a specific path:line).
 

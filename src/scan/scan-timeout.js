@@ -1,6 +1,6 @@
 // A hard deadline around the scan step, as a backstop against any
 // future library complexity: even a CPU-bound hang deep inside a
-// dependency (stack-analyser, or whatever replaces/joins it later)
+// dependency (a parser library, or whatever joins the scan later)
 // cannot be interrupted by a Promise-based timeout alone -- a single
 // synchronous call that never returns blocks the event loop, so no
 // timer callback runs until it does. worker_threads.Worker#terminate()

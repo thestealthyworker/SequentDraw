@@ -1,0 +1,7 @@
+{
+  "version": "3",
+  "remote": {
+    "https://deno.land/std@0.220.0/http/server.ts": "abc123",
+    "https://deno.land/x/oak@v12.6.1/mod.ts": "def456"
+  }
+}

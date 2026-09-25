@@ -1,5 +1,5 @@
-// Turns raw, source-tagged records (from the custom parsers and from
-// mapping @specfy/stack-analyser's payload tree) into the bundle's final
+// Turns raw, source-tagged records (from the bespoke parsers and from the
+// vendored dependency-manifest parsers in rules/) into the bundle's final
 // `evidence` array: deterministic ids, a stable sort order, and hard
 // truncation of every string field, so the bundle is safe to serialise
 // and safe to diff between two runs of the same scan.
@@ -24,76 +24,48 @@ function normalisePath(p) {
   return out;
 }
 
-// stack-analyser dependency types (see node_modules/@specfy/stack-analyser
-// /dist/loader.js `dependencies` map) that get mapped into evidence, and
-// which evidence kind each maps to. Anything not listed here (php, ruby,
-// rust, golang, deno) is treated generically as 'manifest-dependency'.
+// Dependency types, as src/scan/rules/dependency-manifests.js reports them,
+// that map to a specific evidence kind. Anything not listed (golang, rust,
+// ruby, php, deno, terraform providers) is a 'manifest-dependency'.
 const DEP_TYPE_KIND = {
   'terraform.resource': 'iac-resource',
   docker: 'image',
   githubAction: 'ci-job',
 };
 
-// Dependency types SequentDraw's own manifest-parser.js already covers in
-// full, with real per-entry line numbers (package.json -> npm,
-// requirements.txt -> python). stack-analyser's own dependency tuples for
-// these carry no line number and, for a multi-file ecosystem, sometimes
-// attribute the whole set to a folder-level path rather than the exact
-// manifest -- so these types are skipped here entirely rather than
-// half-deduped by (path, value), which would miss real duplicates
-// whenever the paths do not happen to match exactly.
-const DEP_TYPES_COVERED_BY_OWN_PARSERS = new Set(['npm', 'python']);
+// The source tag on records that come from the vendored dependency-manifest
+// parsers, so dedupeAgainstOwnParsers can let a bespoke parser's record --
+// which carries a line number -- win over one of these, which does not.
+const MANIFEST_SOURCE = 'dependency-manifests';
 
-// Recursively walks a stack-analyser AnalyserJson tree (payload.toJson())
-// and yields one raw record per dependency tuple [type, name, version].
-// Only dependencies are harvested here -- technology/component detection
-// on its own (payload.tech, payload.techs) is not citable evidence by
-// itself (design doc: "a manifest entry alone is weak evidence"), it is
-// the *dependency* fact that is.
-function mapStackAnalyserDependencies(node, records = []) {
-  if (!node || typeof node !== 'object') return records;
-
-  const paths = Array.isArray(node.path) ? node.path : [];
-  const primaryPath = normalisePath(paths[0] || '');
-
-  for (const dep of node.dependencies || []) {
-    if (!Array.isArray(dep) || dep.length < 2) continue;
-    const [depType, name, version] = dep;
-    if (DEP_TYPES_COVERED_BY_OWN_PARSERS.has(depType)) continue;
-    const kind = DEP_TYPE_KIND[depType] || 'manifest-dependency';
+// One raw evidence record per dependency tuple. Each carries the path of
+// the manifest it was read from; the original stack-analyser tree lost the
+// path of every "virtual" manifest, which is fixed at the source now.
+function mapDependencyTuples(tuples) {
+  return tuples.map(({ path: filePath, type, name, version }) => {
     const cross = lookup(name);
-    records.push({
-      kind,
-      path: primaryPath,
+    return {
+      kind: DEP_TYPE_KIND[type] || 'manifest-dependency',
+      path: normalisePath(filePath),
       line: null,
       value: name,
       version: typeof version === 'string' ? version : null,
       tech: cross ? cross.tech : null,
       icon: cross ? cross.icon : null,
-      __source: 'stack-analyser',
-    });
-  }
-
-  for (const child of node.childs || []) {
-    mapStackAnalyserDependencies(child, records);
-  }
-
-  return records;
+      __source: MANIFEST_SOURCE,
+    };
+  });
 }
 
-// Drops a stack-analyser-derived manifest-dependency record when a custom
-// parser already produced a record for the same (path, kind, value):
-// ours carries a real line number, stack-analyser's does not, so ours
-// wins. This is what lets stack-analyser cover the ~15 ecosystems we did
-// not write a bespoke parser for (go.mod, Cargo.toml, composer.json, ...)
-// without duplicating evidence for package.json/requirements.txt, which
-// we do parse ourselves.
+// Drops a dependency-manifest record when a bespoke parser already produced
+// a record for the same (path, kind, value): the bespoke one carries a real
+// line number, so it wins.
 function dedupeAgainstOwnParsers(records) {
   const ownKeys = new Set(
-    records.filter(r => r.__source !== 'stack-analyser').map(r => `${r.kind}\u0000${r.path}\u0000${r.value}`),
+    records.filter(r => r.__source !== MANIFEST_SOURCE).map(r => `${r.kind}\u0000${r.path}\u0000${r.value}`),
   );
   return records.filter(r => {
-    if (r.__source !== 'stack-analyser') return true;
+    if (r.__source !== MANIFEST_SOURCE) return true;
     const key = `${r.kind}\u0000${r.path}\u0000${r.value}`;
     return !ownKeys.has(key);
   });
@@ -142,7 +114,7 @@ function assembleEvidence(rawRecords) {
 
 module.exports = {
   assembleEvidence,
-  mapStackAnalyserDependencies,
+  mapDependencyTuples,
   dedupeAgainstOwnParsers,
   normalisePath,
   truncateString,

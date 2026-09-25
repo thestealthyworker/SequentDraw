@@ -288,19 +288,27 @@ Adopting `@specfy/stack-analyser@1.27.6` brought in 5 advisories under
 | `nanoid` 5.1.5 | High | No. Needs a caller-supplied zero or negative size. |
 | `undici`, via `@actions/http-client` | High and moderate | No. Only its GitHub Action entry point loads it, and the scanner makes no network calls. |
 
-How this is handled:
+How this was handled, and then resolved:
 
-1. **npm `overrides`** pin stack-analyser's `yaml` to 2.9.1 and `nanoid` to 5.1.16, and
-   `undici` to 6.28.1. The audit returns to 0 for this repository, CI and plugin
-   installs.
-2. **The safe provider refuses dangerous YAML** before stack-analyser sees it (nesting
-   depth, alias count, size) and records a `yaml-rejected` finding. This protects installs
-   where overrides do not apply.
-3. **Required before publishing to npm:** npm ignores a dependency's `overrides`, so
-   SequentDraw installed as a package would inherit these advisories. Before the first npm
-   publish, vendor only the detection rules SequentDraw uses into `src/scan/rules/`, keeping
-   stack-analyser's MIT notice, and drop the dependency and its transitive tree. Tracked in
-   `docs/HANDOVER.md`.
+1. **Until step 8a**, npm `overrides` pinned stack-analyser's `yaml` to 2.9.1, `nanoid` to
+   5.1.16 and `undici` to 6.28.1, and the safe provider refused dangerous YAML before
+   stack-analyser saw it.
+2. **Step 8a removed the dependency.** SequentDraw only ever used stack-analyser's
+   dependency tuples, never its technology detection, and those came from eight small
+   manifest parsers rather than its 798 technology rules. Those eight were ported into
+   `src/scan/rules/dependency-manifests.js` (MIT notice kept beside them), its 166
+   Terraform resource patterns extracted as data, and the package and its 39-package tree
+   removed. `npm audit --omit=dev` is clean with no `overrides` at all, so a published
+   SequentDraw inherits nothing.
+
+   The port was proven the same way a refactor should be: every scan fixture was scanned
+   before and after, and the six existing fixtures came back byte-identical, ids included.
+   A new fixture, `tests/fixtures/repos/polyglot`, was written first because no existing
+   fixture exercised any of the eight ecosystems. On it, the port differs from the
+   original only where the original was wrong -- dependencies with no file path, an
+   Actions container read as the image "h" version "a", every Terraform provider twice,
+   and Gemfile entries missed -- and each of those is pinned by a named test in
+   `tests/scan-dependency-manifests.test.js`.
 
 ## 8. M1 gate
 

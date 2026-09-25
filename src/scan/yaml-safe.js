@@ -16,16 +16,12 @@
 //     BEFORE the text ever reaches YAML.parse. This is deliberately not
 //     "parse, then check the result's depth": deep nesting is what makes
 //     a recursive-descent YAML parser itself overflow the call stack
-//     (GHSA-48c2-rrv3-qjmp, reachable via @specfy/stack-analyser's own
-//     compose/GitHub-Actions rules parsing repo-supplied YAML). Pinning
-//     `yaml` to 2.9.1 (patched) and npm `overrides` covering
-//     stack-analyser's own nested copy close this for an install that
-//     respects package-lock.json / overrides; this iterative, entirely
-//     non-recursive pre-check is what keeps the guarantee for a
-//     downstream install that does not (a different package manager, or
-//     one that ignores overrides) -- it can reject the input before
-//     calling into the library at all, regardless of which yaml version
-//     ends up resolved.
+//     (GHSA-48c2-rrv3-qjmp). `yaml` is pinned to 2.9.1, which is
+//     patched, and since build step 8a it is the only copy installed:
+//     the nested 2.8.x that @specfy/stack-analyser brought in went with
+//     it. This iterative, entirely non-recursive pre-check still stands
+//     as defence in depth -- it rejects the input before calling into the
+//     library at all, whichever version ends up resolved.
 //   - `maxAliasCount` bounds anchor/alias expansion (a "billion laughs"
 //     style YAML alias bomb re-references the same anchor exponentially;
 //     the `yaml` package counts *expanded* alias uses and throws once the
@@ -56,10 +52,9 @@ const MAX_NESTING_DEPTH = 64;
 // exceedsNestingDepth(): a single cheap linear scan (never a real
 // parse) that rejects anything with more than MAX_LINES lines or more
 // than MAX_ENTRIES apparent mapping-entries/sequence-items, BEFORE any
-// content ever reaches YAML.parse -- because stack-analyser parses the
-// same content with its own options, capping only this module's own
-// parse is not enough; the content has to be refused earlier, in
-// SafeProvider.open() (see checkYamlLimits below and its use there).
+// content ever reaches YAML.parse. It runs in SafeProvider.open() (see
+// checkYamlLimits below and its use there), so the content is refused
+// before ANY parser sees it, not only this module's own parse.
 const MAX_LINES = 10000;
 const MAX_ENTRIES = 5000;
 

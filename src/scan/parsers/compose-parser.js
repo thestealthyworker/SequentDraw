@@ -1,7 +1,7 @@
-// docker-compose*.yml parser: stack-analyser detects individual images as
-// technologies, but does not give us service names, depends_on edges, or
-// links -- exactly the "own small parsers where stack-analyser does not
-// give edges" the design doc calls for.
+// docker-compose*.yml parser: service names, images, depends_on edges and
+// links, each with a line number. Compose is read ONLY here: the vendored
+// dependency-manifest parsers (src/scan/rules/) deliberately do not re-read
+// Compose files, since this parser already covers them in full.
 //
 // Emits raw evidence-shaped records (without ids; evidence.js assigns
 // those once every source has run). One record per (path, line, kind,
@@ -71,11 +71,10 @@ function parseCompose(path, content) {
       const image = service.image.trim();
       const imageLine = findLine(lines, /^\s*image\s*:/, serviceLine ? serviceLine - 1 : 0) || serviceLine;
       const cross = lookup(image);
-      // Split "postgres:16" into name "postgres" / version "16", matching
-      // how stack-analyser's own docker-dependency tuples represent an
-      // image -- this is what lets evidence.js dedupe the two sources
-      // against the same (path, kind, value) key rather than emitting
-      // "postgres:16" and "postgres" as two separate facts.
+      // Split "postgres:16" into name "postgres" / version "16", the same
+      // shape the vendored workflow parser gives a container image, so an
+      // image is keyed by its name wherever it appears rather than being
+      // "postgres:16" in one place and "postgres" in another.
       const [imageName, imageTag] = image.split(':');
       records.push({
         kind: 'image',

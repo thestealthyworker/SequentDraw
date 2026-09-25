@@ -27,7 +27,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@specfy/stack-analyser": "1.27.6",
+    "@iarna/toml": "2.2.5",
     "elkjs": "^0.12.0",
     "simple-icons": "^15.0.0",
     "yaml": "2.9.1"
@@ -40,12 +40,5 @@
   "devDependencies": {
     "@xmldom/xmldom": "^0.9.12",
     "ajv": "^8.20.0"
-  },
-  "overrides": {
-    "@specfy/stack-analyser": {
-      "yaml": "2.9.1",
-      "nanoid": "5.1.16"
-    },
-    "undici": "6.28.1"
   }
 }
