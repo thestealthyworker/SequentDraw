@@ -27,6 +27,4 @@ tour, and render it.
 8. The enquiry form and the invoice email are software. Everything else is
    done by hand.
 
-Use one temp folder. Save the map with its open questions as gaps.json,
-re-check gaps.json, then save a 4-step tour as a patch against gaps.json to
-tour.json, re-check tour.json, then render tour.json as map.html.
+Use one temp folder.

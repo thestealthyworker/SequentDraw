@@ -38,10 +38,11 @@ never to answer it.
 ## Writing the tour
 
 A tour is one merge patch whose only key is `tour`, applied to the map's
-last saved file, exactly like a correction (`references/cli-pipeline.md`):
+last saved file, exactly like a correction (`references/cli-pipeline.md`).
+Name the emitted file `tour.json`, whatever the last saved file was called:
 
 ```
-printf '%s' '<patch with the whole tour>' | <sequentdraw> check <folder>/<last>.json --merge - --emit-open <folder>/<next>.json
+printf '%s' '<patch with the whole tour>' | <sequentdraw> check <folder>/<last>.json --merge - --emit-open <folder>/tour.json
 ```
 
 The patch:
@@ -70,7 +71,7 @@ Each step carries all four fields, every time:
 `check` enforces unique `order` values and that every `nodeIds` entry names
 a declared node; a violation prints one `path  message` line per problem
 and writes nothing. Fix the step named and run the same command again. On
-success it prints `wrote <folder>/<next>.json (<n> open node(s))`, the same
+success it prints `wrote <folder>/tour.json (<n> open node(s))`, the same
 line a correction prints.
 
 Then re-check the emitted file by path, re-render it, and republish to the
@@ -82,4 +83,7 @@ a "Take the tour" button.
 A tour is replaced whole, never merged step by step, because it is one
 ordered narrative (`src/n8n/merge.js`). To change it, send the whole new
 tour as the `tour` key again; to remove it, send `"tour": []`. Both go
-through the same patch, re-check, re-render, republish steps above.
+through the same patch, re-check, re-render, republish steps above --
+against `tour.json` this time, emitting `tour-2.json`, then `tour-3.json`,
+and so on for each later change, the same way a correction numbers its
+own saves.
