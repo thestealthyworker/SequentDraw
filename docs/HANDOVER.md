@@ -285,7 +285,7 @@ plugin scaffold arrives with the first of them, `git-map`.
     requests; the one open issue, #25 (time to the first map), is closed by the M3
     measurement.
 9. **Internal cleanup, after the M3 gate passes:** remove the internal review agent,
-   its reports and the gate process (see `CLAUDE.md`). They are internal checks, not
+   its reports and the gate process. They were internal checks, not
    part of the product. The work is not complete until this is merged. **Done
    (2026-09-26, PR #95).**
 
