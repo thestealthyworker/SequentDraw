@@ -1,6 +1,6 @@
 ---
 name: business-map
-description: Map a business idea or process as an interactive SequentDraw map by interviewing the user -- about eight questions tracing one unit of value from "work is needed" to "paid", written as the business and edge layers, with an open question drawn in the map for anything the user cannot answer. Then offers up to five n8n integrations that improve that workflow, as suggested nodes the user accepts or declines. Trigger phrases -- "map how our business takes and fulfils a booking", "map my business", "map our process", "draw our process from enquiry to invoice", "map this idea". Runs inline as a conversation, never as a background agent. NOT for mapping a code repository from a path or a GitHub URL (that is git-map), NOT for reviewing or suggesting integrations for a map that already exists (that is eval-build, or grill-build for a harsh critique), NOT for tool advice with no map, NOT for exporting an existing map as a static image (that is doc-map), NOT for building or deploying an n8n workflow, and NOT a general Mermaid, flowchart or chart tool.
+description: Map a business idea or process as an interactive SequentDraw map by interviewing the user -- about eight questions tracing one unit of value from "work is needed" to "paid", written as the business and edge layers, with an open question drawn in the map for anything the user cannot answer. Then offers up to five n8n integrations that improve that workflow, as suggested nodes the user accepts or declines. Trigger phrases -- "map how our business takes and fulfils a booking", "map my business", "map our process", "draw our process from enquiry to invoice", "map this idea", "walk me through it". Runs inline as a conversation, never as a background agent. NOT for mapping a code repository from a path or a GitHub URL (that is git-map), NOT for reviewing or suggesting integrations for a map that already exists (that is eval-build, or grill-build for a harsh critique), NOT for tool advice with no map, NOT for exporting an existing map as a static image (that is doc-map), NOT for building or deploying an n8n workflow, and NOT a general Mermaid, flowchart or chart tool.
 when_to_use: Use when the user wants a map of how their business, service or idea actually works -- who does what, in what order, what the customer gets and how payment or sign-off arrives -- and the answers live in the user's head rather than in code. Also when an existing map needs its business and edge layers filled in by asking. Do not use when a map already exists and the user only wants a picture of it (doc-map) or a review of it (eval-build).
 ---
 
@@ -197,7 +197,13 @@ grant).
    something on disk. Write into a repository only if the user asks, and ask
    before overwriting anything there.
 
-7. **Answers, accepts and declines are corrections.** When the user answers
+7. **Offer a tour, once.** Read `references/tours.md`; it holds the step
+   shape, limits and the patch example. Offer a walkthrough after
+   publishing, build it only on yes (or straight away if the user already
+   asked for one), write it as a patch to a new file name, re-check,
+   re-render and republish to the same artifact.
+
+8. **Answers, accepts and declines are corrections.** When the user answers
    a question, find the `q_`-prefixed open node it belongs to, replace it
    with a confirmed node carrying `source: "user"`, and wire it the way the
    answer describes. When the user accepts a suggestion, drop its `status`,
@@ -238,4 +244,4 @@ grant).
 and where each kind of node belongs. `references/suggestions.md` holds the
 suggestion rules, and `references/cli-pipeline.md` the command shapes.
 `references/artifact-output.md` holds the output rule every SequentDraw
-skill follows.
+skill follows, and `references/tours.md` the tour rules.
