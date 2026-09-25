@@ -79,6 +79,21 @@ grant).
 
 ## Steps
 
+**Say where you are, after every step.** A map of a five-service repository
+has taken over five minutes end to end, almost all of it after the scan,
+and with nothing to read in that time a user reasonably concludes it has
+stalled. So after each step below, give one short line naming the step and
+its concrete result -- not "working on it":
+
+- `Scanned: 42 evidence entries across 5 services.`
+- `Map drafted: 9 nodes, 11 edges. Checking it against the evidence.`
+- `Evidence check passed.` (or the one line that failed)
+- `Rendered: /tmp/sequentdraw-shop/map.html` -- the moment it exists.
+
+The last one matters most: print the `map.html` path as soon as `render`
+writes it, before publishing, so the user can open the map while the
+artifact step runs.
+
 1. **Acquire.** A local path the user named, or the current project; or a
    `https://github.com/<owner>/<repo>` URL (optionally `/tree/<ref>`),
    cloned shallow and read-only by `scan` itself. Never execute anything in

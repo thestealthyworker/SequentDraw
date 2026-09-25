@@ -94,6 +94,15 @@ is refused under a narrow grant).
    like: never cite that as evidence the build holds up. Every challenge on
    such a map is your own judgement, and the verdict says so.
 
+   **If `check` did not run** -- the CLI was refused, or is unavailable in
+   this host -- you do not know what it would have reported. Say only that
+   the engine did not run. Make **no** claim about whether its gap rules
+   apply to this map or what they would have found, even when the map's
+   layers seem to settle it: seeing a `business` layer, or its absence, is
+   not the same as knowing what the rules report, and a claim about what
+   the engine checks that was never checked is exactly the line between
+   engine fact and your judgement that this verdict exists to hold.
+
 3. **Read the map** and grill it on the five axes. Draw each challenge, as part of the patch, as:
 
    - a **gold note** whose `content` starts with `Consider:`, `color:
@@ -162,7 +171,9 @@ is refused under a narrow grant).
    - each alternative, what it replaces and its trade-off;
    - what, if anything, genuinely holds up -- only if it does;
    - on a map without a `business` layer, that every challenge is this
-     skill's judgement because the engine's gap rules do not apply to it.
+     skill's judgement because the engine's gap rules do not apply to it;
+   - if `check` did not run, that the engine did not run -- and nothing
+     about what it would have found.
 
 8. **Accepting an alternative is two changes**, and ask about both in one
    message: accept the suggested node (drop `status`, `rationale` and
