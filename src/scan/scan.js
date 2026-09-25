@@ -223,19 +223,30 @@ function composeIdentity(record) {
   return `${record.kind} ${record.value || ''} ${record.from || ''} ${record.to || ''}`;
 }
 
+// Only a record that came FROM a Compose file is a Compose variant. The
+// kinds alone are not enough: a GitHub Actions `services:` container or
+// `container:` is also an `image` record, and without the path check its
+// workflow file counted as one more "variant" of the canonical Compose
+// file -- so a CI service container that shared an image with Compose
+// (postgres:16 in both) was dropped as a duplicate of the Compose one,
+// silently, although it is a different fact about a different file.
+function isComposeRecord(record) {
+  return COMPOSE_KINDS.has(record.kind) && isComposeFile(record.path || '');
+}
+
 function dedupeComposeVariants(records) {
-  const composePaths = [...new Set(records.filter(r => COMPOSE_KINDS.has(r.kind)).map(r => r.path))];
+  const composePaths = [...new Set(records.filter(isComposeRecord).map(r => r.path))];
   if (composePaths.length <= 1) return { records, duplicates: [] };
 
   const canonical = pickCanonicalCompose(composePaths);
   const canonicalIdentities = new Set(
-    records.filter(r => COMPOSE_KINDS.has(r.kind) && r.path === canonical).map(composeIdentity),
+    records.filter(r => isComposeRecord(r) && r.path === canonical).map(composeIdentity),
   );
 
   const kept = [];
   const duplicates = [];
   for (const record of records) {
-    if (COMPOSE_KINDS.has(record.kind) && record.path !== canonical && canonicalIdentities.has(composeIdentity(record))) {
+    if (isComposeRecord(record) && record.path !== canonical && canonicalIdentities.has(composeIdentity(record))) {
       duplicates.push(record);
       continue;
     }
