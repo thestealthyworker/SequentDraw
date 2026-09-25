@@ -287,7 +287,7 @@ plugin scaffold arrives with the first of them, `git-map`.
 9. **Internal cleanup, after the M3 gate passes:** remove the internal review agent,
    its reports and the gate process (see `CLAUDE.md`). They are internal checks, not
    part of the product. The work is not complete until this is merged. **Done
-   (2026-09-26).**
+   (2026-09-26, PR #95).**
 
 The "two known defects" in the old build order (edges crossing containers, label overlaps)
 are re-measured against the n8n renderer rather than fixed in the legacy one.
