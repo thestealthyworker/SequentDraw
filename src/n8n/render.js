@@ -14,6 +14,7 @@ const { noteMarkup } = require('./notes-render');
 const { css, script } = require('./render-shell');
 const { correctBarMarkup } = require('./render-correct');
 const { exportBarMarkup } = require('./render-export');
+const { tourButtonMarkup, tourPanelMarkup } = require('./render-tour');
 const { buildCardData } = require('./card-data');
 const {
   DOT_GRID_GAP,
@@ -217,6 +218,7 @@ ${bg}
   const title = esc(doc.title || 'SequentDraw map');
   const body = `<div id="stage">${svg}</div>
 <div class="title-bar">${title}</div>
+${tourButtonMarkup(doc)}${tourPanelMarkup(doc)}
 ${layerBarMarkup(doc)}
 <div class="zoom-bar">
 <button id="zoom-out" type="button" title="Zoom out" aria-label="Zoom out">&#8722;</button>

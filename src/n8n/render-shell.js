@@ -10,6 +10,7 @@
 const { CANVAS_FILL, NOTE_FONT_SIZE, NOTE_H1_SIZE, NOTE_H2_SIZE } = require('./constants');
 const { correctOpsSource, correctCss, correctScript } = require('./render-correct');
 const { exportCss, exportScript } = require('./render-export');
+const { tourCss, tourScript } = require('./render-tour');
 
 // Safe to serialise any value into an inline <script>: JSON.stringify alone
 // does not escape "<", ">", "&", U+2028 or U+2029, so a string value
@@ -116,7 +117,7 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#333}
 .card-connection-detail{color:#666}
 .card-link{display:inline-block;margin-top:8px;color:#2f5fb0;text-decoration:underline;font-weight:600}
 
-${correctCss()}${exportCss()}
+${correctCss()}${exportCss()}${tourCss()}
 @media (prefers-reduced-motion: reduce){
 .n8n-node,.n8n-edge,.n8n-frame,.n8n-note rect,.n8n-edge .edge-line{transition:none!important}
 .correct-panel,.correct-bar button,.card-edit button{transition:none!important}
@@ -818,6 +819,7 @@ function script(canvas, cardData, geometry, doc, opts = {}) {
 ${correctOpsSource()}
 ${correctScript()}
 ${exportScript(css())}
+${tourScript()}
 
   openView();
   applyLayers();

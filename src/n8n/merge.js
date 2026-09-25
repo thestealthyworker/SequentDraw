@@ -4,6 +4,7 @@
 //     "nodes": [ ...nodes to add ],
 //     "edges": [ ...edges to add ],
 //     "notes": [ ...notes to add ],
+//     "tour": [ ...the whole tour ],        // REPLACES the tour; [] removes it
 //     "remove": {
 //       "nodes": ["node id", ...],          // also removes every edge touching it
 //       "edges": [{ "from": "id", "to": "id" }, ...],  // every edge from -> to
@@ -23,17 +24,21 @@
 // is an error, never an overwrite. Removing something that is not there is an
 // error too. Any error means no document: `{ doc: null, errors }`.
 //
+// A tour is replaced whole rather than merged step by step: it is one ordered
+// narrative, and a partial merge of numbered steps could leave two step 3s or
+// a gap. `"tour": []` removes it.
+//
 // This checks only what the merge itself needs. Everything else about the
 // merged document (field shapes, references, caps) is validateDoc()'s job,
 // which the CLI runs on the result. Pure: neither input is mutated.
 
 const ADD_KEYS = ['nodes', 'edges', 'notes'];
 const REMOVE_KEYS = ['nodes', 'edges', 'notes'];
-const TOP_KEYS = [...ADD_KEYS, 'remove'];
+const TOP_KEYS = [...ADD_KEYS, 'tour', 'remove'];
 
 // Same caps as a whole document (src/n8n/validate.js), applied to each patch
 // list before any of its items is read.
-const PATCH_LIMITS = Object.freeze({ nodes: 100, edges: 500, notes: 20 });
+const PATCH_LIMITS = Object.freeze({ nodes: 100, edges: 500, notes: 20, tour: 50 });
 
 const ECHO_MAX_LENGTH = 60;
 
@@ -79,12 +84,12 @@ function checkShape(base, patch) {
     return errors;
   }
   if (!isPlainObject(patch)) {
-    errors.push({ path: '/', code: 'merge-invalid-patch', message: '--merge: the patch must be a JSON object with any of: nodes, edges, notes, remove.' });
+    errors.push({ path: '/', code: 'merge-invalid-patch', message: '--merge: the patch must be a JSON object with any of: nodes, edges, notes, tour, remove.' });
     return errors;
   }
   for (const key of Object.keys(patch)) {
     if (!TOP_KEYS.includes(key)) {
-      errors.push({ path: `/${key}`, code: 'merge-unknown-key', message: `--merge: unknown patch key "${echo(key)}"; the patch takes nodes, edges, notes, remove.` });
+      errors.push({ path: `/${key}`, code: 'merge-unknown-key', message: `--merge: unknown patch key "${echo(key)}"; the patch takes nodes, edges, notes, tour, remove.` });
     }
   }
   if (patch.remove !== undefined && !isPlainObject(patch.remove)) {
@@ -99,6 +104,7 @@ function checkShape(base, patch) {
   for (const key of ADD_KEYS) {
     checkList(patch[key], `/${key}`, PATCH_LIMITS[key], isPlainObject, 'an object', errors);
   }
+  checkList(patch.tour, '/tour', PATCH_LIMITS.tour, isPlainObject, 'a tour step object', errors);
   if (isPlainObject(patch.remove)) {
     checkList(patch.remove.nodes, '/remove/nodes', PATCH_LIMITS.nodes, isId, 'a node id', errors);
     checkList(patch.remove.edges, '/remove/edges', PATCH_LIMITS.edges, isEdgeRef, 'an object with "from" and "to" node ids', errors);
@@ -171,6 +177,10 @@ function applyPatch(base, patch) {
   };
   if (Array.isArray(base.notes) || (patch.notes || []).length > 0) {
     doc.notes = [...keptNotes, ...(patch.notes || [])];
+  }
+  if (patch.tour !== undefined) {
+    if (patch.tour.length > 0) doc.tour = patch.tour;
+    else delete doc.tour;
   }
   // A deep copy, so nothing the caller later does to the result reaches
   // either input.
