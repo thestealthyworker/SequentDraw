@@ -34,9 +34,9 @@ are testable without a model, which is how the prototype was validated.
 | ELK layout | Proven at 40 nodes / 5 groups / 44 edges. Zero overlaps. |
 | Icon resolution | Working via `simple-icons` npm, with kind-glyph fallback. |
 | HTML renderer | Working. Layer checkboxes, dynamic containers, gap compaction. |
-| Extraction (prose → JSON) | **Not built.** Highest-risk component. |
-| Tours | Specified, not built. |
-| Gap detection | Specified, not built. |
+| Extraction (prose → JSON) | Built. Mode A from a repository scan (`git-map`), Mode B by interview (`business-map`). |
+| Tours | Built. Played in the viewer; `business-map` and `git-map` offer and write them. |
+| Gap detection | Built. `sequentdraw check` emits `open` nodes for completeness gaps. |
 | MCP server | Built. `sequentdraw mcp`; one tool per CLI command, same refusals as the CLI. |
 
 ## What is in `src/`
