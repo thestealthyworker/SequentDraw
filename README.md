@@ -123,6 +123,24 @@ npx sequentdraw licences <owner/repo> [...] --out <verified.json> [--token-env <
 `node src/n8n/cli.js <in.json> <out.html|out.svg> [--layers a,b]` keeps
 working unchanged as the underlying renderer entry point.
 
+## MCP server
+
+`sequentdraw mcp` starts an MCP server over stdio, for hosts that reach
+SequentDraw through MCP rather than a shell command (Cursor, Gemini CLI,
+Copilot, Codex via `config.toml`). Claude Code gets it bundled through
+`.mcp.json` already checked into this repository.
+
+It exposes one tool per CLI command above (`sequentdraw_render`,
+`sequentdraw_validate`, `sequentdraw_scan`, `sequentdraw_check`,
+`sequentdraw_catalogue`, `sequentdraw_licences`), each a thin adapter that
+calls the exact same code the CLI does, so an MCP call gives the same
+answer and the same refusal a CLI invocation would for the same input. A
+document is given inline or by file path, never both; a command that fails
+(an invalid document, an unverified repository link) comes back as a tool
+result, not a JSON-RPC error. See
+[`docs/design/skills-and-plugin.md`](docs/design/skills-and-plugin.md)'s
+"The MCP server" for the full tool list and host configuration snippets.
+
 ## Status
 
 Early. The n8n-style renderer works and is covered by layout invariant and security

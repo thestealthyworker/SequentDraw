@@ -192,7 +192,7 @@ SequentDraw/
 ├── .claude-plugin/
 │   ├── plugin.json            # name "sequentdraw"; skills become /sequentdraw:<skill>
 │   └── marketplace.json       # /plugin marketplace add thestealthyworker/SequentDraw
-├── .mcp.json                  # SequentDraw MCP server over stdio (render, validate, check)
+├── .mcp.json                  # SequentDraw MCP server over stdio (all six CLI commands)
 ├── hooks/hooks.json           # SessionStart → using-sequentdraw routing context
 ├── skills/<skill>/            # the single source of truth for every agent
 ├── evals/<skill>/<case>/      # prompt.md + graders/*.md
@@ -210,6 +210,81 @@ SequentDraw/
 
 A later `npx sequentdraw skills install --agent codex|cursor|copilot` copies `skills/`
 into each host's location, so nobody maintains per-agent copies.
+
+### The MCP server
+
+Built (step 8, `sequentdraw mcp`). A hand-rolled stdio JSON-RPC 2.0 transport --
+newline-delimited JSON, one message per line -- over `initialize`,
+`notifications/initialized`, `ping`, `tools/list` and `tools/call`. No dependency
+was added for it (step 8a just spent real effort getting `npm audit` clean); the
+transport is `src/mcp/server.js`, the tools are `src/mcp/tools.js`.
+
+**One MCP tool per CLI command**, each a thin adapter calling the exact same
+`COMMANDS[name].run(args, io)` from `src/cli/index.js` the CLI dispatches to, with
+`io.stdout`/`io.stderr`/`io.stdin` captured in memory. This is what makes an MCP
+call give the same answer and the same refusal a CLI invocation would for the same
+input (`docs/design/gitrepo-suggest.md` line 38 depends on it). `mcp` itself is a
+seventh CLI command, but never a seventh tool -- `tools.js` lists the six by name,
+not from `COMMANDS`' own keys.
+
+| Tool | Mirrors |
+|---|---|
+| `sequentdraw_render` | `sequentdraw render` |
+| `sequentdraw_validate` | `sequentdraw validate` |
+| `sequentdraw_scan` | `sequentdraw scan` |
+| `sequentdraw_check` | `sequentdraw check` |
+| `sequentdraw_catalogue` | `sequentdraw catalogue` |
+| `sequentdraw_licences` | `sequentdraw licences` |
+
+Each tool takes typed arguments (a JSON Schema, `additionalProperties: false`), not
+an argv string. A document is given inline (`document`, an object) or `path` (a file),
+never both; a merge patch works the same way (`merge` / `merge_path`). Inline input
+goes to the CLI over stdin as `-`; when both the document and the patch are inline
+(so stdin is already spoken for), the patch is written to a private temp file instead
+and removed once the call returns. Output paths (`out`, `evidence`, `repos`,
+`emit_open`) are always real files, exactly as the CLI takes them.
+
+A tool result is `{ content: [{ type: "text", text: <stdout, then stderr> }], isError:
+exitCode !== 0 }` -- a command failing (an invalid document, an unverified repository
+link) is a tool result with `isError: true`, never a JSON-RPC error. JSON-RPC errors
+(`-32700` parse error, `-32600` invalid request or an oversized line, `-32601` unknown
+method, `-32602` invalid params) are reserved for protocol problems: an unknown tool,
+an argument that fails its schema, or a call to `tools/call` itself malformed.
+
+Claude Code gets the server bundled through `.mcp.json` at the repo root:
+
+```json
+{
+  "mcpServers": {
+    "sequentdraw": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw", "mcp"]
+    }
+  }
+}
+```
+
+Any other MCP-speaking host (Cursor, Gemini CLI, Copilot) points the same
+`mcpServers` shape at wherever the package is installed, without `${CLAUDE_PLUGIN_ROOT}`:
+
+```json
+{
+  "mcpServers": {
+    "sequentdraw": {
+      "command": "node",
+      "args": ["/absolute/path/to/sequentdraw/bin/sequentdraw", "mcp"]
+    }
+  }
+}
+```
+
+Codex reaches it through `config.toml`:
+
+```toml
+[mcp_servers.sequentdraw]
+command = "node"
+args = ["/absolute/path/to/sequentdraw/bin/sequentdraw", "mcp"]
+```
 
 ## Proving skills work
 
