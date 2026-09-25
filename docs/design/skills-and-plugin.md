@@ -235,6 +235,16 @@ writes to the Cursor-specific `.cursor/skills/` path rather than the `.agents/sk
 path it shares with Codex, so uninstalling for one agent never touches what the other
 reads from the same project or home directory.
 
+Because Cursor reads BOTH `.agents/skills/` and `.cursor/skills/` at a given level,
+installing for `codex` and for `cursor` at that same level (the same home directory,
+or the same `--project <dir>`) leaves every one of this package's skills reachable
+from two directories Cursor watches, so Cursor loads each one twice. `skills install`
+checks for this: installing for either `codex` or `cursor` prints a one-line warning
+on stderr, naming the other agent's directory and the `skills uninstall` command that
+removes one copy, whenever that other directory already has this package's skills
+installed at the same level. `copilot`'s `.github/skills/` is not a directory Cursor
+reads, so it never triggers this warning.
+
 ### The trap a naive copy falls into, and the fix
 
 Every skill resolves the engine as `node <plugin root>/bin/sequentdraw`, with the
@@ -243,13 +253,23 @@ plugin root computed as two directories above the skill's own directory
 inside a Claude Code plugin checkout. A skill copied verbatim to, say,
 `~/.agents/skills/git-map/` would compute `~/.agents/bin/sequentdraw`, which does not
 exist, and the file's own `npx` fallback never fires because a base directory IS
-known. A naive copy would therefore install six skills that cannot run the engine.
+known. `git-map/SKILL.md` and `doc-map/SKILL.md` also restate the same rule inline --
+and a model reads `SKILL.md` before any `references/` file, so it would follow that
+copy of the rule first regardless of what `cli-pipeline.md` says. A naive copy would
+therefore install six skills that cannot run the engine.
 
 **The fix:** `skills install` rewrites exactly one section of the copied
 `references/cli-pipeline.md` -- "Resolving `<sequentdraw>`", from its heading up to
 the next `## ` heading -- with a generated section that names the engine command
 literally, plus the one `<plugin root>/schema/sequentdraw.schema.json` reference
-inside "Learning the document shape":
+inside "Learning the document shape". Every copied `SKILL.md` also gets an
+"Installed copy" block inserted immediately after its frontmatter (which stays
+byte-identical and first in the file, since hosts parse it there) -- naming the same
+literal command, defining what `<plugin root>` means for this copy, and saying
+explicitly to ignore any instruction further down the same file that computes the
+plugin root from the skill's own base directory. This runs for all six skills, not
+only the two that currently restate the rule, so the fix does not depend on which
+skill happens to carry a copy of it today:
 
 - Running from a stable path (a git checkout, or a global or local `npm install`):
   the command is `node "<absolute path of this package>/bin/sequentdraw"`, and the
@@ -262,8 +282,9 @@ inside "Learning the document shape":
   document against it, and the printed output recommends `npm install -g sequentdraw`
   for a faster, stable engine.
 
-Every other file, and every other section of `cli-pipeline.md`, is copied byte for
-byte; the repository's own `skills/` is never modified by this command.
+Every other file is copied byte for byte, as is the rest of `cli-pipeline.md` and of
+`SKILL.md` around their one rewritten section and inserted block respectively; the
+repository's own `skills/` is never modified by this command.
 
 ### Safety rules
 

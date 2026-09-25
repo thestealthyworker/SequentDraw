@@ -9,11 +9,16 @@
 // `references/cli-pipeline.md` resolves the engine as
 // `node <plugin root>/bin/sequentdraw`, where "plugin root" is computed as
 // two directories above the skill's own directory -- true only inside a
-// Claude Code plugin checkout. A copy at, say, ~/.agents/skills/git-map/
-// has no such plugin root, so this command rewrites that one section of
-// the copy to name a working command literally
-// (src/skills-install/rewrite-cli-pipeline.js). Every other file, and
-// every other section of that file, is copied byte for byte.
+// Claude Code plugin checkout. Two of the six skills (git-map, doc-map)
+// restate the same rule inline in their own `SKILL.md`, which a model
+// reads before any `references/` file. A copy at, say,
+// ~/.agents/skills/git-map/ has no such plugin root, so this command
+// rewrites the one section of the copied `cli-pipeline.md` that computes
+// it, and inserts an override note into every copied `SKILL.md`, both
+// naming a working command literally
+// (src/skills-install/rewrite-cli-pipeline.js,
+// src/skills-install/patch-skill-md.js). Every other file, and every
+// other byte of both of those, is copied unchanged.
 
 const fs = require('fs');
 const os = require('os');
@@ -28,6 +33,14 @@ const { listShippedSkillNames, skillSummary } = require('../skills-install/list-
 const { mcpSnippetFor } = require('../skills-install/mcp-snippet');
 
 const PACKAGE_ROOT = path.resolve(__dirname, '..', '..');
+
+// Cursor reads skills from both ".agents/skills" (which it shares with
+// Codex) and ".cursor/skills" (target-paths.js), at the same level -- the
+// user's home directory, or the same --project directory. Installing for
+// both codex and cursor at that same level therefore makes Cursor load
+// every skill twice. Copilot's ".github/skills" is not one of the
+// directories Cursor reads, so it never overlaps with anything.
+const OVERLAPPING_AGENT = { codex: 'cursor', cursor: 'codex' };
 
 const USAGE = `Usage:
   sequentdraw skills install --agent <codex|copilot|cursor> [--project <dir>] [--dry-run]
@@ -112,6 +125,31 @@ function actionLine(verb, name, targetDir) {
   return `${verb} ${name} -> ${targetDir}\n`;
 }
 
+// Prints one warning line when installing for codex or cursor would leave
+// this package's skills installed at BOTH of the two directories Cursor
+// reads at the same level (docs/design/skills-and-plugin.md, "skills
+// install" -- Cursor reads ".agents/skills" and ".cursor/skills" at the
+// same level, so it would load every duplicated skill twice). A no-op for
+// copilot, and a no-op when the other location has none of our marked
+// skills installed. Runs during --dry-run too: it only reads, and a
+// caller about to actually install benefits from seeing it before, not
+// only after, the fact.
+function warnAboutOverlap(options, skillNames, io) {
+  const overlapAgent = OVERLAPPING_AGENT[options.agent];
+  if (!overlapAgent) return;
+
+  const otherResult = resolveTargetRoot(overlapAgent, options.projectDir, os.homedir());
+  if (otherResult.error) return;
+
+  const duplicated = skillNames.filter(name => markerStatus(path.join(otherResult.root, name)) === 'ours');
+  if (duplicated.length === 0) return;
+
+  const projectFlag = options.projectDir ? ` --project "${options.projectDir}"` : '';
+  io.stderr.write(
+    `warning: Cursor reads skills from both ".agents/skills" and ".cursor/skills" at the same level, and "${otherResult.root}" already has ${duplicated.length} of this package's skill(s) installed -- Cursor would load each one twice. Run "sequentdraw skills uninstall --agent ${overlapAgent}${projectFlag}" to remove one copy.\n`,
+  );
+}
+
 function runInstall(options, io) {
   const { stdout, stderr } = io;
   const targetResult = resolveTargetRoot(options.agent, options.projectDir, os.homedir());
@@ -141,6 +179,8 @@ function runInstall(options, io) {
     }
     toInstall.push({ name, targetDir, replacing: status === 'ours' });
   }
+
+  warnAboutOverlap(options, skillNames, io);
 
   toInstall.forEach(({ name, targetDir, replacing }) => {
     if (options.dryRun) {

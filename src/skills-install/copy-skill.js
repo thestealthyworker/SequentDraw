@@ -1,16 +1,20 @@
 // Copies one `skills/<name>/` directory to an install target: every file
-// byte for byte except `references/cli-pipeline.md`, which is rewritten
-// (rewrite-cli-pipeline.js), plus the marker file every installed
-// directory carries (marker.js). Safety rule 6 is enforced by the caller
-// (src/cli/skills.js), which only ever passes a `sourceDir` under this
-// package's own `skills/` for a name that has a `SKILL.md`.
+// byte for byte except `references/cli-pipeline.md` and `SKILL.md`, which
+// are both patched to name the resolved engine command literally instead
+// of the plugin-root math a Claude Code plugin checkout would compute
+// (rewrite-cli-pipeline.js, patch-skill-md.js), plus the marker file every
+// installed directory carries (marker.js). Safety rule 6 is enforced by
+// the caller (src/cli/skills.js), which only ever passes a `sourceDir`
+// under this package's own `skills/` for a name that has a `SKILL.md`.
 
 const fs = require('fs');
 const path = require('path');
-const { rewriteCliPipeline } = require('./rewrite-cli-pipeline');
+const { rewriteCliPipeline, buildEngineCommand } = require('./rewrite-cli-pipeline');
+const { patchSkillMd } = require('./patch-skill-md');
 const { writeMarker } = require('./marker');
 
 const CLI_PIPELINE_REL = path.join('references', 'cli-pipeline.md');
+const SKILL_MD_REL = 'SKILL.md';
 
 function copyTree(sourceDir, targetDir, relDir) {
   const currentSource = path.join(sourceDir, relDir);
@@ -37,11 +41,18 @@ function copySkillDir(sourceDir, targetDir, { engineInfo, name, version }) {
   copyTree(sourceDir, targetDir, '');
 
   const cliPipelinePath = path.join(targetDir, CLI_PIPELINE_REL);
-  const original = fs.readFileSync(cliPipelinePath, 'utf8');
-  const rewritten = rewriteCliPipeline(original, engineInfo);
-  fs.writeFileSync(cliPipelinePath, rewritten);
+  const originalCliPipeline = fs.readFileSync(cliPipelinePath, 'utf8');
+  fs.writeFileSync(cliPipelinePath, rewriteCliPipeline(originalCliPipeline, engineInfo));
 
-  const { buildEngineCommand } = require('./rewrite-cli-pipeline');
+  // SKILL.md is patched too: two of the six skills (git-map, doc-map)
+  // restate the same "<plugin root> is two directories above" rule inline,
+  // and the model reads SKILL.md before any references/ file -- see
+  // patch-skill-md.js for why every copy gets the same override note,
+  // whether or not that particular skill happens to restate the rule.
+  const skillMdPath = path.join(targetDir, SKILL_MD_REL);
+  const originalSkillMd = fs.readFileSync(skillMdPath, 'utf8');
+  fs.writeFileSync(skillMdPath, patchSkillMd(originalSkillMd, engineInfo));
+
   const engine = buildEngineCommand(engineInfo);
 
   writeMarker(targetDir, {

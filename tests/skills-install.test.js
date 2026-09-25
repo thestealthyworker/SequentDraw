@@ -11,7 +11,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync, execSync } = require('node:child_process');
+const { spawnSync, execSync } = require('node:child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const BIN = path.join(ROOT, 'bin', 'sequentdraw');
@@ -49,19 +49,18 @@ function withTmpDirs(names, fn) {
 
 // Runs the real CLI as a child process with HOME pointed at `home` (never
 // the real one) and returns { status, stdout, stderr }. `cwd` defaults to
-// ROOT; execFileSync never goes through a shell, so no argument here ever
-// needs its own quoting.
+// ROOT; `spawnSync` never goes through a shell, so no argument here ever
+// needs its own quoting. `spawnSync` (unlike `execFileSync`) hands back
+// stderr on a successful exit too, rather than only ever inheriting it to
+// this process's own terminal on success -- which matters here, since a
+// warning this command prints on stderr can accompany exit code 0.
 function runCli(args, { home, cwd } = {}) {
-  try {
-    const stdout = execFileSync(process.execPath, [BIN, ...args], {
-      cwd: cwd || ROOT,
-      env: { ...process.env, HOME: home || tmpDir('sequentdraw-unused-home-') },
-      encoding: 'utf8',
-    });
-    return { status: 0, stdout, stderr: '' };
-  } catch (err) {
-    return { status: err.status, stdout: err.stdout || '', stderr: err.stderr || '' };
-  }
+  const result = spawnSync(process.execPath, [BIN, ...args], {
+    cwd: cwd || ROOT,
+    env: { ...process.env, HOME: home || tmpDir('sequentdraw-unused-home-') },
+    encoding: 'utf8',
+  });
+  return { status: result.status, stdout: result.stdout || '', stderr: result.stderr || '' };
 }
 
 function readAllFiles(dir) {
@@ -91,10 +90,11 @@ function listing(dir) {
   return out.sort();
 }
 
-// --- 1 & 2: install for codex, byte-identical files except cli-pipeline.md,
-//     and the generated resolving section names the engine command literally ---
+// --- 1 & 2: install for codex, byte-identical files except cli-pipeline.md
+//     and SKILL.md, and the generated resolving section names the engine
+//     command literally ---
 
-test('install for codex writes six marked skill dirs, byte-identical to source except cli-pipeline.md', () => {
+test('install for codex writes six marked skill dirs, byte-identical to source except cli-pipeline.md and SKILL.md', () => {
   withTmpDirs(['home'], home => {
     const result = runCli(['skills', 'install', '--agent', 'codex'], { home });
     assert.strictEqual(result.status, 0, result.stderr);
@@ -116,10 +116,96 @@ test('install for codex writes six marked skill dirs, byte-identical to source e
       const cliPipelineRel = path.join('references', 'cli-pipeline.md');
 
       sourceFiles.forEach((content, relPath) => {
-        if (relPath === cliPipelineRel) return; // asserted separately below
+        if (relPath === cliPipelineRel || relPath === 'SKILL.md') return; // asserted separately below
         assert.strictEqual(targetFiles.get(relPath), content, `${name}/${relPath} should be byte-identical`);
       });
     });
+  });
+});
+
+// --- review finding 1 (major): SKILL.md itself must not send the model
+//     down the same broken plugin-root math, since the model reads
+//     SKILL.md before any references/ file ---
+
+test('every installed SKILL.md carries an "Installed copy" block right after an unchanged frontmatter', () => {
+  const { FRONTMATTER_RE } = require('../src/skills-install/patch-skill-md');
+
+  withTmpDirs(['home'], home => {
+    const result = runCli(['skills', 'install', '--agent', 'codex'], { home });
+    assert.strictEqual(result.status, 0, result.stderr);
+
+    SHIPPED_SKILLS.forEach(name => {
+      const sourcePath = path.join(ROOT, 'skills', name, 'SKILL.md');
+      const targetPath = path.join(home, '.agents', 'skills', name, 'SKILL.md');
+      const source = fs.readFileSync(sourcePath, 'utf8');
+      const installed = fs.readFileSync(targetPath, 'utf8');
+
+      const frontmatterMatch = source.match(FRONTMATTER_RE);
+      assert.ok(frontmatterMatch, `${name}/SKILL.md should have a recognizable frontmatter`);
+      const frontmatter = frontmatterMatch[0];
+      const rest = source.slice(frontmatter.length);
+
+      assert.ok(installed.startsWith(frontmatter), `${name}/SKILL.md's frontmatter should be unchanged and first`);
+      assert.ok(installed.endsWith(rest), `${name}/SKILL.md's content after the block should be byte-identical to the source`);
+
+      const block = installed.slice(frontmatter.length, installed.length - rest.length);
+      assert.match(block, /## Installed copy/);
+      assert.match(block, /sequentdraw skills install/);
+      assert.match(block, /ignore any instruction below/i);
+
+      const commandMatch = block.match(/```\n(.+)\n```/);
+      assert.ok(commandMatch, `${name}/SKILL.md's block should contain a fenced command`);
+      const output = execSync(`${commandMatch[1]} --help`, { encoding: 'utf8' });
+      assert.match(output, /Usage: sequentdraw/);
+    });
+  });
+});
+
+test('no installed .md file mentions the plugin-root math without its SKILL.md carrying the override block', () => {
+  withTmpDirs(['home'], home => {
+    const result = runCli(['skills', 'install', '--agent', 'codex'], { home });
+    assert.strictEqual(result.status, 0, result.stderr);
+
+    SHIPPED_SKILLS.forEach(name => {
+      const skillDir = path.join(home, '.agents', 'skills', name);
+      const files = readAllFiles(skillDir);
+      const mentionsPluginRootMath = [...files.entries()]
+        .filter(([relPath]) => relPath.endsWith('.md'))
+        .some(([, content]) => content.includes('two directories above') || content.includes('<plugin root>'));
+
+      if (!mentionsPluginRootMath) return;
+
+      const skillMd = files.get('SKILL.md');
+      assert.match(skillMd, /## Installed copy/, `${name} has a leftover plugin-root mention but no override block in its SKILL.md`);
+    });
+  });
+});
+
+// --- review finding 2 (minor): warn when Cursor would load a skill twice ---
+
+test('installing for cursor after codex (same home) warns about the overlap; installing for copilot never does', () => {
+  withTmpDirs(['home', 'project'], (home, project) => {
+    const codexInstall = runCli(['skills', 'install', '--agent', 'codex'], { home });
+    assert.strictEqual(codexInstall.status, 0, codexInstall.stderr);
+
+    const cursorInstall = runCli(['skills', 'install', '--agent', 'cursor'], { home });
+    assert.strictEqual(cursorInstall.status, 0, cursorInstall.stderr);
+    assert.match(cursorInstall.stderr, /warning:.*Cursor reads skills from both/);
+    assert.match(cursorInstall.stderr, /skills uninstall --agent codex/);
+
+    // A fresh, unrelated project directory has neither install yet -- no
+    // warning, and copilot's own location never overlaps with anything.
+    const copilotInstall = runCli(['skills', 'install', '--agent', 'copilot', '--project', project], { home });
+    assert.strictEqual(copilotInstall.status, 0, copilotInstall.stderr);
+    assert.strictEqual(copilotInstall.stderr, '');
+  });
+});
+
+test('installing for codex with nothing yet at the cursor location prints no overlap warning', () => {
+  withTmpDirs(['home'], home => {
+    const result = runCli(['skills', 'install', '--agent', 'codex'], { home });
+    assert.strictEqual(result.status, 0, result.stderr);
+    assert.strictEqual(result.stderr, '');
   });
 });
 
