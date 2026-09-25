@@ -37,6 +37,7 @@ are testable without a model, which is how the prototype was validated.
 | Extraction (prose → JSON) | **Not built.** Highest-risk component. |
 | Tours | Specified, not built. |
 | Gap detection | Specified, not built. |
+| MCP server | Built. `sequentdraw mcp`; one tool per CLI command, same refusals as the CLI. |
 
 ## What is in `src/`
 

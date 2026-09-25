@@ -14,6 +14,32 @@ const scanCmd = require('./scan');
 const checkCmd = require('./check');
 const licencesCmd = require('./licences');
 
+// `mcp` starts the stdio MCP server (src/mcp/server.js) and never returns
+// until stdin ends -- see that file for the protocol. It is dispatched
+// through COMMANDS like every other command, but src/mcp/tools.js lists
+// the six MCP tools by name rather than from COMMANDS' own keys, so this
+// command never becomes a seventh tool that calls itself.
+const MCP_USAGE = 'Usage: sequentdraw mcp';
+const mcpCmd = {
+  USAGE: MCP_USAGE,
+  async run(args, io = {}) {
+    const stdout = io.stdout || process.stdout;
+    const stderr = io.stderr || process.stderr;
+    const stdin = io.stdin || process.stdin;
+
+    if (args.includes('--help') || args.includes('-h')) {
+      stdout.write(`${MCP_USAGE}\n\nStarts the SequentDraw MCP server over stdio (newline-delimited JSON-RPC 2.0). Runs until stdin ends.\n`);
+      return 0;
+    }
+    if (args.length > 0) {
+      stderr.write(`${MCP_USAGE}\n`);
+      return 1;
+    }
+    const { runServer } = require('../mcp/server');
+    return runServer({ stdin, stdout, stderr });
+  },
+};
+
 const COMMANDS = {
   render: renderCmd,
   validate: validateCmd,
@@ -21,6 +47,7 @@ const COMMANDS = {
   check: checkCmd,
   catalogue: require('./catalogue'),
   licences: licencesCmd,
+  mcp: mcpCmd,
 };
 
 const TOP_USAGE = `Usage: sequentdraw <command> [options]
@@ -40,6 +67,9 @@ Commands:
   licences <owner/repo> ... --out <f>  Verify candidate repositories through
                                         the GitHub API (MIT only, active,
                                         not a fork).
+  mcp                                  Start the MCP server over stdio, for
+                                        hosts that reach SequentDraw through
+                                        MCP instead of a shell command.
 
 "-" as the input document reads it from stdin, and so does "-" as a --merge
 patch when the input is a file. Output paths, --evidence, --repos and
