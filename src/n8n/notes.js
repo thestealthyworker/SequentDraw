@@ -68,6 +68,15 @@ function overlaps(a, b) {
 // overlap, otherwise the diagonal across whatever gap separates them. This
 // is the "how far is this note from the thing it annotates" measure the
 // placement search minimises and the proximity test asserts on.
+function containsBox(outer, inner) {
+  return (
+    inner.x >= outer.x &&
+    inner.y >= outer.y &&
+    inner.x + inner.w <= outer.x + outer.w &&
+    inner.y + inner.h <= outer.y + outer.h
+  );
+}
+
 function rectGap(a, b) {
   const dx = Math.max(0, a.x - (b.x + b.w), b.x - (a.x + a.w));
   const dy = Math.max(0, a.y - (b.y + b.h), b.y - (a.y + a.h));
@@ -174,14 +183,25 @@ function scoreLessThan(a, b) {
   return false;
 }
 
-// [targets too far away, edge paths blocked, worst distance to any target,
-// distance from the bounding box's centre, preferred side, x, y]. "Too far
-// away" leads because getting a note beside everything it names is the
-// whole point. Blocked paths come next: routing runs after this and treats
-// notes as obstacles, so a note parked on a connection leaves the router
-// nowhere to go. Worst-distance then pulls the note as close as it can get
-// to the rest.
-function scoreFor(box, targetBoxes, bbox, dirIndex, edgePaths) {
+// [targets too far away, edge paths blocked, frame borders straddled, worst
+// distance to any target, distance from the bounding box's centre,
+// preferred side, x, y]. "Too far away" leads because getting a note beside
+// everything it names is the whole point. Blocked paths come next: routing
+// runs after this and treats notes as obstacles, so a note parked on a
+// connection leaves the router nowhere to go. Worst-distance then pulls the
+// note as close as it can get to the rest.
+//
+// Straddling (issue #36) sits after both of those and before distance, and
+// its position is the whole design. A note half across a frame border reads
+// as belonging to neither side. The obvious fix -- rejecting such a
+// placement outright in isClear() -- was measured in #35 and reverted: by
+// REMOVING candidates it pushed two notes in another layer set off their
+// targets and onto connectors (0 -> 2 connectors, worst gap 24px -> 256px).
+// Ranked here it removes nothing. It can only choose between placements
+// that already reach the same targets and block the same edge paths, so it
+// cannot create a connector or put a note on a connection; at worst it
+// moves a note a few pixels further out, still within reach of its target.
+function scoreFor(box, targetBoxes, bbox, dirIndex, edgePaths, straddles) {
   let far = 0;
   let worst = 0;
   targetBoxes.forEach(t => {
@@ -201,7 +221,7 @@ function scoreFor(box, targetBoxes, bbox, dirIndex, edgePaths) {
   });
   const c = centreOf(box);
   const tc = centreOf(bbox);
-  return [far, blocked, worst, Math.hypot(c.x - tc.x, c.y - tc.y), dirIndex, box.x, box.y];
+  return [far, blocked, straddles(box), worst, Math.hypot(c.x - tc.x, c.y - tc.y), dirIndex, box.x, box.y];
 }
 
 // How far out the edge-path-avoiding phases are willing to look before
@@ -229,7 +249,7 @@ const PATH_CLEAR_SEARCH_MAX = 1024;
 // Within a phase, the whole band is searched before anything is chosen, so
 // a placement that reaches every target always beats a closer one that
 // abandons some.
-function placeAttachedNote(bbox, targetBoxes, w, h, isClear, exemptFrames, edgePaths) {
+function placeAttachedNote(bbox, targetBoxes, w, h, isClear, exemptFrames, edgePaths, straddles = () => 0) {
   function bestAt(offset, requirePathsClear) {
     let bestBox = null;
     let bestScore = null;
@@ -239,7 +259,7 @@ function placeAttachedNote(bbox, targetBoxes, w, h, isClear, exemptFrames, edgeP
       slideOffsets(span, size).forEach(slide => {
         const box = candidateBox(bbox, w, h, dir, offset, slide);
         if (!isClear(box, exemptFrames)) return;
-        const score = scoreFor(box, targetBoxes, bbox, dirIndex, edgePaths);
+        const score = scoreFor(box, targetBoxes, bbox, dirIndex, edgePaths, straddles);
         if (requirePathsClear && score[1] !== 0) return;
         if (!bestScore || scoreLessThan(score, bestScore)) {
           bestScore = score;
@@ -397,7 +417,17 @@ function computeNoteBoxes(doc, nodeBoxes, frameBoxes, labelReserve, provisionalE
       });
       const targetBoxes = attachTargetBoxes(attachTo, nodeBoxes, frameBoxes, labelReserve);
       const targetBBox = boundingBoxOf(targetBoxes);
-      box = placeAttachedNote(targetBBox, targetBoxes, width, height, isClear, exemptFrames, edgePaths);
+      // Only an EXEMPT frame can be straddled: isClear() already refuses a
+      // placement that touches any other frame at all.
+      const straddles = candidate => {
+        let n = 0;
+        exemptFrames.forEach(id => {
+          const f = frameBoxes[id];
+          if (f && overlaps(candidate, f) && !containsBox(f, candidate)) n++;
+        });
+        return n;
+      };
+      box = placeAttachedNote(targetBBox, targetBoxes, width, height, isClear, exemptFrames, edgePaths, straddles);
       connectors = connectorsFor(box, targetBoxes, connectorObstacles);
     }
 
