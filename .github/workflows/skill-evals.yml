@@ -7,7 +7,13 @@ name: skill-evals
 # token by default. The job below additionally no-ops when the secret is
 # absent, which is exactly the fork-PR case.
 on:
+  # `labeled` is here so adding the run-evals label to an already-open PR
+  # (see the opt-in below) starts a run without needing a new commit. The
+  # existing `paths` filter is unchanged -- it still applies to a `labeled`
+  # event the same way it does to any other, from the diff against the base
+  # branch.
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - "skills/**"
       - ".agents/skills/**"
@@ -22,6 +28,9 @@ on:
       - "scripts/select-eval-tags.js"
       - "scripts/eval-results-guard.js"
       - ".github/workflows/skill-evals.yml"
+  # A full-suite run with no PR at all -- the final-review run, or a manual
+  # re-run after a plan limit resets. No inputs: it always runs everything.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,6 +38,15 @@ permissions:
 jobs:
   skill-evals:
     runs-on: ubuntu-latest
+    # A `labeled` event fires for every label added to a matching PR, not
+    # just `run-evals` (someone tagging a PR "needs-design" would otherwise
+    # start a paid run). Skip the whole job for that case rather than
+    # threading the check through every later step -- simpler to reason
+    # about, and it costs nothing since no step below has run yet.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'run-evals'
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     steps:
@@ -95,20 +113,38 @@ jobs:
           echo "sandbox backend OK"
 
       # Every eval run spends the owner's Claude plan quota, which this
-      # session's own work shares; a full suite ran it out mid-run on PR #50.
+      # session's own work shares; a full suite ran it out mid-run on PR #50,
+      # and again on #86 once every engine PR was running it by default.
       # A PR runs only the cases for the skills it touches (by tag -- see
-      # scripts/select-eval-tags.js); anything shared (src/, bin/, schema/,
-      # hooks/, .claude-plugin/, package*.json, this workflow) runs them all.
+      # scripts/select-eval-tags.js); hooks/ and .claude-plugin/ still run
+      # them all, since either changes how every skill triggers. The engine
+      # (src/, bin/, schema/, package*.json, the two CI scripts, this
+      # workflow) runs nothing on its own -- it opts in with the run-evals
+      # label or a manual dispatch, checked below and passed to the script
+      # explicitly rather than looked up from the GitHub API.
+      #
+      # workflow_dispatch has no PR and so no base ref to diff against;
+      # BASE_REF is empty in that case and the diff is skipped entirely.
       - name: Select eval cases for this PR
         id: select
         if: ${{ env.CLAUDE_CODE_OAUTH_TOKEN != '' }}
         env:
           BASE_REF: ${{ github.base_ref }}
+          FULL_SUITE_OPT_IN: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-evals')) }}
         run: |
-          changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
+          if [ -n "$BASE_REF" ]; then
+            changed="$(git diff --name-only "origin/$BASE_REF...HEAD")"
+          else
+            changed=""
+          fi
           echo "Changed paths:"
           echo "$changed" | sed 's/^/  /'
-          selection="$(echo "$changed" | node scripts/select-eval-tags.js)"
+          full_suite_flag=""
+          if [ "$FULL_SUITE_OPT_IN" = "true" ]; then
+            echo "Full-suite opt-in: run-evals label or manual dispatch"
+            full_suite_flag="--full"
+          fi
+          selection="$(printf '%s\n' "$changed" | node scripts/select-eval-tags.js $full_suite_flag)"
           if [ "$selection" = "all" ]; then
             echo "Eval selection: full suite"
             echo "filter=" >> "$GITHUB_OUTPUT"
