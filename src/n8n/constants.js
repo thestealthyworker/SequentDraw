@@ -67,6 +67,11 @@ const EDGE_DASH = '5 6';
 const GLYPH_STROKE = '#555555';
 const BRAND_ICON_SIZE = 48;
 const GLYPH_ICON_SIZE = 40;
+// A product with no brand mark shows its initials instead (issue #55,
+// render-svg.js monogramOf). Two letters are set smaller than one so both
+// sit inside the same visual weight as a 40px glyph.
+const MONOGRAM_FONT_SIZE = 30;
+const MONOGRAM_FONT_SIZE_PAIR = 24;
 const ICON_VIEWBOX = 24; // simple-icons / kind glyph source coordinate space
 
 const DOT_GRID_GAP = 16;
@@ -212,6 +217,8 @@ module.exports = {
   EDGE_WIDTH,
   EDGE_DASH,
   GLYPH_STROKE,
+  MONOGRAM_FONT_SIZE,
+  MONOGRAM_FONT_SIZE_PAIR,
   BRAND_ICON_SIZE,
   GLYPH_ICON_SIZE,
   ICON_VIEWBOX,

@@ -14,6 +14,8 @@ const {
   EDGE_DASH,
   EDGE_WIDTH,
   GLYPH_STROKE,
+  MONOGRAM_FONT_SIZE,
+  MONOGRAM_FONT_SIZE_PAIR,
   BRAND_ICON_SIZE,
   GLYPH_ICON_SIZE,
   ICON_VIEWBOX,
@@ -30,6 +32,7 @@ const {
   LABEL_LINES_MAX,
 } = require('./constants');
 const { roundedRectPath, wrapLabel } = require('./geometry');
+const { getIntegration } = require('../catalogue');
 const { wrapSublabel } = require('./sublabel');
 
 function esc(s) {
@@ -50,12 +53,42 @@ function nodeVisualStyle(n) {
   return { dashed, width, color, fill, isOpen, isSuggested };
 }
 
+// A monogram for a named product that has no brand mark (issue #55).
+//
+// A suggestion carries its catalogue `integration`, so the map knows it is
+// Pipedrive or Postmark -- but Simple Icons carries no mark for 25 of the
+// 76 catalogue entries (measured against simple-icons 15.22; Microsoft,
+// LinkedIn and others withdrew theirs). Those used to fall back to the
+// generic service glyph, the same box any unnamed service gets, so a
+// client read them as less real than the suggestions beside them that
+// had a logo.
+//
+// So a node that names a product but has no mark gets that product's
+// initials instead: up to two, from its first two words ("Microsoft
+// Teams" -> "MT", "Pipedrive" -> "P"). It is specific without borrowing
+// anyone's trademark -- a letter in SequentDraw's own type and colour, not
+// the brand's logo or palette.
+function monogramOf(name) {
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  return words
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('')
+    .toUpperCase();
+}
+
 function nodeIconMarkup(n, cx, cy) {
   const brand = n.icon ? ICONS.get(n.icon) : null;
   if (brand) {
     const scale = BRAND_ICON_SIZE / ICON_VIEWBOX;
     const half = BRAND_ICON_SIZE / 2;
     return `<g transform="translate(${cx - half} ${cy - half}) scale(${scale})"><path d="${brand.path}" fill="${brand.hex}"/></g>`;
+  }
+  const product = n.integration ? getIntegration(n.integration) : null;
+  const initials = product ? monogramOf(product.name) : '';
+  if (initials) {
+    const size = initials.length > 1 ? MONOGRAM_FONT_SIZE_PAIR : MONOGRAM_FONT_SIZE;
+    return `<text class="node-monogram" x="${cx}" y="${cy + size * 0.35}" text-anchor="middle" font-size="${size}" font-weight="600" fill="${GLYPH_STROKE}">${esc(initials)}</text>`;
   }
   const glyph = ICONS.glyph[n.kind] || ICONS.glyph.service;
   const scale = GLYPH_ICON_SIZE / ICON_VIEWBOX;
@@ -214,6 +247,7 @@ module.exports = {
   // docs/design/n8n-visual-style.md.
   nodeVisualStyle,
   nodeIconMarkup,
+  monogramOf,
   statusBadge,
   handleDot,
   statusKeyEntries,
