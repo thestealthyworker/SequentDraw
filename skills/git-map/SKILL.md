@@ -1,6 +1,6 @@
 ---
 name: git-map
-description: Map a code repository's architecture into an interactive SequentDraw map -- services, data stores, external integrations and the flow between them, built only from a deterministic scan, never from raw repo prose. Trigger phrases -- "map this repository's architecture", "map this repo", "diagram our architecture", "diagram https://github.com/<owner>/<repo>", "show me how this codebase is wired together". Works on a local path or a GitHub URL. Every node or edge claiming to come from the code cites scan evidence; anything the scan cannot establish becomes an "open" node with a question instead of a guess. NOT for building or deploying an n8n workflow, NOT a general Mermaid or chart tool, NOT for mapping a business or process (that is business-map), and NOT for exporting an existing map as a static image (that is doc-map).
+description: Map a code repository's architecture into an interactive SequentDraw map -- services, data stores, external integrations and the flow between them, built only from a deterministic scan, never from raw repo prose. Trigger phrases -- "map this repository's architecture", "map this repo", "diagram our architecture", "diagram https://github.com/<owner>/<repo>", "show me how this codebase is wired together", "walk me through this map" once this skill has built it. Works on a local path or a GitHub URL. Every node or edge claiming to come from the code cites scan evidence; anything the scan cannot establish becomes an "open" node with a question instead of a guess. NOT for building or deploying an n8n workflow, NOT a general Mermaid or chart tool, NOT for mapping a business or process (that is business-map), and NOT for exporting an existing map as a static image (that is doc-map).
 when_to_use: Use when the user wants a map of what a repository actually contains and how its pieces connect, from a local path or a GitHub URL. Do not use once a map already exists and the user just wants a static export -- that is doc-map. Do not use for a business or process walkthrough with no code involved -- that is business-map.
 context: fork
 ---
@@ -199,7 +199,15 @@ artifact step runs.
    Write into the repository only if the user asks, and ask before
    overwriting.
 
-7. **Corrections are conversational.** "Stripe belongs in Payment" or
+7. **Offer a tour, once.** Read `references/tours.md`; it holds the step
+   shape, limits and the patch example. Offer a walkthrough after
+   publishing, build it only on yes (or straight away if the user already
+   asked for one), write it as a patch to a new file name -- no
+   `--evidence` needed, since a tour patch adds no scan-sourced node or
+   edge -- re-check, re-render and republish to the same artifact. Even
+   when running as a forked subagent, say so back in the main conversation.
+
+8. **Corrections are conversational.** "Stripe belongs in Payment" or
    similar: write only the change as a patch against the last saved file,
    with the bundle still enforced, into a new file name:
 

@@ -444,6 +444,10 @@ authoring model.
 Optional. Generated on request, not by default. Most valuable on the business
 layer, where the audience is not technical.
 
+Written by `business-map` and `git-map`, the two skills that build a map --
+never by a dedicated tour skill (owner, 2026-09-25) -- as a merge patch
+against the map's last saved file, same as a correction.
+
 ## Prior art: cc-wf-studio
 
 Reviewed at `github.com/breaking-brake/cc-wf-studio` (core, cli, mcp are MIT; the

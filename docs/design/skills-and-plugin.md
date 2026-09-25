@@ -56,7 +56,9 @@ Shared capabilities, used by every skill rather than exposed as skills:
 - **Suggestion validation**: rationale present and citing existing nodes, pick from
   the n8n catalogue, at most 5 per map.
 
-Deferred: `tour`, until tours are built and the owner names a skill for them.
+No dedicated tour skill (owner, 2026-09-25): `business-map` and `git-map`,
+the two skills that build a map, offer a walkthrough once it is published
+and write it on request (`skills/*/references/tours.md`).
 
 ### Rules every skill keeps
 
