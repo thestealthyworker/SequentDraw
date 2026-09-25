@@ -10,8 +10,9 @@ how to run it.
   any host that reads the Agent Skills spec.
 - **An MCP server** (`sequentdraw mcp`, stdio, JSON-RPC 2.0) is for hosts that reach
   SequentDraw through MCP instead of a shell command: Cursor, Gemini CLI, Copilot, and
-  Codex through its own `config.toml`. Claude Code gets the same server bundled through
-  `.mcp.json`.
+  Codex through its own `config.toml`. Claude Code gets the same server bundled
+  through `.claude-plugin/plugin.json`'s own inline `mcpServers` field, not a
+  repo-root `.mcp.json`.
 - **The CLI** (`sequentdraw <command> ...`, or `node bin/sequentdraw <command> ...` in
   this repo) is always available and is what both of the above call underneath.
 

@@ -17,5 +17,11 @@
     "svg",
     "map",
     "visualization"
-  ]
+  ],
+  "mcpServers": {
+    "sequentdraw": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw", "mcp"]
+    }
+  }
 }

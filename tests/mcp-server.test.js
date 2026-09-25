@@ -83,6 +83,22 @@ function spawnServer() {
     child.stdin.write(`${line}\n`);
   }
 
+  // Writes `line` (already newline-terminated) as many separate small
+  // writes rather than one, so the server's chunk-by-chunk framing is
+  // actually exercised across many 'data' events -- most of which land in
+  // the middle of the line, not on a boundary. Awaits each write's
+  // callback so writes are not reordered relative to each other.
+  function sendChunked(line, chunkSize = 64 * 1024) {
+    const writeOne = offset => {
+      if (offset >= line.length) return Promise.resolve();
+      const piece = line.slice(offset, offset + chunkSize);
+      return new Promise((resolve, reject) => {
+        child.stdin.write(piece, 'utf8', err => (err ? reject(err) : resolve()));
+      }).then(() => writeOne(offset + chunkSize));
+    };
+    return writeOne(0);
+  }
+
   function call(method, params) {
     const id = nextId++;
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
@@ -97,7 +113,7 @@ function spawnServer() {
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`);
   }
 
-  return { child, call, callTool, notify, sendRaw, waitFor, allLines };
+  return { child, call, callTool, notify, sendRaw, sendChunked, waitFor, allLines };
 }
 
 function runCli(args, options = {}) {
@@ -164,6 +180,53 @@ test('tools/list: exactly the six tools, each with a strict inputSchema, and no 
       assert.strictEqual(tool.inputSchema.additionalProperties, false, `${tool.name} must set additionalProperties: false`);
       assert.strictEqual(tool.inputSchema.type, 'object');
       assert.ok(tool.description.length > 0);
+    });
+  });
+});
+
+// Every file-path argument's description must say how a relative path
+// resolves and that an absolute one is recommended, across all six tools --
+// not duplicated per property elsewhere in this file, since a wording
+// change should only need pinning once.
+test('tools/list: every file-path argument documents relative resolution and recommends an absolute path', async () => {
+  await withServer(async server => {
+    const reply = await server.call('tools/list', {});
+    const PATH_ARGS = new Set([
+      'path', 'merge_path', 'out', 'source', 'evidence', 'repos:check', 'emit_open',
+    ]);
+    reply.result.tools.forEach(tool => {
+      Object.entries(tool.inputSchema.properties).forEach(([key, prop]) => {
+        // "repos" means two different things: a file path for check, an
+        // array of owner/repo ids for licences -- only the former is a path.
+        const argKey = key === 'repos' && tool.name === 'sequentdraw_check' ? 'repos:check' : key;
+        if (!PATH_ARGS.has(argKey)) return;
+        assert.match(
+          prop.description,
+          /relative path resolves against this server's own working directory.*absolute path is recommended/,
+          `${tool.name}.${key} must document relative/absolute path resolution`,
+        );
+      });
+    });
+  });
+});
+
+// --- security: sequentdraw_licences never accepts a caller-named env var --
+
+test('sequentdraw_licences has no "token_env": naming any environment variable is refused', async () => {
+  await withServer(async server => {
+    await withTempDir(async dir => {
+      const out = path.join(dir, 'verified.json');
+      // Even a legitimate-looking value must be refused -- the point is that
+      // this argument does not exist at all, not that some values of it are
+      // disallowed.
+      const reply = await server.callTool('sequentdraw_licences', {
+        repos: ['owner/repo'],
+        out,
+        token_env: 'GITHUB_TOKEN',
+      });
+      assert.strictEqual(reply.error.code, -32602);
+      assert.match(reply.error.message, /unknown argument "token_env"/);
+      assert.strictEqual(fs.existsSync(out), false);
     });
   });
 });
@@ -342,6 +405,37 @@ test('an oversized line is refused with -32600, and the server keeps running', a
 
     const stillUp = await server.call('ping', {});
     assert.deepStrictEqual(stillUp.result, {});
+  });
+});
+
+// A performance regression, not a protocol case: framing that re-copies
+// everything buffered so far on every incoming chunk is quadratic in the
+// line's length. A ~10MB document delivered as ~64KB writes -- about 160 of
+// them -- would not time out from that alone, but it is the shape that
+// exposed it; this pins that the answer is still exactly right, not just
+// that it eventually arrives. The document itself cannot be schema-valid at
+// this size (every SequentDraw field is capped well under 10MB), so the
+// oracle is the identical, tiny-padded document run once through the real
+// CLI: the padding's length is irrelevant to which structural errors fire,
+// only its presence is, so the two must produce byte-identical text.
+test('a ~10MB document sent as many small stdin writes answers exactly like the CLI does', async () => {
+  await withServer(async server => {
+    const paddedDoc = padLength => ({ pad: 'x'.repeat(padLength) });
+
+    const cli = runCli(['validate', '-'], { input: JSON.stringify(paddedDoc(10)) });
+    assert.strictEqual(cli.status, 1);
+
+    const id = 4242;
+    const line = `${JSON.stringify({
+      jsonrpc: '2.0',
+      id,
+      method: 'tools/call',
+      params: { name: 'sequentdraw_validate', arguments: { document: paddedDoc(10 * 1024 * 1024) } },
+    })}\n`;
+
+    const [reply] = await Promise.all([server.waitFor(m => m.id === id, 30000), server.sendChunked(line)]);
+    assert.strictEqual(reply.result.isError, true);
+    assert.strictEqual(reply.result.content[0].text, cli.stdout + cli.stderr);
   });
 });
 

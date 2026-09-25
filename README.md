@@ -128,7 +128,9 @@ working unchanged as the underlying renderer entry point.
 `sequentdraw mcp` starts an MCP server over stdio, for hosts that reach
 SequentDraw through MCP rather than a shell command (Cursor, Gemini CLI,
 Copilot, Codex via `config.toml`). Claude Code gets it bundled through
-`.mcp.json` already checked into this repository.
+`.claude-plugin/plugin.json`'s own inline `mcpServers` field (not a
+repo-root `.mcp.json`, which Claude Code would also load whenever a
+contributor opens this repository as a project of its own).
 
 It exposes one tool per CLI command above (`sequentdraw_render`,
 `sequentdraw_validate`, `sequentdraw_scan`, `sequentdraw_check`,

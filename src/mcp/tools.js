@@ -46,14 +46,19 @@ const { CATEGORIES } = require('../catalogue');
 // without hardcoding the string twice.
 const MERGE_TMP_PREFIX = 'sequentdraw-mcp-merge-';
 
+// Appended to every file-path argument's description: this server, not a
+// client, resolves the path, and it does so relative to wherever it happens
+// to have been started, which a caller cannot see or control.
+const PATH_NOTE = ' A relative path resolves against this server\'s own working directory; an absolute path is recommended.';
+
 const DOCUMENT_PROPS = {
   document: { type: 'object', description: 'The workflow JSON document, given inline.' },
-  path: { type: 'string', description: 'A file path to the workflow JSON document.' },
+  path: { type: 'string', description: `A file path to the workflow JSON document.${PATH_NOTE}` },
 };
 
 const MERGE_PROPS = {
   merge: { type: 'object', description: 'A merge patch, given inline (same shape as "sequentdraw check --merge").' },
-  merge_path: { type: 'string', description: 'A file path to a merge patch.' },
+  merge_path: { type: 'string', description: `A file path to a merge patch.${PATH_NOTE}` },
 };
 
 // --- hand-written schema check --------------------------------------------
@@ -182,7 +187,7 @@ const TOOLS = [
       properties: {
         ...DOCUMENT_PROPS,
         ...MERGE_PROPS,
-        out: { type: 'string', description: 'Output file path, ending in .html or .svg.' },
+        out: { type: 'string', description: `Output file path, ending in .html or .svg.${PATH_NOTE}` },
         layers: { type: 'array', items: { type: 'string' }, description: 'SVG output only: extra layers beyond "base".' },
         fragment: { type: 'boolean', description: 'HTML output only: emit the artifact fragment instead of a full document.' },
       },
@@ -224,8 +229,8 @@ const TOOLS = [
     inputSchema: {
       type: 'object',
       properties: {
-        source: { type: 'string', description: 'A local path or a https://github.com/<owner>/<repo> URL.' },
-        out: { type: 'string', description: 'Where to write the evidence bundle.' },
+        source: { type: 'string', description: `A local path or a https://github.com/<owner>/<repo> URL.${PATH_NOTE}` },
+        out: { type: 'string', description: `Where to write the evidence bundle.${PATH_NOTE}` },
         timeout: { type: 'integer', minimum: 1, description: 'Hard deadline for the scan step, in milliseconds.' },
       },
       required: ['source', 'out'],
@@ -248,9 +253,9 @@ const TOOLS = [
       properties: {
         ...DOCUMENT_PROPS,
         ...MERGE_PROPS,
-        evidence: { type: 'string', description: 'File path to the evidence bundle from "sequentdraw scan".' },
-        repos: { type: 'string', description: 'File path to the verdicts from "sequentdraw licences".' },
-        emit_open: { type: 'string', description: 'Write a copy of the map with one open node per completeness gap.' },
+        evidence: { type: 'string', description: `File path to the evidence bundle from "sequentdraw scan".${PATH_NOTE}` },
+        repos: { type: 'string', description: `File path to the verdicts from "sequentdraw licences".${PATH_NOTE}` },
+        emit_open: { type: 'string', description: `Write a copy of the map with one open node per completeness gap.${PATH_NOTE}` },
       },
       additionalProperties: false,
     },
@@ -291,13 +296,12 @@ const TOOLS = [
   },
   {
     name: 'sequentdraw_licences',
-    description: 'Verify candidate repositories through the GitHub API (MIT only, active, not a fork) and write the verdicts. Mirrors "sequentdraw licences". The token, if any, is read server-side from the environment variable named by "token_env"; it is never an argument.',
+    description: 'Verify candidate repositories through the GitHub API (MIT only, active, not a fork) and write the verdicts. Mirrors "sequentdraw licences", always using its default token source (the GITHUB_TOKEN environment variable on the machine running this server). There is no way to name a different environment variable from a tool call: doing so would let a caller read out the value of any variable in this process\'s environment by pointing it at api.github.com and reading the rejection.',
     inputSchema: {
       type: 'object',
       properties: {
         repos: { type: 'array', items: { type: 'string' }, minItems: 1, description: 'owner/repo identifiers to verify.' },
-        out: { type: 'string', description: 'Where to write the verdicts.' },
-        token_env: { type: 'string', description: 'Environment variable holding a GitHub token (default GITHUB_TOKEN).' },
+        out: { type: 'string', description: `Where to write the verdicts.${PATH_NOTE}` },
         max: { type: 'integer', minimum: 1, description: 'Refuse a run of more than this many repositories.' },
       },
       required: ['repos', 'out'],
@@ -307,8 +311,11 @@ const TOOLS = [
       return null;
     },
     buildArgv(args) {
+      // No --token-env here, ever: the CLI flag exists for a human at a
+      // terminal choosing where their own token lives, and this server
+      // never turns a model's argument into an environment variable name --
+      // see the tool description above for why.
       const argv = ['licences', ...args.repos, '--out', args.out];
-      if (args.token_env != null) argv.push('--token-env', args.token_env);
       if (args.max != null) argv.push('--max', String(args.max));
       return { argv, stdinText: null, cleanup: noop };
     },

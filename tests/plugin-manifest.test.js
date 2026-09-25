@@ -43,3 +43,18 @@ test('package.json exposes the sequentdraw CLI as its bin entry', () => {
   const pkg = readJson('package.json');
   assert.strictEqual(pkg.bin.sequentdraw, 'bin/sequentdraw');
 });
+
+// The MCP server is bundled through plugin.json's own "mcpServers" field, not
+// a root-level .mcp.json: this repository is itself a project contributors
+// open in Claude Code, and a root .mcp.json is loaded there too, as a
+// project-scoped server, where ${CLAUDE_PLUGIN_ROOT} does not expand.
+test('plugin.json bundles the MCP server inline, and no root .mcp.json shadows it', () => {
+  const plugin = readJson('.claude-plugin/plugin.json');
+  assert.deepStrictEqual(plugin.mcpServers, {
+    sequentdraw: {
+      command: 'node',
+      args: ['${CLAUDE_PLUGIN_ROOT}/bin/sequentdraw', 'mcp'],
+    },
+  });
+  assert.strictEqual(fs.existsSync(path.join(ROOT, '.mcp.json')), false);
+});
