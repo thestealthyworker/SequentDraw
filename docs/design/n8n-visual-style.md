@@ -50,6 +50,24 @@ Key values were re-checked against source after the research pass: the 16px grid
 | `status: open` | 2px dashed border, muted fill, "?" badge at bottom-right (after n8n's placeholder node) |
 | `status: suggested` | 2px border in the secondary purple plus a badge. Must stay distinct from `open`. |
 
+### Tours
+
+*Added in build step 8.* A static map answers "what is this"; a tour answers "how does
+this work" (`docs/SPEC.md`, "Tours"). The steps are the document's own `tour` array.
+
+| Element | Behaviour |
+|---|---|
+| Start | A **Take the tour · n steps** button beside the map title, rendered only when the map has a tour. |
+| Panel | Above the zoom bar: `Step i of n`, the step's title, its narration, **Back** and **Next** (the last is **Finish**), and ×. |
+| Spotlight | The step's nodes get a violet outline; every other node, edge, note and frame drops to 16% opacity. An edge stays lit only when both its ends are spotlighted, a note only when it is attached to a spotlighted node, a frame only when it holds one. |
+| Camera | Frames the step's nodes, with their label strip, in the space above the panel, zoomed in no further than 1.25×. |
+| Layers | A step whose nodes sit on a layer the reader switched off turns that layer **on**. A step never turns a layer off. Leaving the tour restores every layer exactly as the reader had it. |
+| Keys | ← and → step; Esc leaves. |
+
+The rule the whole product rests on holds here too: **a tour never moves a node.** The
+camera moves and visibility changes; every coordinate is the one layout computed. Tour
+text reaches the page through `textContent` only.
+
 ### Monograms for unbranded products
 
 *Added for issue #55.* A suggestion carries its catalogue `integration`, so the map

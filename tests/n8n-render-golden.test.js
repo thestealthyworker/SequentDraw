@@ -49,6 +49,12 @@
 // export's exportKeyGroup(), which carries an on-screen key into an
 // exported file. +4,132 bytes. Nothing on the canvas moved.
 //
+// Rebaselined for tours (build step 8). The Medusa fixture has no tour, so
+// it gains no button and no panel; what changed is the viewer's stylesheet
+// and script, which now carry the tour player. The stylesheet counts twice
+// because the viewer's export embeds its own CSS as a string. Nothing on the
+// canvas moved. +10,549 bytes.
+//
 // Rebaselined for the readable first view (issue #24). The viewer script
 // gains openView() and fitScale(), and GEOMETRY gains openAnchor, the box
 // of the node the map opens on. Markup and script only: layout is
@@ -62,6 +68,8 @@
 // and nothing on the canvas moved. +600 bytes.
 //
 // Previous baselines:
+//   the readable first view (#24):         237362 bytes /
+//     b71d4994c3375812894f3f1c4b6376d7032deb88bff9a63a52038f28e3c46c32
 //   wrapped sublabels (#54):                236133 bytes /
 //     f7c008176559c6bd44c3317ad8aa25b1d5822ee4ea82eca5801c3ffd83425c6c
 //   the status key (#56):                   235533 bytes /
@@ -106,8 +114,8 @@ const path = require('node:path');
 const { renderMap } = require('../src/n8n/index');
 
 const FIXTURE = path.join(__dirname, '..', 'examples', 'medusa-return-flow.json');
-const GOLDEN_LENGTH = 237362;
-const GOLDEN_SHA256 = 'b71d4994c3375812894f3f1c4b6376d7032deb88bff9a63a52038f28e3c46c32';
+const GOLDEN_LENGTH = 247911;
+const GOLDEN_SHA256 = '1397d3ff97436e24da6215e97a0931760eb2a58c080a17014ef808e7eb9bef33';
 
 test('renderMap(Medusa) is byte-identical to the note-connector-routing baseline', async () => {
   const doc = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));

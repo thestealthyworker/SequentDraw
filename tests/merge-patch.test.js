@@ -142,7 +142,7 @@ describe('shape and bounds', () => {
     assert.deepStrictEqual(codes(applyPatch(BASE, null)), ['merge-invalid-patch']);
     const unknown = applyPatch(BASE, { node: [] });
     assert.deepStrictEqual(codes(unknown), ['merge-unknown-key']);
-    assert.match(unknown.errors[0].message, /"node".*nodes, edges, notes, remove/);
+    assert.match(unknown.errors[0].message, /"node".*nodes, edges, notes, tour, remove/);
     assert.deepStrictEqual(codes(applyPatch(BASE, { remove: { groups: ['g1'] } })), ['merge-unknown-key']);
   });
 
