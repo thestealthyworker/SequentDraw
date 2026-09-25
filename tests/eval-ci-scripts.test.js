@@ -33,7 +33,27 @@ describe('select-eval-tags', () => {
     assert.deepStrictEqual(selectTags(['.agents/skills/doc-map']), { all: false, tags: ['doc-map'] });
   });
 
-  for (const shared of ['src/cli/check.js', 'bin/sequentdraw', 'schema/sequentdraw.schema.json', 'hooks/session-start.js', '.claude-plugin/plugin.json', 'package.json', 'package-lock.json', '.github/workflows/skill-evals.yml', 'scripts/select-eval-tags.js', 'scripts/eval-results-guard.js']) {
+  // Engine paths (src/, bin/, schema/, package*.json, the selection and
+  // guard scripts, the workflow itself) no longer send a PR to the full
+  // suite by themselves: the design doc only ever asked for evals on PRs
+  // touching skills/, evals/, hooks/ or the CLI contract, and every engine
+  // PR was running the full ~65-run suite until #86 died on the plan's
+  // session limit. They select nothing on their own, and contribute nothing
+  // when a skill path is also touched -- the skill's own tag still selects
+  // exactly that skill.
+  for (const engine of ['src/cli/check.js', 'bin/sequentdraw', 'schema/sequentdraw.schema.json', 'package.json', 'package-lock.json', '.github/workflows/skill-evals.yml', 'scripts/select-eval-tags.js', 'scripts/eval-results-guard.js']) {
+    test(`${engine} alone selects nothing`, () => {
+      assert.deepStrictEqual(selectTags([engine]), { all: false, tags: [] });
+    });
+
+    test(`${engine} alongside a skill path selects only that skill`, () => {
+      assert.deepStrictEqual(selectTags(['skills/doc-map/SKILL.md', engine]), { all: false, tags: ['doc-map'] });
+    });
+  }
+
+  // hooks/ and .claude-plugin/ change how every skill triggers, so they are
+  // unchanged: either one still always selects the full suite.
+  for (const shared of ['hooks/session-start.js', '.claude-plugin/plugin.json']) {
     test(`${shared} selects the full suite`, () => {
       assert.deepStrictEqual(selectTags(['skills/doc-map/SKILL.md', shared]), { all: true, tags: [] });
     });
@@ -45,6 +65,22 @@ describe('select-eval-tags', () => {
 
   test('changes that touch no skill select nothing', () => {
     assert.deepStrictEqual(selectTags(['docs/SPEC.md', 'tests/foo.test.js']), { all: false, tags: [] });
+  });
+
+  // The full-suite opt-in (the `run-evals` label, or a manual
+  // workflow_dispatch run) always wins, whatever the changed paths say --
+  // it is how an engine PR that changes the CLI contract gets real eval
+  // coverage despite engine paths otherwise selecting nothing.
+  test('opt-in plus an engine path selects the full suite', () => {
+    assert.deepStrictEqual(selectTags(['src/cli/check.js'], undefined, { fullSuiteOptIn: true }), { all: true, tags: [] });
+  });
+
+  test('opt-in plus a skill path selects the full suite too', () => {
+    assert.deepStrictEqual(selectTags(['skills/doc-map/SKILL.md'], undefined, { fullSuiteOptIn: true }), { all: true, tags: [] });
+  });
+
+  test('opt-in alone, with no changed paths, selects the full suite', () => {
+    assert.deepStrictEqual(selectTags([], undefined, { fullSuiteOptIn: true }), { all: true, tags: [] });
   });
 });
 
@@ -202,5 +238,34 @@ describe('the eval workflow lets the guard be the gate', () => {
 
   test('the guard step runs after the eval step', () => {
     assert.ok(steps.indexOf(guardStep) > steps.indexOf(evalStep));
+  });
+});
+
+// The run-evals opt-in (brief: ci/eval-opt-in) needs the workflow to notice
+// a label being added to an already-open PR, and to run on demand with no
+// PR at all. Neither must ever hand the paid credential to a fork PR.
+describe('the eval workflow supports the run-evals opt-in', () => {
+  const rawYaml = fs.readFileSync(path.resolve(__dirname, '..', '.github', 'workflows', 'skill-evals.yml'), 'utf8');
+  const { parse } = require('yaml');
+  const workflow = parse(rawYaml);
+
+  test('pull_request listens for labeled events, on top of the usual ones', () => {
+    assert.deepStrictEqual(workflow.on.pull_request.types, ['opened', 'synchronize', 'reopened', 'labeled']);
+  });
+
+  test('the existing paths filter is kept', () => {
+    assert.ok(Array.isArray(workflow.on.pull_request.paths));
+    assert.ok(workflow.on.pull_request.paths.includes('src/**'));
+  });
+
+  test('workflow_dispatch is present, for a full-suite run with no PR', () => {
+    assert.ok('workflow_dispatch' in workflow.on);
+  });
+
+  test('pull_request_target is never a trigger -- it would hand a fork PR the secret', () => {
+    // The file's header comment names pull_request_target on purpose, to
+    // explain why it is avoided, so this checks the parsed triggers rather
+    // than the raw text.
+    assert.ok(!('pull_request_target' in workflow.on));
   });
 });

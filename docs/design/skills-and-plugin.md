@@ -240,7 +240,7 @@ Rules:
 | `claude plugin validate . --strict`, plus a check that each description is ≤ 1,536 chars and states what it is not for | Every PR | Free |
 | `npm test` (engine) | Every PR | Free |
 | `npm run preflight` | Locally, before every push | Free |
-| `claude plugin eval . --trust-plugin --no-publish --json --threshold 0.8 --max-cost-usd 10` | PRs touching `skills/`, `evals/`, `hooks/` or the CLI contract | Counts against the owner's Claude subscription usage |
+| `claude plugin eval . --trust-plugin --no-publish --json --threshold 0.8 --max-cost-usd 10` | PRs touching `skills/`, `evals/`, `hooks/`, `.claude-plugin/`, or carrying the `run-evals` label | Counts against the owner's Claude subscription usage |
 
 **Credential: the owner's Claude subscription.** The owner runs `claude setup-token`
 (it requires a subscription and a browser login) and stores the long-lived token as the
@@ -260,11 +260,23 @@ failed with "You've hit your session limit". Runs use `--concurrency 4` since PR
 `scripts/select-eval-tags.js` maps changed paths to skills, and the workflow passes
 `--tag <skill...>`. Every case's `prompt.md` is tagged with each skill it exercises,
 and a test enforces it. `--case` takes a single glob (`claude plugin eval --help`:
-`--case <glob>`), while `--tag <tag...>` takes several. A change to `src/`, `bin/`,
-`schema/`, `hooks/`, `.claude-plugin/`, `package*.json`, the selection or guard
-script, or the workflow runs the full suite. `scripts/eval-results-guard.js` fails the
-job on a results file with zero cases and on any run error, except a run that stopped
-at its own limit; in a must-not-fire case only a turn limit with turns >= N is tolerated.
+`--case <glob>`), while `--tag <tag...>` takes several. A change to `hooks/` or
+`.claude-plugin/` runs the full suite, since either changes how every skill triggers.
+
+**The engine does not run evals by default.** A change only to `src/`, `bin/`,
+`schema/`, `package*.json`, the selection or guard script, or the workflow itself runs
+nothing: the design here only ever asked for evals on PRs touching `skills/`,
+`evals/`, `hooks/` or the CLI contract, but the implementation ran ahead of it and sent
+every engine PR (#78-#86) to the full ~65-run suite regardless — #86's run died on
+"You've hit your session limit." **Add the `run-evals` label** to an engine PR that
+changes what the CLI prints or accepts (the CLI contract the skills depend on) to opt
+that PR into the full suite; adding the label to an already-open PR starts a run
+without a new commit. A manual `workflow_dispatch` run does the same with no PR at
+all. The opt-in always wins over path selection, whatever else did or didn't change.
+The full suite also runs once more at the final review, regardless of what the
+milestone PR touched. `scripts/eval-results-guard.js` fails the job on a results file
+with zero cases and on any run error, except a run that stopped at its own limit; in a
+must-not-fire case only a turn limit with turns >= N is tolerated.
 
 **Narrow the suite while iterating.** A full run is 28 agent runs: roughly 25 minutes
 and a real slice of the subscription's usage. While fixing one skill, run only the

@@ -25,7 +25,8 @@ Sessions on this project work on SequentDraw only.
    Workers never merge.
 3. CI (`npm test`) must pass before merging. Skill PRs also need
    `claude plugin validate --strict` and passing skill evals
-   (`docs/design/skills-and-plugin.md`).
+   (`docs/design/skills-and-plugin.md`). An engine PR that changes the CLI's output or
+   options carries the `run-evals` label.
 4. Any GitHub repository that informs the output is credited in `CREDITS.md`, with its
    licence checked. Nothing from n8n's source, styles or assets is copied (Sustainable
    Use License).
