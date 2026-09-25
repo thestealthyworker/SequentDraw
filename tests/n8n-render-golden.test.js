@@ -49,6 +49,12 @@
 // export's exportKeyGroup(), which carries an on-screen key into an
 // exported file. +4,132 bytes. Nothing on the canvas moved.
 //
+// Rebaselined for the readable first view (issue #24). The viewer script
+// gains openView() and fitScale(), and GEOMETRY gains openAnchor, the box
+// of the node the map opens on. Markup and script only: layout is
+// untouched, and nothing on the canvas moved -- only where the camera
+// starts. +1,229 bytes.
+//
 // Rebaselined for wrapped sublabels (issue #54). The sublabel is now a
 // <text> of <tspan> lines rather than a single truncated <text>, which is
 // a markup change only: every Medusa sublabel already fitted on one line,
@@ -56,6 +62,8 @@
 // and nothing on the canvas moved. +600 bytes.
 //
 // Previous baselines:
+//   wrapped sublabels (#54):                236133 bytes /
+//     f7c008176559c6bd44c3317ad8aa25b1d5822ee4ea82eca5801c3ffd83425c6c
 //   the status key (#56):                   235533 bytes /
 //     8a23aa76ce5a65f93dbb5ed57df8bb102b952b44d241a2d7313be8572f58cc75
 //   step 7c, export from the viewer:          231401 bytes /
@@ -98,8 +106,8 @@ const path = require('node:path');
 const { renderMap } = require('../src/n8n/index');
 
 const FIXTURE = path.join(__dirname, '..', 'examples', 'medusa-return-flow.json');
-const GOLDEN_LENGTH = 236133;
-const GOLDEN_SHA256 = 'f7c008176559c6bd44c3317ad8aa25b1d5822ee4ea82eca5801c3ffd83425c6c';
+const GOLDEN_LENGTH = 237362;
+const GOLDEN_SHA256 = 'b71d4994c3375812894f3f1c4b6376d7032deb88bff9a63a52038f28e3c46c32';
 
 test('renderMap(Medusa) is byte-identical to the note-connector-routing baseline', async () => {
   const doc = JSON.parse(fs.readFileSync(FIXTURE, 'utf8'));
