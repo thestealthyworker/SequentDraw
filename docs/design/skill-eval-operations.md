@@ -52,9 +52,10 @@ the same session had already run `node --version`. The skills now say so.
 1. **One PR, one run.** Batch skill changes. Do not push a fix and a follow-up
    separately if they can land together.
 2. **Let the selection work.** `scripts/select-eval-tags.js` maps changed paths to
-   `--tag <skill>`; only a change under `src/`, `bin/`, `schema/`, `hooks/`,
-   `.claude-plugin/`, `package*.json`, the workflow or those scripts runs the full
-   suite. Docs-only changes run nothing.
+   `--tag <skill>`; only a change under `hooks/` or `.claude-plugin/` runs the full
+   suite. Engine, workflow and script changes run nothing unless the PR carries the
+   `run-evals` label (PR #87), which an engine PR that changes the CLI's output or
+   options should carry. Docs-only changes run nothing.
 3. **Prove the command forms locally first.** Every form a skill tells the model to run
    can be run by hand from a bash script. Do that before spending a run.
 4. **Write grader patterns from real output**, and test them offline against a saved

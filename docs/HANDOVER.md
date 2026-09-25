@@ -34,10 +34,11 @@ are testable without a model, which is how the prototype was validated.
 | ELK layout | Proven at 40 nodes / 5 groups / 44 edges. Zero overlaps. |
 | Icon resolution | Working via `simple-icons` npm, with kind-glyph fallback. |
 | HTML renderer | Working. Layer checkboxes, dynamic containers, gap compaction. |
-| Extraction (prose → JSON) | **Not built.** Highest-risk component. |
-| Tours | Specified, not built. |
-| Gap detection | Specified, not built. |
+| Extraction (prose → JSON) | Built. Mode A from a repository scan (`git-map`), Mode B by interview (`business-map`). |
+| Tours | Built. Played in the viewer; `business-map` and `git-map` offer and write them. |
+| Gap detection | Built. `sequentdraw check` emits `open` nodes for completeness gaps. |
 | MCP server | Built. `sequentdraw mcp`; one tool per CLI command, same refusals as the CLI. |
+| Skills for other agents | Built. `sequentdraw skills install --agent codex\|copilot\|cursor`. |
 
 ## What is in `src/`
 
@@ -268,6 +269,9 @@ plugin scaffold arrives with the first of them, `git-map`.
    that would be a network service, with the input limits, auth and rate limiting that
    brings. The engine is pure functions behind thin adapters, so an HTTP adapter can land
    whenever a real caller needs one without anything built now having to change.
+   **Done (2026-09-25):** tours in the viewer (#86), offered and written by `business-map`
+   and `git-map` rather than a skill of their own (#88, owner decision), the MCP server
+   (#89), and `sequentdraw skills install` for Codex, Copilot and Cursor (#90).
 8a. **Before the first npm publish:** vendor the stack-analyser detection rules SequentDraw
     uses into `src/scan/rules/`, keeping the MIT notice, and drop the dependency. npm
     ignores a dependency's `overrides`, so downstream installs would otherwise inherit its
@@ -280,7 +284,8 @@ plugin scaffold arrives with the first of them, `git-map`.
     rather than a work in progress. A gate report that spends its findings on things
     already logged tells the owner nothing they do not know, and each round costs a
     full CTO run. Deferred issues are labelled as such and named in the M3 brief, so
-    the CTO does not re-raise them.
+    the CTO does not re-raise them. **Done (2026-09-25):** no open pull requests; the one
+    open issue, #25 (time to the first map), is closed by the M3 measurement.
 9. **Internal cleanup, after the M3 gate passes:** remove the CTO agent, the review
    reports and the gate process (see `CLAUDE.md`). They are internal checks, not part
    of the product. The work is not complete until this is merged.
