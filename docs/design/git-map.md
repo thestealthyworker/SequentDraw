@@ -5,7 +5,7 @@ Status: **proposed** · 2026-09-15
 `git-map` turns a code repository into a SequentDraw map: the technical (`base`) layer,
 covering services, data stores, external integrations and the flow between them. It is
 the first skill to ship, so it also brings the plugin scaffold and skill evals. Its
-merge triggers the M1 CTO review.
+merge triggers the M1 review.
 
 Owner decisions:
 - **Sources:** local folders and GitHub URLs.
@@ -234,7 +234,7 @@ edits the JSON, re-validates, re-checks evidence and republishes to the same art
 - `bin/sequentdraw`, the CLI entry for `scan`, `check` and `render` (`check`, `render`
   and `validate` take `-` to read the input document from stdin)
 - `package.json` `files` whitelist: the published package excludes `.claude/`,
-  `CLAUDE.md`, `docs/reviews/` and tests, per the internal-tooling rule
+  `CLAUDE.md` and tests, per the internal-tooling rule
 - CI: `claude plugin validate . --strict` on every PR; skill evals on PRs touching
   `skills/`, `evals/` or `hooks/`, using the `CLAUDE_CODE_OAUTH_TOKEN` secret and
   `--max-cost-usd 10`
@@ -312,7 +312,8 @@ How this was handled, and then resolved:
 
 ## 8. M1 gate
 
-After merge, the lead developer briefs the CTO on that `main` commit: install the plugin
-from the marketplace, run `git-map` on `dockersamples/example-voting-app` by URL and on
-a local repo, open the published artifact, then correct one node conversationally. The
-CTO judges whether it works, looks right, feels right and fits its purpose.
+After merge, the lead developer runs the M1 review against that `main` commit: install
+the plugin from the marketplace, run `git-map` on `dockersamples/example-voting-app` by
+URL and on a local repo, open the published artifact, then correct one node
+conversationally. The review judges whether it works, looks right, feels right and
+fits its purpose.

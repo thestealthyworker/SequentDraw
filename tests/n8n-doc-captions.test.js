@@ -1,4 +1,4 @@
-// CTO-M1-03 regression: the documentation export must not truncate what it
+// #28 regression: the documentation export must not truncate what it
 // is for. The figure is made for slides, PDFs and pasted screenshots where
 // nobody can hover, so a caption cut off at "Owns shipment state, including
 // the…" tells the reader strictly less than the node's own label already
@@ -33,7 +33,7 @@ function countEllipses(svg) {
   return (svg.match(/…/g) || []).length;
 }
 
-describe('CTO-M1-03: the documentation export never truncates a caption', () => {
+describe('#28: the documentation export never truncates a caption', () => {
   test('the Medusa business export contains no ellipsis at all (was 33)', async () => {
     const svg = await renderSvg(medusaDoc, { layers: ['business'] });
     assert.strictEqual(countEllipses(svg), 0);
@@ -92,9 +92,9 @@ describe('CTO-M1-03: the documentation export never truncates a caption', () => 
   });
 });
 
-describe('CTO-M1-03: edge labels are printed in full too', () => {
+describe('#28: edge labels are printed in full too', () => {
   test('a ~40-character edge label survives intact', () => {
-    const label = 'Return id and the items approved for re'; // 39 chars, the case the CTO cited
+    const label = 'Return id and the items approved for re'; // 39 chars, the case #28 cited
     const lines = wrapEdgeText(label);
     assert.ok(!lines.some(l => l.includes('…')));
     assert.strictEqual(lines.join(' '), label);
@@ -113,7 +113,7 @@ describe('CTO-M1-03: edge labels are printed in full too', () => {
   });
 });
 
-describe('CTO-M1-03: the wider caption column still cannot collide', () => {
+describe('#28: the wider caption column still cannot collide', () => {
   test('two nodes sharing a row are always further apart than a caption is wide', async () => {
     const { layout } = await buildDocSvg(medusaDoc, { layers: ['business'] });
     const boxes = Object.entries(layout.nodeBoxes).map(([id, b]) => ({ id, ...b }));

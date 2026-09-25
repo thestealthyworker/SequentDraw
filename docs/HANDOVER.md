@@ -278,31 +278,16 @@ plugin scaffold arrives with the first of them, `git-map`.
     transitive advisories (see `docs/design/git-map.md`, "Supply chain"). **Done:** eight
     manifest parsers ported, 39 packages removed, `npm audit --omit=dev` clean with no
     `overrides` at all. The six existing scan fixtures produce byte-identical bundles.
-8b. **Clear the tree, immediately before the M3 gate** (added by the owner, 2026-09-20).
-    Every open pull request is merged or closed, and every open issue is fixed or
-    explicitly deferred by the owner, so the final gate reviews a finished product
-    rather than a work in progress. A gate report that spends its findings on things
-    already logged tells the owner nothing they do not know, and each round costs a
-    full CTO run. Deferred issues are labelled as such and named in the M3 brief, so
-    the CTO does not re-raise them. **Done (2026-09-25):** no open pull requests; the one
-    open issue, #25 (time to the first map), is closed by the M3 measurement.
-9. **Internal cleanup, after the M3 gate passes:** remove the CTO agent, the review
-   reports and the gate process (see `CLAUDE.md`). They are internal checks, not part
-   of the product. The work is not complete until this is merged.
-
-**Milestone gates.** `main` is judged at three points, each after the lead developer
-has merged the milestone: **M1** once extraction Mode A and `git-map` are in; **M2**
-once the suggestion agent is in (`business-map` with suggestions, `eval-build`,
-`grill-build`); and **M3** when the build order is complete. M1 and M2 were judged by
-the CTO agent (`sequentdraw-cto`, on Fable). M3 is an overall review and test pass by
-the lead developer (Opus 5.5), per the owner's decision of 2026-09-24. The procedure
-is in `CLAUDE.md`.
-
-The original plan had M3 re-test against the unrecovered prototype files (`check.js`,
-`layout.js`, `stampedid-workflow.json`). The owner released that on 2026-09-24: the
-lead developer re-tests the product end to end itself, against the repository's own
-fixtures and examples, which have since grown to cover everything those files did —
-`check.js`'s measurements are the automated layout tests from step 4.
+8b. **Clear the tree, immediately before the final review** (added by the owner,
+    2026-09-20). Every open pull request is merged or closed, and every open issue is
+    fixed or explicitly deferred by the owner, so the final review covers a finished
+    product rather than a work in progress. **Done (2026-09-25):** no open pull
+    requests; the one open issue, #25 (time to the first map), is closed by the M3
+    measurement.
+9. **Internal cleanup, after the M3 gate passes:** remove the internal review agent,
+   its reports and the gate process. They were internal checks, not
+   part of the product. The work is not complete until this is merged. **Done
+   (2026-09-26, PR #95).**
 
 The "two known defects" in the old build order (edges crossing containers, label overlaps)
 are re-measured against the n8n renderer rather than fixed in the legacy one.

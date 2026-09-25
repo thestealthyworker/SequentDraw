@@ -1,11 +1,11 @@
-// CTO-M1-04 regression: a sticky note has to sit next to the thing it
+// #28 regression: a sticky note has to sit next to the thing it
 // annotates. docs/design/n8n-visual-style.md states the rule — a note is
 // "placed beside the bounding box of the nodes it names" — but before the
 // fix the Medusa map put n_consider_silent_notification 1192-1368px from
 // both of its targets, directly above an unrelated frame, where a reader
 // attributes it to Payment rather than Notifications.
 //
-// The rule asserted here is the CTO's: every attached note sits within one
+// The rule asserted here is the M1 review's: every attached note sits within one
 // node-spacing (128px) of each thing it names, OR is visibly connected to
 // it. One Medusa note genuinely cannot satisfy the first half — the layout
 // puts its two targets 1,100px apart — so the connector is not a loophole,
@@ -77,7 +77,7 @@ function orphanedPairs(doc, layout, labelReserve) {
   return bad;
 }
 
-describe('CTO-M1-04: attached notes sit beside what they name (interactive map)', () => {
+describe('#28: attached notes sit beside what they name (interactive map)', () => {
   let layout;
 
   test('layout resolves and places every note', async () => {
@@ -89,7 +89,7 @@ describe('CTO-M1-04: attached notes sit beside what they name (interactive map)'
     assert.deepStrictEqual(orphanedPairs(medusaDoc, layout, LABEL_RESERVE), []);
   });
 
-  test('the notes the CTO measured are now beside their targets', () => {
+  test('the notes the M1 review measured are now beside their targets', () => {
     // n_consider_silent_notification was 1192-1368px from both targets and
     // n_refund_cap 240px from its single one. Each must now reach at least
     // one target directly — a note attached to a single node has no excuse
@@ -146,7 +146,7 @@ describe('CTO-M1-04: attached notes sit beside what they name (interactive map)'
   });
 });
 
-describe('CTO-M1-04: the same holds in the static documentation export', () => {
+describe('#28: the same holds in the static documentation export', () => {
   const layerSets = [[], ['business'], ['edge'], ['business', 'edge', 'build']];
 
   layerSets.forEach(layers => {
@@ -160,13 +160,13 @@ describe('CTO-M1-04: the same holds in the static documentation export', () => {
 });
 
 // ---------------------------------------------------------------------
-// CTO-M1-04, second round: the connector the first fix introduced must
+// #35, second round after #28: the connector the first fix introduced must
 // not mis-attribute
 // the note all over again. On main@aee7b42 the Medusa map drew
 // n_consider_silent_notification -> no_notif as a straight line through
 // the body of the unrelated "Event bus / Redis" node, clipping its
 // sublabel, so at a glance the note read as belonging to Event bus — the
-// same defect CTO-M1-04 was raised about, in a new form.
+// same defect #28 was raised about, in a new form.
 //
 // The rule asserted here: a connector may touch the note it leaves and
 // the target it names, and may cross a group frame's BORDER (a note
@@ -289,7 +289,7 @@ function expectedPathData(layout) {
   return out.sort();
 }
 
-describe('CTO-M1-04 (round 2): a note connector never runs through an unrelated node, note or group title', () => {
+describe('#35 (round 2): a note connector never runs through an unrelated node, note or group title', () => {
   test('interactive map: every connector reaches its target without crossing anything else', async () => {
     const layout = await layoutMap(medusaDoc);
     assert.ok(countConnectors(layout) > 0, 'the Medusa fixture should exercise at least one connector');
@@ -321,7 +321,7 @@ describe('CTO-M1-04 (round 2): a note connector never runs through an unrelated 
   });
 });
 
-describe('CTO-M1-04: connectors are wired for layer toggling, not left dangling', () => {
+describe('#28: connectors are wired for layer toggling, not left dangling', () => {
   test('every rendered connector names a target that exists in the document', async () => {
     const html = await renderMap(medusaDoc);
     const targets = [...html.matchAll(/class="note-link" data-target="([^"]+)"/g)].map(m => m[1]);

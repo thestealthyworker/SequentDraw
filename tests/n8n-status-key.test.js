@@ -1,4 +1,4 @@
-// The status key (issue #56, CTO-M2-04): what a dashed "?" node and a
+// The status key (issue #56, #69): what a dashed "?" node and a
 // purple "+" node mean, said on screen without a click, in the figure
 // nobody can hover, and in the file the viewer exports. See
 // docs/design/n8n-visual-style.md "Status key".

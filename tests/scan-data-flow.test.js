@@ -1,4 +1,4 @@
-// CTO-M1-02 and CTO-M1-05: arrows must follow work, not startup order,
+// #27: arrows must follow work, not startup order,
 // and the scan must not miss a service or count a compose file three
 // times.
 //
@@ -29,7 +29,7 @@ function dataAccess(bundle, from, to) {
   return bundle.evidence.find(e => e.kind === 'data-access' && e.from === from && e.to === to);
 }
 
-describe('data-access direction (CTO-M1-02)', () => {
+describe('data-access direction (#27)', () => {
   test('a component that only pushes is upstream of the queue', async () => {
     const bundle = await scanFixture('queue-pipeline');
     const fact = dataAccess(bundle, 'producer', 'redis');
@@ -94,7 +94,7 @@ describe('data-access direction (CTO-M1-02)', () => {
   });
 });
 
-describe('depends_on is labelled as a deployment fact (CTO-M1-02)', () => {
+describe('depends_on is labelled as a deployment fact (#27)', () => {
   test('every depends-on entry carries role "deployment"', async () => {
     const bundle = await scanFixture('queue-pipeline');
     const dependsOn = bundle.evidence.filter(e => e.kind === 'depends-on');
@@ -111,7 +111,7 @@ describe('depends_on is labelled as a deployment fact (CTO-M1-02)', () => {
   });
 });
 
-describe('compose variants are counted once (CTO-M1-05)', () => {
+describe('compose variants are counted once (#27)', () => {
   test('services are not multiplied across compose files', async () => {
     const bundle = await scanFixture('queue-pipeline');
     const services = bundle.evidence.filter(e => e.kind === 'compose-service').map(e => e.value).sort();
@@ -132,7 +132,7 @@ describe('compose variants are counted once (CTO-M1-05)', () => {
   });
 });
 
-describe('.NET projects are scanned (CTO-M1-05)', () => {
+describe('.NET projects are scanned (#27)', () => {
   test('the processor\'s data-store clients and runtime are found', async () => {
     const bundle = await scanFixture('queue-pipeline');
     const deps = bundle.evidence.filter(e => e.kind === 'manifest-dependency' && e.path === 'processor/Worker.csproj');

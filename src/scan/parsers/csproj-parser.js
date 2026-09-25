@@ -1,11 +1,11 @@
 // .NET project-file parser (*.csproj / *.fsproj / *.vbproj).
 //
-// Why this exists (CTO-M1-05): the example-voting-app bundle had no entry
+// Why this exists (#27): the example-voting-app bundle had no entry
 // at all for `worker/` -- a .NET project whose Worker.csproj declares
 // StackExchange.Redis and Npgsql. The founder run had to add a gap note
-// saying the worker's runtime was unknown, and CTO-M1-02's direction
-// inference had no client evidence to work from for the one service that
-// sits in the middle of the pipeline.
+// saying the worker's runtime was unknown, and the direction inference
+// fixed in #27 had no client evidence to work from for the one service
+// that sits in the middle of the pipeline.
 //
 // Regex over text only: never an XML parse, never an eval, never a
 // dependency resolve. Every pattern is anchored and length-bounded (no

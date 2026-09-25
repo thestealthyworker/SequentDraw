@@ -2,7 +2,7 @@
 // THE PRODUCT, and which only describe how the product is tested or
 // demonstrated.
 //
-// Why this exists (CTO-M1-01): scanning SequentDraw's own checkout
+// Why this exists (#27): scanning SequentDraw's own checkout
 // produced 69 evidence entries, 54 of them from `tests/fixtures/repos/*`
 // and `evals/*` -- three synthetic fixture apps that are not SequentDraw.
 // `check --evidence` passed that map, because the evidence was real; it
@@ -24,7 +24,7 @@
 // a checkout carrying four `.claude/worktrees/agent-*` copies gave 80
 // evidence entries against a clean export's 16, drawing every component five
 // times -- the walk descended into each worktree and excluded that copy's own
-// `tests/`, never the worktree itself. Same class as CTO-M1-01: real
+// `tests/`, never the worktree itself. Same class as #27: real
 // evidence, wrong subject. The test is the `.git` entry a repository plants
 // at its own root, so it covers a vendored clone and a submodule too, which a
 // rule about the name `.claude/worktrees` would miss.
@@ -75,7 +75,7 @@ const AMBIGUOUS_SEGMENTS = new Set([
 
 // A file whose basename carries a ".test." or ".spec." segment:
 // "server.test.js", and -- the case that leaked false compose facts into
-// the voting-app bundle (CTO-M1-05) -- "docker-compose.test.yml".
+// the voting-app bundle (#27) -- "docker-compose.test.yml".
 // Requires dots on BOTH sides, so "latest.json" is not a test file.
 const TEST_FILE_RE = /\.(?:test|spec)\./i;
 

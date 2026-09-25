@@ -101,7 +101,7 @@ function assembleEvidence(rawRecords) {
     entry.path = normalisePath(record.path);
     if (record.line != null) entry.line = record.line;
     // `direction` ('read'|'write') and `role` ('deployment') are what
-    // carry CTO-M1-02's distinction between a work-flow arrow and a
+    // carry the distinction, from #27, between a work-flow arrow and a
     // startup dependency into the bundle, so they must survive assembly.
     for (const field of ['value', 'from', 'to', 'tech', 'icon', 'version', 'direction', 'role']) {
       const value = record[field];
