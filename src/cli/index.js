@@ -13,6 +13,7 @@ const validateCmd = require('./validate');
 const scanCmd = require('./scan');
 const checkCmd = require('./check');
 const licencesCmd = require('./licences');
+const skillsCmd = require('./skills');
 
 // `mcp` starts the stdio MCP server (src/mcp/server.js) and never returns
 // until stdin ends -- see that file for the protocol. It is dispatched
@@ -48,6 +49,7 @@ const COMMANDS = {
   catalogue: require('./catalogue'),
   licences: licencesCmd,
   mcp: mcpCmd,
+  skills: skillsCmd,
 };
 
 const TOP_USAGE = `Usage: sequentdraw <command> [options]
@@ -70,6 +72,11 @@ Commands:
   mcp                                  Start the MCP server over stdio, for
                                         hosts that reach SequentDraw through
                                         MCP instead of a shell command.
+  skills install|uninstall|list        Copy this package's skills into a
+                                        host's skills location (Codex,
+                                        Copilot, Cursor), or list what it
+                                        ships. Claude Code users get skills
+                                        from the plugin install instead.
 
 "-" as the input document reads it from stdin, and so does "-" as a --merge
 patch when the input is a file. Output paths, --evidence, --repos and

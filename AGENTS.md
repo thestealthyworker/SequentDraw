@@ -7,7 +7,9 @@ how to run it.
 ## Reaching SequentDraw
 
 - **Skills** (`skills/<name>/SKILL.md`) are the primary interface in Claude Code and
-  any host that reads the Agent Skills spec.
+  any host that reads the Agent Skills spec. Claude Code gets them from the plugin
+  install; Codex, Copilot and Cursor get them from `sequentdraw skills install`
+  (`docs/design/skills-and-plugin.md`, "Packaging").
 - **An MCP server** (`sequentdraw mcp`, stdio, JSON-RPC 2.0) is for hosts that reach
   SequentDraw through MCP instead of a shell command: Cursor, Gemini CLI, Copilot, and
   Codex through its own `config.toml`. Claude Code gets the same server bundled

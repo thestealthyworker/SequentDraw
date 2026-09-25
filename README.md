@@ -143,6 +143,30 @@ result, not a JSON-RPC error. See
 [`docs/design/skills-and-plugin.md`](docs/design/skills-and-plugin.md)'s
 "The MCP server" for the full tool list and host configuration snippets.
 
+## Skills for Codex, Copilot and Cursor
+
+Claude Code users get the six skills from the plugin install above. Every other
+host gets them from `sequentdraw skills install`, which copies `skills/` into that
+host's own skills location and rewrites the one part of each skill that would
+otherwise break outside a Claude Code plugin checkout (how it finds the engine):
+
+```sh
+npx sequentdraw skills install --agent codex     # -> ~/.agents/skills/<skill>
+npx sequentdraw skills install --agent cursor    # -> ~/.cursor/skills/<skill>
+npx sequentdraw skills install --agent copilot --project <dir>   # -> <dir>/.github/skills/<skill>
+npx sequentdraw skills uninstall --agent <codex|copilot|cursor> [--project <dir>]
+npx sequentdraw skills list
+```
+
+Add `--project <dir>` to install into a specific repository instead of your home
+directory (required for `copilot`, which has no user-level skills location). Add
+`--dry-run` to see what would happen without changing anything. Re-running `install`
+over a previous install from this command is safe; a directory it did not create
+itself is left alone and named in an error instead. See
+[`docs/design/skills-and-plugin.md`](docs/design/skills-and-plugin.md), "Packaging",
+for the full targets table, the safety rules and why the engine-resolving section of
+each copied skill has to change.
+
 ## Status
 
 Early. The n8n-style renderer works and is covered by layout invariant and security
