@@ -193,3 +193,33 @@ test('stack-analyser is no longer loaded by the scanner', () => {
   assert.doesNotMatch(scanSource, /import\(['"]@specfy/);
   assert.doesNotMatch(scanSource, /require\(['"]@specfy/);
 });
+
+// Found while proving the 8a port, fixed separately so the port's diff
+// stayed "the port plus its listed fixes". dedupeComposeVariants decided
+// what counted as a Compose variant by record KIND alone, and a GitHub
+// Actions `services:` container is also an `image` record -- so the
+// workflow file counted as one more "variant" of docker-compose.yml, and a
+// CI service container sharing an image with Compose (postgres:16 in both)
+// was dropped as a duplicate of the Compose one. It is a different fact,
+// about a different file. The original stack-analyser output dropped it
+// too, which is why the 8a baseline could not show it.
+describe('Compose variant dedupe only considers Compose files', () => {
+  const { dedupeComposeVariants } = require('../src/scan/scan');
+
+  test('a CI service container sharing an image with Compose is kept', async () => {
+    const bundle = await scanPath(POLYGLOT, { source: 'local', name: 'polyglot' });
+    const images = bundle.evidence.filter(e => e.kind === 'image').map(e => `${e.path} ${e.value}:${e.version}`);
+    assert.ok(images.includes('.github/workflows/ci.yml postgres:16'), images.join('\n'));
+    assert.ok(images.includes('docker-compose.yml postgres:16'), images.join('\n'));
+  });
+
+  test('a real Compose variant restating the canonical file is still dropped', () => {
+    const canonical = { kind: 'image', path: 'docker-compose.yml', value: 'postgres', version: '16' };
+    const variant = { kind: 'image', path: 'docker-compose.images.yml', value: 'postgres', version: '16' };
+    const ci = { kind: 'image', path: '.github/workflows/ci.yml', value: 'postgres', version: '16' };
+    const { records, duplicates } = dedupeComposeVariants([canonical, variant, ci]);
+    assert.deepStrictEqual(duplicates, [variant]);
+    assert.ok(records.includes(canonical));
+    assert.ok(records.includes(ci), 'the workflow image is not a Compose variant');
+  });
+});
