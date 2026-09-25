@@ -14,7 +14,7 @@ Sessions on this project work on SequentDraw only.
 | Owner | The repository owner | Product direction and final say |
 | Lead developer and reviewer | Opus (the main session) | Plans, orchestrates, reviews every change for correctness and security, merges |
 | Workers | Subagents matched to the task | Haiku for bulk search and extraction; Sonnet for research and implementation; the reviewer agent for code review |
-| CTO | `sequentdraw-cto` agent on Fable 5.1, low effort | Judges at milestone gates whether the product works, looks and feels right, and meets its purpose |
+| CTO | `sequentdraw-cto` agent on Fable 5.1, low effort | Judged the M1 and M2 gates. Not used for M3 (owner, 2026-09-24) |
 
 ## How work lands
 
@@ -30,17 +30,22 @@ Sessions on this project work on SequentDraw only.
    licence checked. Nothing from n8n's source, styles or assets is copied (Sustainable
    Use License).
 
-## Milestone gates (CTO review)
+## Milestone gates
 
-The CTO is deployed **only** at these gates. It is never used for routine PRs, code
-review or ad-hoc checks. It never reviews an open PR: it reviews `main` after the
-lead developer has merged the milestone.
+A gate judges whether the product works, looks and feels right, and meets its
+purpose. It never reviews an open PR: it reviews `main` after the lead developer has
+merged the milestone.
+
+M1 and M2 were judged by the CTO agent, and only there; it was never used for routine
+PRs, code review or ad-hoc checks. **M3 is not a CTO gate.** The owner decided on
+2026-09-24 that the final gate is an overall review and test pass by the lead
+developer (Opus 5.5) itself.
 
 | Gate | Reached when this is merged | Scope |
 |---|---|---|
 | M1 | `git-map` (extraction Mode A, plugin scaffold, skill eval CI) | `git-map` end to end: install the plugin, map a real repository, open the map |
 | M2 | The suggestion agent (`business-map` with suggestions, `eval-build`, `grill-build`) | Those three skills end to end on realistic business scenarios |
-| M3 | The whole build order | The final product across Claude Code, Codex, the CLI and the MCP server, re-tested end to end by the lead developer against the repository's own fixtures and examples |
+| M3 | The whole build order | The final product across Claude Code, Codex, the CLI and the MCP server: an overall review and end-to-end test pass by the lead developer (Opus 5.5), against the repository's own fixtures and examples |
 
 Procedure:
 
@@ -61,10 +66,16 @@ Procedure:
 7. If a gate has not passed after three re-review rounds, the lead developer stops and
    escalates to the owner with the open findings.
 
+M3 follows the same procedure with the lead developer in the CTO's place. Its findings
+are graded `blocker`, `major` or `minor` and written to `docs/reviews/m3/round-<n>.md`,
+every `blocker` and `major` is fixed through its own PR before the gate passes, and
+every `minor` is logged as an issue. Being its own reviewer does not lower the bar:
+each finding carries the evidence that it was tested, not assumed.
+
 ### The CTO is internal, and is removed before completion
 
 The CTO review is an internal quality check, not a product feature. The owner requires
-it to be gone before the work is complete:
+it to be gone before the work is complete. It has done its last review (M2):
 
 - **Until then, it never ships.** Packaging (npm `files`, the plugin manifest,
   `skills install`) must exclude `.claude/`, `CLAUDE.md` and `docs/reviews/`. No skill,
